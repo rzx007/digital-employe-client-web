@@ -47,10 +47,10 @@ import { cn } from "@workspace/ui/lib/utils"
 
 ### Component Structure
 
-Use named exports. Add `"use client"` directive only for client-side interactivity.
+Use named exports. Add `` directive only for client-side interactivity.
 
 ```typescript
-"use client"
+
 import * as React from "react"
 
 export function MyComponent({ prop }: MyComponentProps) {

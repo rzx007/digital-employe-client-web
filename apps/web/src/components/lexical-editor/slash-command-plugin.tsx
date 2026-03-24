@@ -1,4 +1,4 @@
-"use client"
+
 
 import { useCallback, useState, useMemo } from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"

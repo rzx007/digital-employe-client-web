@@ -9,6 +9,7 @@ export interface Message {
   content: string
   timestamp: Date
   type?: "text" | "image" | "file"
+  metadata?: Record<string, any>
 }
 
 export const MOCK_MESSAGES: Record<string, Message[]> = {

@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 
 import {
@@ -41,6 +39,8 @@ import { ChatPromptInput } from "../chat-prompt-input"
 import { useCallback, useMemo } from "react"
 import type { PromptChangeEvent } from "../lexical-editor/prompt-input-textarea"
 import { toast } from "sonner"
+import { ArtifactPreview } from "../artifact"
+import { useArtifactStore } from "@/stores/artifact-store"
 
 export function ChatView({
   selectedConversationId,
@@ -101,6 +101,7 @@ export function ChatView({
     },
     [setInputValue]
   )
+  const { openArtifact, closeArtifact, addArtifact } = useArtifactStore()
 
   return (
     <div
@@ -179,7 +180,7 @@ export function ChatView({
             </Button>
           </div>
 
-          <Conversation className="flex-1">
+          <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
               {messages.length === 0 ? (
                 <ConversationEmptyState
@@ -189,6 +190,13 @@ export function ChatView({
               ) : (
                 messages.map((message) => {
                   const employee = getEmployeeById(message.senderId)
+                  const meta = message.metadata ?? ({} as any)
+                  const hasArtifact = meta?.artifactToolCallId && meta?.artifact
+                  const handleOpenArtifact = () => {
+                    if (meta?.artifact) {
+                      openArtifact(meta.artifact.id)
+                    }
+                  }
                   return (
                     <Message key={message.id} from={message.role}>
                       {message.role === "assistant" && employee && (
@@ -214,6 +222,12 @@ export function ChatView({
                       >
                         {formatTime(message.timestamp)}
                       </div>
+                      {hasArtifact && (
+                        <ArtifactPreview
+                          artifact={meta.artifact}
+                          onClick={handleOpenArtifact}
+                        />
+                      )}
                     </Message>
                   )
                 })

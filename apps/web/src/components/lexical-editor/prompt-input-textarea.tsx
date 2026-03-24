@@ -1,4 +1,4 @@
-"use client"
+
 
 import { useState, useCallback, type ClipboardEventHandler } from "react"
 import {
