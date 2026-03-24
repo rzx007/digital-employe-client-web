@@ -7,7 +7,7 @@ export const Route = createFileRoute("/chat")({
 
 function ChatPage() {
   return (
-    <div className="h-[calc(100vh-4rem)]">
+    <div className="h-svh overflow-hidden">
       <ChatLayout />
     </div>
   )

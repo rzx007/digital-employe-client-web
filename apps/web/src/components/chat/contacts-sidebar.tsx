@@ -1,14 +1,8 @@
 import * as React from "react"
-
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroup,
-} from "@workspace/ui/components/avatar"
-import { Badge } from "@workspace/ui/components/badge"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@workspace/ui/components/button"
 import {
-  IconPlus,
+  IconCirclePlus,
   IconSettings,
   IconSearch,
   IconChevronLeft,
@@ -17,6 +11,10 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 import { CONTACTS, type AIEmployee } from "@/lib/mock-data/ai-employees"
 
+import {
+  EmployeeContactAvatar,
+  GroupMembersAvatar,
+} from "./contact-avatars"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { useChatContext } from "./chat-context"
 
@@ -27,11 +25,20 @@ export function ContactsSidebar({
   const [isCollapsed, setIsCollapsed] = React.useState(false)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const { selectedContactId, setSelectedContactId } = useChatContext()
-
+  const isMobile = useIsMobile()
   const handleCreateGroup = (selectedEmployees: AIEmployee[]) => {
     console.log("创建群聊，选择员工:", selectedEmployees)
     setIsDialogOpen(false)
   }
+
+  const groupContacts = React.useMemo(
+    () => CONTACTS.filter((contact) => contact.type === "group"),
+    []
+  )
+  const employeeContacts = React.useMemo(
+    () => CONTACTS.filter((contact) => contact.type === "employee"),
+    []
+  )
 
   return (
     <>
@@ -42,8 +49,8 @@ export function ContactsSidebar({
       />
       <div
         className={cn(
-          "flex flex-col border-r bg-muted/50 transition-all duration-300",
-          isCollapsed ? "w-14" : "w-64",
+          "h-full flex flex-col border-r bg-muted/50 transition-all duration-300",
+          isCollapsed ? "w-14" : isMobile ? "w-full" : "w-64",
           className
         )}
         {...props}
@@ -55,7 +62,7 @@ export function ContactsSidebar({
           )}
         >
           {!isCollapsed && (
-            <span className="text-lg font-semibold">Contacts</span>
+            <span className="text-lg font-semibold">员工列表</span>
           )}
           <div
             className={cn(
@@ -78,146 +85,136 @@ export function ContactsSidebar({
               className="h-8 w-8"
               title="新建群聊"
             >
-              <IconPlus className="size-4" />
+              <IconCirclePlus className="size-4" />
             </Button>
           </div>
         </div>
 
         <div className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}>
           {isCollapsed ? (
-            <div className="flex flex-col items-center gap-3 px-2">
-              {CONTACTS.map((contact) => {
-                const contactId =
-                  contact.type === "employee"
-                    ? contact.employee?.id
-                    : contact.group?.id
+            <div className="flex flex-col items-center gap-2 px-2">
+              {groupContacts.map((contact) => {
+                const contactId = contact.group?.id
                 const isSelected = selectedContactId === contactId
                 return (
                   <div
                     key={contactId}
                     onClick={() => setSelectedContactId?.(contactId || null)}
                     className={cn(
-                      "relative cursor-pointer transition-transform hover:scale-110",
+                      "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                      "rounded-md ring-2 ring-ring ring-offset-2 ring-offset-background"
+                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
-                    {contact.type === "group" ? (
-                      <div className="flex -space-x-1">
-                        {contact.group?.participants.slice(0, 1).map((p) => (
-                          <Avatar
-                            key={p.id}
-                            className="h-8 w-8 border-2 border-background rounded-none"
-                          >
-                            <AvatarFallback className="rounded-none! bg-primary text-[10px] font-medium text-primary-foreground">
-                              {p.name.slice(0, 1)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    ) : (
-                      <>
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="rounded-none! bg-primary font-medium text-primary-foreground">
-                            {contact.employee?.name.slice(0, 1)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <Badge
-                          className={cn(
-                            "absolute right-0 bottom-0 h-2 w-2 rounded-full border-2 border-background p-0",
-                            contact.employee?.status === "online" &&
-                            "bg-green-500",
-                            contact.employee?.status === "busy" && "bg-red-500",
-                            contact.employee?.status === "offline" &&
-                            "bg-gray-400"
-                          )}
-                        />
-                      </>
+                    <GroupMembersAvatar
+                      participants={contact.group?.participants}
+                      className="h-8 w-8"
+                    />
+                  </div>
+                )
+              })}
+
+              <div className="my-1 h-px w-7 bg-border" />
+
+              {employeeContacts.map((contact) => {
+                const contactId = contact.employee?.id
+                const isSelected = selectedContactId === contactId
+                return (
+                  <div
+                    key={contactId}
+                    onClick={() => setSelectedContactId?.(contactId || null)}
+                    className={cn(
+                      "relative cursor-pointer transition-transform hover:scale-105",
+                      isSelected &&
+                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
+                  >
+                    <EmployeeContactAvatar
+                      name={contact.employee?.name}
+                      avatar={contact.employee?.avatar}
+                      status={contact.employee?.status}
+                      showStatus
+                    />
                   </div>
                 )
               })}
             </div>
           ) : (
-            <div className="space-y-0.5 px-2 py-2">
-              {CONTACTS.map((contact) => {
-                const contactId =
-                  contact.type === "employee"
-                    ? contact.employee?.id
-                    : contact.group?.id
-                const isSelected = selectedContactId === contactId
-                return (
-                  <div
-                    key={contactId}
-                    onClick={() => setSelectedContactId?.(contactId || null)}
-                    className={cn(
-                      "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
-                      isSelected && "bg-accent text-accent-foreground"
-                    )}
-                  >
-                    {contact.type === "group" ? (
-                      <>
-                        <AvatarGroup className="-space-x-1">
-                          {contact.group?.participants.slice(0, 2).map((p) => (
-                            <Avatar
-                              key={p.id}
-                              className="rounded-none! h-8 w-8 border-2 border-background"
-                            >
-                              <AvatarFallback className="rounded-none! bg-primary text-[10px] font-medium text-primary-foreground">
-                                {p.name.slice(0, 1)}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                        </AvatarGroup>
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate font-medium">
-                            {contact.group?.name}
-                          </span>
-                          <span className="truncate text-muted-foreground">
-                            {contact.group?.participants.length} 位成员
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="relative">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="rounded-none! bg-primary font-medium text-primary-foreground">
-                              {contact.employee?.name.slice(0, 1)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <Badge
-                            className={cn(
-                              "absolute right-0 bottom-0 h-2 w-2 rounded-full border-2 border-background p-0",
-                              contact.employee?.status === "online" &&
-                              "bg-green-500",
-                              contact.employee?.status === "busy" &&
-                              "bg-red-500",
-                              contact.employee?.status === "offline" &&
-                              "bg-gray-400"
-                            )}
-                          />
-                        </div>
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate font-medium">
-                            {contact.employee?.name}
-                          </span>
-                          <span className="truncate text-muted-foreground">
-                            {contact.employee?.role}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="space-y-3 px-2 py-2">
+              <div className="space-y-0.5">
+                <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                  群聊
+                </p>
+                {groupContacts.map((contact) => {
+                  const contactId = contact.group?.id
+                  const isSelected = selectedContactId === contactId
+                  return (
+                    <div
+                      key={contactId}
+                      onClick={() => setSelectedContactId?.(contactId || null)}
+                      className={cn(
+                        "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
+                        isSelected && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      <GroupMembersAvatar
+                        participants={contact.group?.participants}
+                        className="size-9"
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate font-medium">
+                          {contact.group?.name}
+                        </span>
+                        <span className="truncate text-muted-foreground">
+                          {contact.group?.participants.length} 位成员
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="space-y-0.5">
+                <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                  联系人
+                </p>
+                {employeeContacts.map((contact) => {
+                  const contactId = contact.employee?.id
+                  const isSelected = selectedContactId === contactId
+                  return (
+                    <div
+                      key={contactId}
+                      onClick={() => setSelectedContactId?.(contactId || null)}
+                      className={cn(
+                        "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
+                        isSelected && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      <EmployeeContactAvatar
+                        name={contact.employee?.name}
+                        avatar={contact.employee?.avatar}
+                        status={contact.employee?.status}
+                        showStatus
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate font-medium">
+                          {contact.employee?.name}
+                        </span>
+                        <span className="truncate text-muted-foreground" title={contact.employee?.role}>
+                          {contact.employee?.role}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
 
         <div
           className={cn(
-            "flex border-t p-4",
+            "flex border-t p-2",
             isCollapsed
               ? "flex-col items-center gap-2"
               : "items-center justify-between"

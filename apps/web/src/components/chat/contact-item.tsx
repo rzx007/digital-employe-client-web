@@ -2,14 +2,12 @@
 
 import * as React from "react"
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroup,
-} from "@workspace/ui/components/avatar"
-import { Badge } from "@workspace/ui/components/badge"
 import { cn } from "@workspace/ui/lib/utils"
 import type { Contact } from "@/lib/mock-data/ai-employees"
+import {
+  EmployeeContactAvatar,
+  GroupMembersAvatar,
+} from "./contact-avatars"
 import { useChatContext } from "./chat-context"
 
 interface ContactItemProps extends React.ComponentProps<"div"> {
@@ -43,15 +41,13 @@ export function ContactItem({
         {...props}
         onClick={handleClick}
       >
-        <AvatarGroup className="-space-x-2">
-          {contact.group?.participants.slice(0, 3).map((p) => (
-            <Avatar key={p.id} className="h-10 w-10 border-2 border-background">
-              <AvatarFallback className="bg-primary font-medium text-primary-foreground">
-                {p.name.slice(0, 1)}
-              </AvatarFallback>
-            </Avatar>
-          ))}
-        </AvatarGroup>
+        <GroupMembersAvatar
+          participants={contact.group?.participants}
+          className="h-10 w-10 gap-1"
+          itemClassName="h-[18px] w-[18px]"
+          fallbackClassName="text-[10px]"
+          placeholderClassName="h-[18px] w-[18px]"
+        />
         {!isCollapsed && (
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="truncate font-medium">{contact.group?.name}</span>
@@ -75,18 +71,13 @@ export function ContactItem({
       onClick={handleClick}
     >
       <div className="relative shrink-0">
-        <Avatar className="h-10 w-10">
-          <AvatarFallback className="bg-primary font-medium text-primary-foreground">
-            {contact.employee?.name.slice(0, 1)}
-          </AvatarFallback>
-        </Avatar>
-        <Badge
-          className={cn(
-            "absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-background p-0",
-            contact.employee?.status === "online" && "bg-green-500",
-            contact.employee?.status === "busy" && "bg-red-500",
-            contact.employee?.status === "offline" && "bg-gray-400"
-          )}
+        <EmployeeContactAvatar
+          name={contact.employee?.name}
+          avatar={contact.employee?.avatar}
+          status={contact.employee?.status}
+          showStatus
+          avatarClassName="h-10 w-10"
+          statusClassName="h-2.5 w-2.5"
         />
       </div>
       {!isCollapsed && (

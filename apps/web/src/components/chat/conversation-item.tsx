@@ -1,18 +1,19 @@
-"use client"
-
 import * as React from "react"
 
+import { IconArchive, IconDots, IconPencil, IconTrash } from "@tabler/icons-react"
+import { Button } from "@workspace/ui/components/button"
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroup,
-} from "@workspace/ui/components/avatar"
-import { Badge } from "@workspace/ui/components/badge"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
 import { cn } from "@workspace/ui/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import type { Conversation } from "@/lib/mock-data/conversations"
-import { getContactById } from "@/lib/mock-data/ai-employees"
+import { Spinner } from "@/components/spinner"
 
 interface ConversationItemProps extends React.ComponentProps<"div"> {
   conversation: Conversation
@@ -25,7 +26,8 @@ export function ConversationItem({
   className,
   ...props
 }: ConversationItemProps) {
-  const contact = getContactById(conversation.contactId)
+  const [menuOpen, setMenuOpen] = React.useState(false)
+
   const getTimeAgo = (date?: Date) => {
     if (!date) return ""
     return formatDistanceToNow(date, {
@@ -34,63 +36,78 @@ export function ConversationItem({
     })
   }
 
+  const renderStatusIndicator = () => {
+    if (conversation.status === "running") {
+      return <Spinner className="size-3.5 text-purple-500" style={{ color: "#8B5CF6" }} />
+    }
+    if (conversation.status === "error") {
+      return <div className="size-1.5 rounded-full bg-destructive" />
+    }
+    if (conversation.status === "unread") {
+      return <div className="size-1.5 rounded-full bg-primary" />
+    }
+    return <span className="text-natural-500">-</span>
+  }
+
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 rounded-md px-3 py-2.5 text-xs transition-colors",
+        "group flex items-center gap-2 rounded-md px-3 py-2.5 text-xs transition-colors",
         isSelected
-          ? "bg-accent text-accent-foreground"
+          ? "bg-accent text-primary"
           : "hover:bg-accent/50 hover:text-accent-foreground",
         className
       )}
       {...props}
     >
-      <div className="relative shrink-0">
-        {contact?.type === "group" ? (
-          <AvatarGroup className="-space-x-2">
-            {contact.group?.participants.slice(0, 3).map((p) => (
-              <Avatar
-                key={p.id}
-                className="h-10 w-10 border-2 border-background"
-              >
-                <AvatarFallback className="bg-primary text-[10px] font-medium text-primary-foreground">
-                  {p.name.slice(0, 1)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-          </AvatarGroup>
-        ) : (
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-primary font-medium text-primary-foreground">
-              {contact?.employee?.name.slice(0, 1)}
-            </AvatarFallback>
-          </Avatar>
-        )}
+      <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+        {renderStatusIndicator()}
       </div>
-
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-center justify-between">
-          <span className="truncate font-medium">
-            {contact?.type === "group"
-              ? contact.group?.name
-              : contact?.employee?.name}
+        <div className="relative flex items-center justify-between">
+          <span className="truncate font-medium text-sm"> {conversation.title}</span>
+          <span
+            className={cn(
+              "shrink-0 text-[10px] text-natural-500 transition-opacity group-hover:opacity-0",
+              menuOpen && "opacity-0"
+            )}
+          >
+            {getTimeAgo(conversation.updatedAt)}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">
-            {getTimeAgo(conversation.lastMessageTime)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-muted-foreground">
-            {conversation.lastMessage}
-          </span>
-          {conversation.unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="h-4 min-w-[1.25rem] rounded-full px-1.5 text-[10px] font-medium"
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  "absolute right-0 h-6 w-6 rounded-sm opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100",
+                 
+                )}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <IconDots className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-36"
+              onClick={(event) => event.stopPropagation()}
             >
-              {conversation.unreadCount}
-            </Badge>
-          )}
+              <DropdownMenuItem>
+                <IconPencil className="text-muted-foreground" />
+                <span>重命名</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <IconArchive className="text-muted-foreground" />
+                <span>归档</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive">
+                <IconTrash />
+                <span>删除</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

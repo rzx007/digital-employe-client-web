@@ -46,13 +46,13 @@ export function ChatLayout({
             </div>
 
             <Sheet open={showContacts} onOpenChange={setShowContacts}>
-              <SheetContent side="left" className="w-[280px] p-0">
+              <SheetContent side="left" className="w-64 p-0">
                 <ContactsSidebar />
               </SheetContent>
             </Sheet>
 
             <Sheet open={showConversations} onOpenChange={setShowConversations}>
-              <SheetContent side="left" className="w-[320px] p-0">
+              <SheetContent side="left" className="w-64 p-0">
                 <ConversationList />
               </SheetContent>
             </Sheet>

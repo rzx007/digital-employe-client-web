@@ -36,27 +36,21 @@ Note: No test framework is currently configured. When adding tests, set up Vites
 
 ### Imports
 
-Import order (grouped, sorted within groups):
-
-1. React and external packages
-2. Local components (`@/components/*` or `@workspace/ui/components/*`)
-3. Utils, hooks, types
+Import order (grouped, sorted within groups): React and external packages, local components, utils/hooks/types.
 
 ```typescript
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
-import { NavMain } from "@/components/nav-main"
 import { cn } from "@workspace/ui/lib/utils"
 ```
 
 ### Component Structure
 
-Components files start with `"use client"` directive at the top. Use named exports for both components and utilities.
+Use named exports. Add `"use client"` directive only for client-side interactivity.
 
 ```typescript
 "use client"
-
 import * as React from "react"
 
 export function MyComponent({ prop }: MyComponentProps) {
@@ -66,10 +60,7 @@ export function MyComponent({ prop }: MyComponentProps) {
 
 ### TypeScript
 
-- Strict mode enabled
-- Use `React.ComponentProps` for spreading native element props
-- Use `VariantProps` from class-variance-authority for variant types
-- Declare module augmentations in separate blocks
+Strict mode enabled. Use `React.ComponentProps` for spreading native element props. Use `VariantProps` from class-variance-authority for variant types.
 
 ```typescript
 function Button({
@@ -79,50 +70,34 @@ function Button({
 }: React.ComponentProps<"button"> & {
   variant?: "default" | "outline"
 }) {
-  // ...
-}
-
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router
-  }
+  return <button className={cn(variants({ variant, className }))} {...props} />
 }
 ```
 
 ### Styling with Tailwind CSS
 
-- Use `cn()` utility for merging Tailwind classes
-- Use `cva()` for component variants with class-variance-authority
-- Prefer data attributes over arbitrary values for theming
-- Use semantic class names from Tailwind v4
+Use `cn()` utility for merging Tailwind classes. Use `cva()` for component variants. Prefer data attributes over arbitrary values for theming.
 
 ```typescript
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@workspace/ui/lib/utils"
-
 const variants = cva("base-classes", {
   variants: {
     size: { default: "h-8", sm: "h-6" }
   },
   defaultVariants: { size: "default" }
 })
-
-export function MyComponent({ className, size, ...props }: MyComponentProps) {
-  return <div className={cn(variants({ size, className }))} {...props} />
-}
 ```
 
 ### Naming Conventions
 
 - **Components**: PascalCase (`AppSidebar`, `Button`)
-- **Hooks**: camelCase with `use` prefix (`useIsMobile`, `useEffect`)
+- **Hooks**: camelCase with `use` prefix (`useIsMobile`)
 - **Utilities**: camelCase (`cn`, `formatDate`)
 - **Constants**: UPPER_SNAKE_CASE (`MOBILE_BREAKPOINT`)
 - **Interfaces/Types**: PascalCase (`ButtonProps`, `VariantProps`)
 
 ### Error Handling
 
-When fetching data with TanStack Query, handle errors in error boundaries or use the `useErrorBoundary` hook. Component errors should use error boundaries.
+Use error boundaries for component errors. For TanStack Query, use `useErrorBoundary` hook or error boundaries.
 
 ### Formatting
 
@@ -136,11 +111,7 @@ Running `turbo format` applies Prettier automatically. The codebase uses prettie
 
 ### ESLint & TypeScript
 
-Run `turbo typecheck` before committing. The project uses TypeScript ESLint with:
-
-- `typescript-eslint` for TypeScript rules
-- `eslint-plugin-react-hooks` for React hooks rules
-- `eslint-plugin-react-refresh` for fast refresh in Vite
+Run `turbo typecheck` before committing. Uses TypeScript ESLint with `typescript-eslint`, `eslint-plugin-react-hooks`, and `eslint-plugin-react-refresh`.
 
 Always run `turbo lint` and `turbo typecheck` to ensure code quality.
 
@@ -152,6 +123,28 @@ Always run `turbo lint` and `turbo typecheck` to ensure code quality.
 - **Icons**: Tabler Icons via `@tabler/icons-react`
 - **Styling**: Tailwind CSS v4, class-variance-authority
 - **Utilities**: clsx, tailwind-merge, ahooks
+
+### Radix UI Patterns
+
+Use the `asChild` pattern for composability when rendering Radix UI components as custom elements:
+
+```typescript
+<Button asChild>
+  <Link to="/path">Click me</Link>
+</Button>
+```
+
+### TanStack Router
+
+Define routes using `createFileRoute`:
+
+```typescript
+import { createFileRoute } from "@tanstack/react-router"
+
+export const Route = createFileRoute("/")({
+  component: Index,
+})
+```
 
 ### Workspace Package Usage
 

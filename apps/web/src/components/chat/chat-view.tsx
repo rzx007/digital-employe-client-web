@@ -16,6 +16,7 @@ import {
 import {
   PromptInput,
   PromptInputBody,
+  PromptInputFooter,
   PromptInputTextarea,
   PromptInputSubmit,
   PromptInputTools,
@@ -196,6 +197,8 @@ export function ChatView({
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="输入消息..."
                 />
+              </PromptInputBody>
+              <PromptInputFooter>
                 <PromptInputTools>
                   <PromptInputButton
                     variant="ghost"
@@ -204,9 +207,9 @@ export function ChatView({
                   >
                     📎
                   </PromptInputButton>
-                  <PromptInputSubmit variant="default" />
                 </PromptInputTools>
-              </PromptInputBody>
+                <PromptInputSubmit variant="default" />
+              </PromptInputFooter>
             </PromptInput>
           </div>
         </>

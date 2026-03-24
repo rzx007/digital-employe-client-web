@@ -25,6 +25,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "陈小红",
     role: "HR经理",
     status: "online",
+    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Alice",
     specialty: "员工关系、福利政策、招聘流程",
   },
   {
@@ -32,6 +33,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "王大明",
     role: "首席工程师",
     status: "busy",
+    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Bob",
     specialty: "技术架构、代码审查、基础设施",
   },
   {
@@ -39,6 +41,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "李晓琳",
     role: "产品设计师",
     status: "online",
+    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Charlie",
     specialty: "UX设计、用户研究、原型制作",
   },
   {
@@ -46,6 +49,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "赵伟",
     role: "营销总监",
     status: "offline",
+    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=David",
     specialty: "品牌策略、营销活动、数据分析",
   },
 ]
@@ -63,6 +67,7 @@ export const AI_GROUPS = [
     id: "group-product",
     name: "产品讨论群",
     participants: [
+      AI_EMPLOYEES[1], // 王大明
       AI_EMPLOYEES[2], // 李晓琳
       AI_EMPLOYEES[0], // 陈小红
     ],
