@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
@@ -23,7 +23,7 @@ interface EnvironmentVariablesContextType {
 
 // Default noop for context default value
 // oxlint-disable-next-line eslint(no-empty-function)
-const noop = () => {};
+const noop = () => { };
 
 const EnvironmentVariablesContext =
   createContext<EnvironmentVariablesContextType>({

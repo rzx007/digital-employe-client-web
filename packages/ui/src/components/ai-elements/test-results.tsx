@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Badge } from "@workspace/ui/components/badge";
 import {

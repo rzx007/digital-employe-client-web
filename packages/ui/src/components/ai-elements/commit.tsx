@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";

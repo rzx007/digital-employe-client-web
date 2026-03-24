@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Badge } from "@workspace/ui/components/badge";
 import type { CarouselApi } from "@workspace/ui/components/carousel";

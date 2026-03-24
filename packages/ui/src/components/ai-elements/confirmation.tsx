@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
@@ -9,30 +9,30 @@ import { createContext, useContext, useMemo } from "react";
 
 type ToolUIPartApproval =
   | {
-      id: string;
-      approved?: never;
-      reason?: never;
-    }
+    id: string;
+    approved?: never;
+    reason?: never;
+  }
   | {
-      id: string;
-      approved: boolean;
-      reason?: string;
-    }
+    id: string;
+    approved: boolean;
+    reason?: string;
+  }
   | {
-      id: string;
-      approved: true;
-      reason?: string;
-    }
+    id: string;
+    approved: true;
+    reason?: string;
+  }
   | {
-      id: string;
-      approved: true;
-      reason?: string;
-    }
+    id: string;
+    approved: true;
+    reason?: string;
+  }
   | {
-      id: string;
-      approved: false;
-      reason?: string;
-    }
+    id: string;
+    approved: false;
+    reason?: string;
+  }
   | undefined;
 
 interface ConfirmationContextValue {

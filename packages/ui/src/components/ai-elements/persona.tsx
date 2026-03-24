@@ -1,4 +1,4 @@
-"use client";
+
 
 import { cn } from "@workspace/ui/lib/utils";
 import type { RiveParameters } from "@rive-app/react-webgl2";
@@ -254,16 +254,16 @@ export const Persona: FC<PersonaProps> = memo(
     const { rive, RiveComponent } = useRive(
       ready
         ? {
-            autoplay: true,
-            onLoad: stableCallbacks.onLoad,
-            onLoadError: stableCallbacks.onLoadError,
-            onPause: stableCallbacks.onPause,
-            onPlay: stableCallbacks.onPlay,
-            onRiveReady: stableCallbacks.onReady,
-            onStop: stableCallbacks.onStop,
-            src: source.source,
-            stateMachines: stateMachine,
-          }
+          autoplay: true,
+          onLoad: stableCallbacks.onLoad,
+          onLoadError: stableCallbacks.onLoadError,
+          onPause: stableCallbacks.onPause,
+          onPlay: stableCallbacks.onPlay,
+          onRiveReady: stableCallbacks.onReady,
+          onStop: stableCallbacks.onStop,
+          src: source.source,
+          stateMachines: stateMachine,
+        }
         : null
     );
 

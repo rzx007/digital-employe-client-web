@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -68,11 +68,11 @@ export const AudioPlayer = ({
 export type AudioPlayerElementProps = Omit<ComponentProps<"audio">, "src"> &
   (
     | {
-        data: SpeechResult["audio"];
-      }
+      data: SpeechResult["audio"];
+    }
     | {
-        src: string;
-      }
+      src: string;
+    }
   );
 
 export const AudioPlayerElement = ({ ...props }: AudioPlayerElementProps) => (

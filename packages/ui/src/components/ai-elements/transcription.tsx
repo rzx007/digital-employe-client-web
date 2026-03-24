@@ -1,4 +1,4 @@
-"use client";
+
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { cn } from "@workspace/ui/lib/utils";

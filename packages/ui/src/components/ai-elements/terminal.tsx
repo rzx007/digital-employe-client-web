@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";

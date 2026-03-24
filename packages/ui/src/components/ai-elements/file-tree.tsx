@@ -1,4 +1,4 @@
-"use client";
+
 
 import {
   Collapsible,
@@ -30,7 +30,7 @@ interface FileTreeContextType {
 
 // Default noop for context default value
 // oxlint-disable-next-line eslint(no-empty-function)
-const noop = () => {};
+const noop = () => { };
 
 const FileTreeContext = createContext<FileTreeContextType>({
   // oxlint-disable-next-line eslint-plugin-unicorn(no-new-builtin)
