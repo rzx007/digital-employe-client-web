@@ -1,5 +1,3 @@
-
-
 import * as React from "react"
 
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
@@ -7,10 +5,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { CONVERSATIONS } from "@/lib/mock-data/conversations"
 import { getConversationsByContactId } from "@/lib/mock-data/conversations"
 import { getContactById } from "@/lib/mock-data/ai-employees"
-import {
-  EmployeeContactAvatar,
-  GroupMembersAvatar,
-} from "./contact-avatars"
+import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { Button } from "@workspace/ui/components/button"
 import { IconCirclePlus } from "@tabler/icons-react"
 
@@ -54,7 +49,11 @@ export function ConversationList({
 
   return (
     <div
-      className={cn("flex  flex-col border-r bg-muted/50", isMobile ? "w-full h-full" : "w-[320px]", className)}
+      className={cn(
+        "flex flex-col border-r bg-muted/50",
+        isMobile ? "h-full w-full" : "w-[320px]",
+        className
+      )}
       {...props}
     >
       <div className="flex items-center justify-between border-b px-4 py-3">
@@ -89,7 +88,7 @@ export function ConversationList({
         ) : (
           <h2 className="text-sm font-medium">最近消息</h2>
         )}
-        <Button
+        {/* <Button
           variant="ghost"
           size="icon-sm"
           onClick={() => {
@@ -99,8 +98,19 @@ export function ConversationList({
           }}
         >
           <IconCirclePlus className="size-4" />
-        </Button>
+        </Button> */}
       </div>
+      <Button
+        className="m-2"
+        variant="outline"
+        onClick={() => {
+          if (setSelectedConversationId) {
+            setSelectedConversationId(null)
+          }
+        }}
+      >
+          <IconCirclePlus className="size-4" />新建会话
+      </Button>
 
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-2">
