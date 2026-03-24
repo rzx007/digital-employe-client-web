@@ -37,6 +37,10 @@ import { getConversationById } from "@/lib/mock-data/conversations"
 import { getContactById } from "@/lib/mock-data/ai-employees"
 import { getEmployeeById } from "@/lib/mock-data/ai-employees"
 import { IconDots, IconMessages, IconUsers } from "@tabler/icons-react"
+import { ChatPromptInput } from "../chat-prompt-input"
+import { useCallback, useMemo } from "react"
+import type { PromptChangeEvent } from "../lexical-editor/prompt-input-textarea"
+import { toast } from "sonner"
 
 export function ChatView({
   selectedConversationId,
@@ -52,22 +56,51 @@ export function ChatView({
   onOpenConversations?: () => void
 }) {
   const [inputValue, setInputValue] = React.useState("")
+  const [status, setStatus] = React.useState<
+    "submitted" | "streaming" | "ready" | "error"
+  >()
   const conversation = getConversationById(selectedConversationId || "")
   const contact = getContactById(selectedContactId || "")
   const messages = MOCK_MESSAGES[selectedConversationId || ""] || []
+
+  const handleTextChange = useCallback(
+    (event: PromptChangeEvent) => {
+      console.log("handleTextChange", event)
+      setInputValue(event.value)
+    },
+    [setInputValue]
+  )
 
   const formatTime = (date: Date) => {
     return format(date, "HH:mm", { locale: zhCN })
   }
 
-  const handleSendMessage = async (
-    message: PromptInputMessage,
-    event: React.FormEvent
-  ) => {
-    event.preventDefault()
-    console.log("发送消息:", message.text)
-    setInputValue("")
-  }
+  const isSubmitDisabled = useMemo(
+    () => !(inputValue.trim() || status) || status === "streaming",
+    [inputValue, status]
+  )
+
+  const handleSendMessage = useCallback(
+    (message: PromptInputMessage) => {
+      console.log("handleSubmit", message)
+      const hasText = Boolean(message.text)
+      const hasAttachments = Boolean(message.files?.length)
+
+      if (!(hasText || hasAttachments)) {
+        return
+      }
+
+      if (message.files?.length) {
+        toast.success("Files attached", {
+          description: `${message.files.length} file(s) attached to message`,
+        })
+      }
+
+      console.log("发送消息:", { text: message.text })
+      setInputValue("")
+    },
+    [setInputValue]
+  )
 
   return (
     <div
@@ -190,7 +223,16 @@ export function ChatView({
           </Conversation>
 
           <div className="border-t p-4">
-            <PromptInput onSubmit={handleSendMessage}>
+            <ChatPromptInput
+              value={inputValue}
+              onChange={handleTextChange}
+              onSubmit={handleSendMessage}
+              status={status as "submitted" | "streaming" | "ready" | "error"}
+              disabled={isSubmitDisabled}
+              size="compact"
+              className="w-full overflow-hidden"
+            />
+            {/* <PromptInput onSubmit={handleSendMessage}>
               <PromptInputBody>
                 <PromptInputTextarea
                   value={inputValue}
@@ -210,7 +252,7 @@ export function ChatView({
                 </PromptInputTools>
                 <PromptInputSubmit variant="default" />
               </PromptInputFooter>
-            </PromptInput>
+            </PromptInput> */}
           </div>
         </>
       )}
