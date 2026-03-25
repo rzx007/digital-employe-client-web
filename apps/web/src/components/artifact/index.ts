@@ -1,7 +1,4 @@
-export {
-  ArtifactPreview,
-  type ArtifactPreviewProps,
-} from "./artifact-preview"
+export { ArtifactPreview, type ArtifactPreviewProps } from "./artifact-preview"
 export { ArtifactPanel, type ArtifactPanelProps } from "./artifact-panel"
 export {
   ArtifactHeader,
@@ -25,8 +22,4 @@ export {
   ImageRenderer,
   type ImageRendererProps,
 } from "./artifact-content/image-renderer"
-export type {
-  Artifact,
-  ArtifactType,
-  ArtifactMetadata,
-} from "./artifact-types"
+export type { Artifact, ArtifactType, ArtifactMetadata } from "./artifact-types"

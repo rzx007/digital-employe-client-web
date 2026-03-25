@@ -1,5 +1,3 @@
-
-
 import { Button } from "@workspace/ui/components/button"
 import {
   Tooltip,
@@ -88,9 +86,7 @@ export const ArtifactHeader = ({
 
   return (
     <div
-      className={cn(
-        "flex items-center gap-2 border-b bg-muted/50 px-4 py-3",
-      )}
+      className={cn("flex items-center gap-2 border-b bg-muted/50 px-4 py-3")}
     >
       <div className="flex-1">
         <h2 className="text-sm font-medium">{artifact.title}</h2>

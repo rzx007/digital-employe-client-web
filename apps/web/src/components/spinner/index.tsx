@@ -12,7 +12,13 @@ const squares = Array.from({ length: 16 }, (_, i) => ({
   corner: cornerIndices.has(i),
 }))
 
-export function Spinner({ className, style }: { className?: string; style?: React.CSSProperties }) {
+export function Spinner({
+  className,
+  style,
+}: {
+  className?: string
+  style?: React.CSSProperties
+}) {
   return (
     <svg
       viewBox="0 0 15 15"

@@ -32,8 +32,10 @@ import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { MOCK_MESSAGES } from "@/lib/mock-data/messages"
 import { getConversationById } from "@/lib/mock-data/conversations"
-import { getContactById } from "@/lib/mock-data/ai-employees"
-import { getEmployeeById } from "@/lib/mock-data/ai-employees"
+import {
+  getContactById,
+  getPeerProfileById,
+} from "@/lib/mock-data/ai-employees"
 import { IconDots, IconMessages, IconUsers } from "@tabler/icons-react"
 import { ChatPromptInput } from "../chat-prompt-input"
 import { useCallback, useMemo } from "react"
@@ -157,6 +159,22 @@ export function ChatView({
                     </p>
                   </div>
                 </>
+              ) : contact.type === "curator" ? (
+                <>
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-xs font-medium text-primary-foreground">
+                      {contact.curator?.name.slice(0, 1)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-sm font-medium">
+                      {contact.curator?.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {contact.curator?.role}
+                    </p>
+                  </div>
+                </>
               ) : (
                 <>
                   <Avatar className="h-8 w-8">
@@ -189,7 +207,7 @@ export function ChatView({
                 />
               ) : (
                 messages.map((message) => {
-                  const employee = getEmployeeById(message.senderId)
+                  const sender = getPeerProfileById(message.senderId)
                   const meta = message.metadata ?? ({} as any)
                   const hasArtifact = meta?.artifactToolCallId && meta?.artifact
                   const handleOpenArtifact = () => {
@@ -199,15 +217,15 @@ export function ChatView({
                   }
                   return (
                     <Message key={message.id} from={message.role}>
-                      {message.role === "assistant" && employee && (
+                      {message.role === "assistant" && sender && (
                         <div className="mb-2 flex items-center gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="bg-primary text-[10px] font-medium text-primary-foreground">
-                              {employee.name.slice(0, 1)}
+                              {sender.name.slice(0, 1)}
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-xs text-muted-foreground">
-                            {employee.name}
+                            {sender.name}
                           </span>
                         </div>
                       )}

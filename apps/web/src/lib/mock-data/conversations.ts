@@ -66,7 +66,7 @@ export const CONVERSATIONS: Conversation[] = [
     contactId: "group-product", // 产品讨论群
     status: "running",
     lastMessage: "陈小红: 你看看你干的是什么",
-    lastMessageTime: new Date(Date.now() - 10 * 60 * 1000), 
+    lastMessageTime: new Date(Date.now() - 10 * 60 * 1000),
     lastMessageType: "text",
     unreadCount: 0,
     updatedAt: new Date(Date.now() - 10 * 60 * 1000),

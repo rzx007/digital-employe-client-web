@@ -1,5 +1,3 @@
-
-
 import { useState, useCallback, type ClipboardEventHandler } from "react"
 import {
   useOptionalPromptInputController,
@@ -42,7 +40,8 @@ function getEditorCommandAndValue(): PromptChangeEvent {
   for (const child of topLevelChildren) {
     // 只关心段落等元素里的第一个命令 Pill
     // @ts-expect-error Lexical 节点在运行时有 getChildren
-    const grandChildren = typeof child.getChildren === "function" ? child.getChildren() : []
+    const grandChildren =
+      typeof child.getChildren === "function" ? child.getChildren() : []
     for (const node of grandChildren as unknown as CommandPillNode[]) {
       if ($isCommandPillNode(node)) {
         const latest = node.getLatest() as CommandPillNode
@@ -83,26 +82,28 @@ function OnChangePlugin({
   const isUpdatingRef = useRef(false)
 
   useEffect(() => {
-    return editor.registerUpdateListener(
-      ({ editorState }) => {
-        // 只更新外部状态，如果更新来自用户输入，而不是外部属性
-        if (isUpdatingRef.current) {
-          return
-        }
-
-        editorState.read(() => {
-          const { value: nextValue, rawValue, command } = getEditorCommandAndValue()
-
-          if (nextValue !== value && onChange) {
-            onChange({
-              value: nextValue,
-              rawValue,
-              command,
-            })
-          }
-        })
+    return editor.registerUpdateListener(({ editorState }) => {
+      // 只更新外部状态，如果更新来自用户输入，而不是外部属性
+      if (isUpdatingRef.current) {
+        return
       }
-    )
+
+      editorState.read(() => {
+        const {
+          value: nextValue,
+          rawValue,
+          command,
+        } = getEditorCommandAndValue()
+
+        if (nextValue !== value && onChange) {
+          onChange({
+            value: nextValue,
+            rawValue,
+            command,
+          })
+        }
+      })
+    })
   }, [editor, onChange, value])
 
   useEffect(() => {
@@ -331,7 +332,12 @@ export function LexicalPromptInputTextarea({
     <LexicalComposer initialConfig={initialConfig}>
       {/* 隐藏输入框来同步值到原生表单数据，如果未使用 PromptInputController */}
       {!controller && (
-        <input type="hidden" name="message" ref={hiddenInputRef} value={value} />
+        <input
+          type="hidden"
+          name="message"
+          ref={hiddenInputRef}
+          value={value}
+        />
       )}
       <div
         className={cn("relative flex w-full flex-1 flex-col", className)}

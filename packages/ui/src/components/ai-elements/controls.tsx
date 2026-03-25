@@ -1,10 +1,8 @@
+import { cn } from "@workspace/ui/lib/utils"
+import { Controls as ControlsPrimitive } from "@xyflow/react"
+import type { ComponentProps } from "react"
 
-
-import { cn } from "@workspace/ui/lib/utils";
-import { Controls as ControlsPrimitive } from "@xyflow/react";
-import type { ComponentProps } from "react";
-
-export type ControlsProps = ComponentProps<typeof ControlsPrimitive>;
+export type ControlsProps = ComponentProps<typeof ControlsPrimitive>
 
 export const Controls = ({ className, ...props }: ControlsProps) => (
   <ControlsPrimitive
@@ -15,4 +13,4 @@ export const Controls = ({ className, ...props }: ControlsProps) => (
     )}
     {...props}
   />
-);
+)

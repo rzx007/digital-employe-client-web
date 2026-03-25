@@ -13,7 +13,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@workspace/ui/components/sidebar"
-import { Link } from '@tanstack/react-router'
+import { Link } from "@tanstack/react-router"
 import { IconChevronRight } from "@tabler/icons-react"
 
 export function NavMain({
@@ -33,7 +33,6 @@ export function NavMain({
 }) {
   return (
     <SidebarGroup>
-
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible key={item.title} asChild defaultOpen={true}>

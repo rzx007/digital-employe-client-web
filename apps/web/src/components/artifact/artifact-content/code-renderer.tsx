@@ -1,5 +1,3 @@
-
-
 import { MessageResponse } from "@workspace/ui/components/ai-elements/message"
 import { cn } from "@workspace/ui/lib/utils"
 import type { Artifact } from "../artifact-types"

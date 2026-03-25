@@ -1,5 +1,3 @@
-
-
 import { useCallback, useState, useMemo } from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import {
@@ -7,7 +5,12 @@ import {
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from "@lexical/react/LexicalTypeaheadMenuPlugin"
-import { TextNode, $createTextNode, $getSelection, $isRangeSelection } from "lexical"
+import {
+  TextNode,
+  $createTextNode,
+  $getSelection,
+  $isRangeSelection,
+} from "lexical"
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "@workspace/ui/lib/utils"
@@ -17,13 +20,19 @@ import {
   CommandItem,
   CommandList,
 } from "@workspace/ui/components/command"
-import { IconGlobe, IconBolt, IconTerminal, IconFileText, IconCode } from "@tabler/icons-react"
+import {
+  IconGlobe,
+  IconBolt,
+  IconTerminal,
+  IconFileText,
+  IconCode,
+} from "@tabler/icons-react"
 import { $createCommandPillNode } from "./command-pill-node"
 
 class SlashCommandOption extends MenuOption {
   id: string
   title: string
-  icon: React.ReactElement 
+  icon: React.ReactElement
   description: string
   keywords: Array<string>
   onSelect: (queryString: string) => void
@@ -72,7 +81,8 @@ function FloatingMenu({
     // after Lexical finishes its selection rendering.
     const timeoutId = setTimeout(() => {
       if (anchorElementRef.current) {
-        const { top, left, bottom } = anchorElementRef.current.getBoundingClientRect()
+        const { top, left, bottom } =
+          anchorElementRef.current.getBoundingClientRect()
         setRect({ top, left, bottom })
       }
     }, 10)
@@ -91,7 +101,7 @@ function FloatingMenu({
 
   return createPortal(
     <div
-      className="z-50 max-w-2xl overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+      className="z-50 max-w-2xl animate-in overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md fade-in-0 zoom-in-95"
       style={{
         position: "fixed",
         top: topPosition,
@@ -112,7 +122,7 @@ function FloatingMenu({
                   selectOptionAndCleanUp(option)
                 }}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 p-2 hover:bg-accent hover:text-accent-foreground rounded-sm",
+                  "flex cursor-pointer items-center gap-2 rounded-sm p-2 hover:bg-accent hover:text-accent-foreground",
                   selectedIndex === i && "bg-accent text-accent-foreground"
                 )}
                 onMouseEnter={() => {
@@ -126,7 +136,7 @@ function FloatingMenu({
                   {option.icon}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium leading-none">
+                  <span className="text-sm leading-none font-medium">
                     {option.title}
                   </span>
                   <span className="text-xs text-muted-foreground">

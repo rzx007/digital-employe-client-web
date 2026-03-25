@@ -1,13 +1,8 @@
-
-
 import * as React from "react"
 
 import { cn } from "@workspace/ui/lib/utils"
 import type { Contact } from "@/lib/mock-data/ai-employees"
-import {
-  EmployeeContactAvatar,
-  GroupMembersAvatar,
-} from "./contact-avatars"
+import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { useChatContext } from "./chat-context"
 
 interface ContactItemProps extends React.ComponentProps<"div"> {
@@ -23,7 +18,11 @@ export function ContactItem({
 }: ContactItemProps) {
   const { selectedContactId, setSelectedContactId } = useChatContext()
   const contactId =
-    contact.type === "employee" ? contact.employee?.id : contact.group?.id
+    contact.type === "curator"
+      ? contact.curator?.id
+      : contact.type === "employee"
+        ? contact.employee?.id
+        : contact.group?.id
   const isSelected = selectedContactId === contactId
 
   const handleClick = () => {
@@ -53,6 +52,41 @@ export function ContactItem({
             <span className="truncate font-medium">{contact.group?.name}</span>
             <span className="truncate text-muted-foreground">
               {contact.group?.participants.length} 位成员
+            </span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (contact.type === "curator") {
+    return (
+      <div
+        className={cn(
+          "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
+          isSelected && "bg-accent text-accent-foreground",
+          className
+        )}
+        {...props}
+        onClick={handleClick}
+      >
+        <div className="relative shrink-0">
+          <EmployeeContactAvatar
+            name={contact.curator?.name}
+            avatar={contact.curator?.avatar}
+            status={contact.curator?.status}
+            showStatus
+            avatarClassName="h-10 w-10"
+            statusClassName="h-2.5 w-2.5"
+          />
+        </div>
+        {!isCollapsed && (
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate font-medium">
+              {contact.curator?.name}
+            </span>
+            <span className="truncate text-muted-foreground">
+              {contact.curator?.role}
             </span>
           </div>
         )}

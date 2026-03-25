@@ -1,5 +1,3 @@
-
-
 import { motion, AnimatePresence } from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
 import { ArtifactHeader } from "./artifact-header"

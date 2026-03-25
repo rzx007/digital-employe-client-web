@@ -96,7 +96,7 @@ export function GroupMembersAvatar({
         <div
           key={`placeholder-${index}`}
           className={cn(
-            "h-4 w-4 rounded-none border  bg-border",
+            "h-4 w-4 rounded-none border bg-border",
             placeholderClassName
           )}
         />

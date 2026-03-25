@@ -1,5 +1,3 @@
-
-
 import { cn } from "@workspace/ui/lib/utils"
 import type { Artifact } from "../artifact-types"
 

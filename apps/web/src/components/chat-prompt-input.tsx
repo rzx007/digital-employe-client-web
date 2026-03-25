@@ -1,5 +1,3 @@
-
-
 import { useState, useCallback, useMemo } from "react"
 import type { FileUIPart } from "ai"
 import {
@@ -154,22 +152,20 @@ export function ChatPromptInput({
 
   return (
     <div className={className}>
-      <PromptInput
-        globalDrop
-        multiple
-        onSubmit={onSubmit}
-        className=""
-      >
+      <PromptInput globalDrop multiple onSubmit={onSubmit} className="">
         <PromptInputHeader>
           <PromptInputAttachmentsDisplay />
         </PromptInputHeader>
-        <PromptInputBody className={isCompact ? "min-h-[60px]" : "min-h-[100px]"}>
+        <PromptInputBody
+          className={isCompact ? "min-h-[60px]" : "min-h-[100px]"}
+        >
           <LexicalPromptInputTextarea
             onChange={onChange}
             value={value}
             placeholder={placeholder}
-            className={`resize-none placeholder:text-muted-foreground/60 ${isCompact ? "min-h-[60px] text-base" : "min-h-28 text-lg"
-              }`}
+            className={`resize-none placeholder:text-muted-foreground/60 ${
+              isCompact ? "min-h-[60px] text-base" : "min-h-28 text-lg"
+            }`}
           />
         </PromptInputBody>
         <PromptInputFooter>
@@ -221,7 +217,7 @@ export function ChatPromptInput({
             <PromptInputSubmit
               disabled={disabled}
               status={status}
-              className=" bg-primary/80 transition-colors hover:bg-primary"
+              className="bg-primary/80 transition-colors hover:bg-primary"
             />
           </PromptInputTools>
         </PromptInputFooter>

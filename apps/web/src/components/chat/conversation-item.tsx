@@ -1,6 +1,11 @@
 import * as React from "react"
 
-import { IconArchive, IconDots, IconPencil, IconTrash } from "@tabler/icons-react"
+import {
+  IconArchive,
+  IconDots,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react"
 import { Button } from "@workspace/ui/components/button"
 import {
   DropdownMenu,
@@ -38,7 +43,12 @@ export function ConversationItem({
 
   const renderStatusIndicator = () => {
     if (conversation.status === "running") {
-      return <Spinner className="size-3.5 text-purple-500" style={{ color: "#8B5CF6" }} />
+      return (
+        <Spinner
+          className="size-3.5 text-purple-500"
+          style={{ color: "#8B5CF6" }}
+        />
+      )
     }
     if (conversation.status === "error") {
       return <div className="size-1.5 rounded-full bg-destructive" />
@@ -65,10 +75,13 @@ export function ConversationItem({
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="relative flex items-center justify-between">
-          <span className="truncate font-medium text-sm"> {conversation.title}</span>
+          <span className="truncate text-sm font-medium">
+            {" "}
+            {conversation.title}
+          </span>
           <span
             className={cn(
-              "shrink-0 text-[10px] text-natural-500 transition-opacity group-hover:opacity-0",
+              "text-natural-500 shrink-0 text-[10px] transition-opacity group-hover:opacity-0",
               menuOpen && "opacity-0"
             )}
           >
@@ -80,8 +93,7 @@ export function ConversationItem({
                 variant="ghost"
                 size="icon-sm"
                 className={cn(
-                  "absolute right-0 h-6 w-6 rounded-sm opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100",
-                 
+                  "absolute right-0 h-6 w-6 rounded-sm opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
                 )}
                 onClick={(event) => event.stopPropagation()}
               >

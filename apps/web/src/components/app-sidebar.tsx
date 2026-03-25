@@ -1,7 +1,5 @@
-
-
 import * as React from "react"
-import { Link } from '@tanstack/react-router'
+import { Link } from "@tanstack/react-router"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
@@ -37,7 +35,6 @@ import {
   IconFileText,
   IconSubtitlesAi,
 } from "@tabler/icons-react"
-
 
 const data = {
   user: {

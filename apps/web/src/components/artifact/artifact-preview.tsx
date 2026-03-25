@@ -1,5 +1,3 @@
-
-
 import { motion } from "motion/react"
 import {
   IconArrowDown,
@@ -45,25 +43,43 @@ export const ArtifactPreview = ({
     <motion.div
       onClick={onClick}
       className={cn(
-        "group flex cursor-pointer items-center gap-3 rounded-xl border border-border/70 bg-background p-5 transition-colors hover:shadow-md overflow-hidden max-w-90 relative",
+        "group relative flex max-w-90 cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border/70 bg-background p-5 transition-colors hover:shadow-md",
         className
       )}
       {...props}
     >
-      <img src='/doc-grid.png' alt={artifact.title} width={120} height={110} className="absolute top-1 -left-1" />
-      <div className="space-y-2 mr-32">
+      <img
+        src="/doc-grid.png"
+        alt={artifact.title}
+        width={120}
+        height={110}
+        className="absolute top-1 -left-1"
+      />
+      <div className="mr-32 space-y-2">
         <Icon className="h-5 w-5 text-primary/70" />
         <div className="flex flex-col gap-1">
-          <p className="text-base text-secondary-foreground/75">{artifact.title}</p>
+          <p className="text-base text-secondary-foreground/75">
+            {artifact.title}
+          </p>
           <p className="text-xs font-thin text-muted-foreground">
             {typeLabels[artifact.type]}
           </p>
         </div>
       </div>
-      <div className="h-35 absolute -right-1 top-6 w-34 rounded-xl shadow-md bg-background border border-border/60 transition-transform group-hover:-rotate-5">
-        <img src='/doc-canvas-card-fallback.png' alt={artifact.title} width={100} height={100} className="object-cover w-full h-full" />
+      <div className="absolute top-6 -right-1 h-35 w-34 rounded-xl border border-border/60 bg-background shadow-md transition-transform group-hover:-rotate-5">
+        <img
+          src="/doc-canvas-card-fallback.png"
+          alt={artifact.title}
+          width={100}
+          height={100}
+          className="h-full w-full object-cover"
+        />
       </div>
-      <Button size="icon" variant="outline" className="size-8 p-0 absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
+      <Button
+        size="icon"
+        variant="outline"
+        className="absolute right-4 bottom-4 size-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+      >
         <IconArrowDown className="size-4" />
       </Button>
     </motion.div>

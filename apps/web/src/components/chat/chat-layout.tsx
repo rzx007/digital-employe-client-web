@@ -1,10 +1,9 @@
-
-
 import * as React from "react"
 
 import { Sheet, SheetContent } from "@workspace/ui/components/sheet"
 import { cn } from "@workspace/ui/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { DEFAULT_SELECTED_CONTACT_ID } from "@/lib/mock-data/ai-employees"
 import { ContactsSidebar } from "./contacts-sidebar"
 import { ConversationList } from "./conversation-list"
 import { ChatView } from "./chat-view"
@@ -19,7 +18,7 @@ export function ChatLayout({
   >(null)
   const [selectedContactId, setSelectedContactId] = React.useState<
     string | null
-  >(null)
+  >(DEFAULT_SELECTED_CONTACT_ID)
   const [showContacts, setShowContacts] = React.useState(false)
   const [showConversations, setShowConversations] = React.useState(false)
   const isMobile = useIsMobile()

@@ -25,7 +25,7 @@ function CommandPillComponent({ commandTitle }: { commandTitle: string }) {
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-[calc(var(--radius)-3px)] bg-primary/45 px-1.5 py-0.5 text-sm font-medium text-primary-foreground",
-        "select-none align-middle"
+        "align-middle select-none"
       )}
       contentEditable={false}
     >
@@ -43,7 +43,11 @@ export class CommandPillNode extends DecoratorNode<JSX.Element> {
   }
 
   static clone(node: CommandPillNode): CommandPillNode {
-    return new CommandPillNode(node.__commandId, node.__commandTitle, node.__key)
+    return new CommandPillNode(
+      node.__commandId,
+      node.__commandTitle,
+      node.__key
+    )
   }
 
   constructor(commandId: string, commandTitle: string, key?: NodeKey) {
@@ -87,7 +91,9 @@ export class CommandPillNode extends DecoratorNode<JSX.Element> {
     return { element }
   }
 
-  static importJSON(serializedNode: SerializedCommandPillNode): CommandPillNode {
+  static importJSON(
+    serializedNode: SerializedCommandPillNode
+  ): CommandPillNode {
     const node = $createCommandPillNode(
       serializedNode.commandId,
       serializedNode.commandTitle

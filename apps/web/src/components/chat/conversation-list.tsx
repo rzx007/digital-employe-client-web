@@ -64,6 +64,13 @@ export function ConversationList({
                 participants={selectedContact.group?.participants}
                 className="h-8 w-8"
               />
+            ) : selectedContact.type === "curator" ? (
+              <EmployeeContactAvatar
+                name={selectedContact.curator?.name}
+                avatar={selectedContact.curator?.avatar}
+                status={selectedContact.curator?.status}
+                showStatus
+              />
             ) : (
               <EmployeeContactAvatar
                 name={selectedContact.employee?.name}
@@ -76,12 +83,16 @@ export function ConversationList({
               <h2 className="truncate text-sm font-medium">
                 {selectedContact.type === "group"
                   ? selectedContact.group?.name
-                  : selectedContact.employee?.name}
+                  : selectedContact.type === "curator"
+                    ? selectedContact.curator?.name
+                    : selectedContact.employee?.name}
               </h2>
               <p className="truncate text-xs text-muted-foreground">
                 {selectedContact.type === "group"
                   ? `${selectedContact.group?.participants.length ?? 0} 位成员`
-                  : selectedContact.employee?.role}
+                  : selectedContact.type === "curator"
+                    ? selectedContact.curator?.role
+                    : selectedContact.employee?.role}
               </p>
             </div>
           </div>
@@ -109,7 +120,8 @@ export function ConversationList({
           }
         }}
       >
-          <IconCirclePlus className="size-4" />新建会话
+        <IconCirclePlus className="size-4" />
+        新建会话
       </Button>
 
       <ScrollArea className="flex-1">

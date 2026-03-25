@@ -9,12 +9,13 @@ import {
   IconChevronRight,
 } from "@tabler/icons-react"
 import { cn } from "@workspace/ui/lib/utils"
-import { CONTACTS, type AIEmployee } from "@/lib/mock-data/ai-employees"
-
 import {
-  EmployeeContactAvatar,
-  GroupMembersAvatar,
-} from "./contact-avatars"
+  CONTACTS,
+  PRIMARY_CURATOR,
+  type AIEmployee,
+} from "@/lib/mock-data/ai-employees"
+
+import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { useChatContext } from "./chat-context"
 
@@ -40,6 +41,9 @@ export function ContactsSidebar({
     []
   )
 
+  const curatorId = PRIMARY_CURATOR.id
+  const isCuratorSelected = selectedContactId === curatorId
+
   return (
     <>
       <CreateGroupDialog
@@ -49,7 +53,7 @@ export function ContactsSidebar({
       />
       <div
         className={cn(
-          "h-full flex flex-col border-r bg-muted/50 transition-all duration-300",
+          "flex h-full flex-col border-r bg-muted/50 transition-all duration-300",
           isCollapsed ? "w-14" : isMobile ? "w-full" : "w-64",
           className
         )}
@@ -93,6 +97,26 @@ export function ContactsSidebar({
         <div className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}>
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2">
+              <div
+                onClick={() => setSelectedContactId?.(curatorId)}
+                className={cn(
+                  "relative cursor-pointer transition-transform hover:scale-105",
+                  isCuratorSelected &&
+                    "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                )}
+                title={PRIMARY_CURATOR.name}
+              >
+                <EmployeeContactAvatar
+                  name={PRIMARY_CURATOR.name}
+                  avatar={PRIMARY_CURATOR.avatar}
+                  status={PRIMARY_CURATOR.status}
+                  showStatus
+                  avatarClassName="h-8 w-8"
+                />
+              </div>
+
+              <div className="my-1 h-px w-7 bg-border" />
+
               {groupContacts.map((contact) => {
                 const contactId = contact.group?.id
                 const isSelected = selectedContactId === contactId
@@ -141,6 +165,37 @@ export function ContactsSidebar({
             </div>
           ) : (
             <div className="space-y-3 px-2 py-2">
+              <div className="space-y-0.5">
+                <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                  主理人
+                </p>
+                <div
+                  onClick={() => setSelectedContactId?.(curatorId)}
+                  className={cn(
+                    "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
+                    isCuratorSelected && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  <EmployeeContactAvatar
+                    name={PRIMARY_CURATOR.name}
+                    avatar={PRIMARY_CURATOR.avatar}
+                    status={PRIMARY_CURATOR.status}
+                    showStatus
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate font-medium">
+                      {PRIMARY_CURATOR.name}
+                    </span>
+                    <span
+                      className="truncate text-muted-foreground"
+                      title={PRIMARY_CURATOR.role}
+                    >
+                      {PRIMARY_CURATOR.role}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-0.5">
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   群聊
@@ -200,7 +255,10 @@ export function ContactsSidebar({
                         <span className="truncate font-medium">
                           {contact.employee?.name}
                         </span>
-                        <span className="truncate text-muted-foreground" title={contact.employee?.role}>
+                        <span
+                          className="truncate text-muted-foreground"
+                          title={contact.employee?.role}
+                        >
                           {contact.employee?.role}
                         </span>
                       </div>

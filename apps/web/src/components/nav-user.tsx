@@ -1,5 +1,3 @@
-
-
 import {
   Avatar,
   AvatarFallback,
@@ -20,7 +18,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@workspace/ui/components/sidebar"
-import { IconSelector, IconSparkles, IconRosetteDiscountCheck, IconCreditCard, IconBell, IconLogout } from "@tabler/icons-react"
+import {
+  IconSelector,
+  IconSparkles,
+  IconRosetteDiscountCheck,
+  IconCreditCard,
+  IconBell,
+  IconLogout,
+} from "@tabler/icons-react"
 
 export function NavUser({
   user,
@@ -74,33 +79,28 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <IconSparkles
-                />
+                <IconSparkles />
                 Upgrade to Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <IconRosetteDiscountCheck
-                />
+                <IconRosetteDiscountCheck />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <IconCreditCard
-                />
+                <IconCreditCard />
                 Billing
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <IconBell
-                />
+                <IconBell />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <IconLogout
-              />
+              <IconLogout />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

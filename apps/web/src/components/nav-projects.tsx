@@ -1,12 +1,10 @@
-
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  } from "@workspace/ui/components/dropdown-menu"
+} from "@workspace/ui/components/dropdown-menu"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -16,8 +14,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@workspace/ui/components/sidebar"
-import { Link } from '@tanstack/react-router'
-import { IconDots, IconFolder, IconShare2, IconTrash } from "@tabler/icons-react"
+import { Link } from "@tanstack/react-router"
+import {
+  IconDots,
+  IconFolder,
+  IconShare2,
+  IconTrash,
+} from "@tabler/icons-react"
 
 export function NavProjects({
   projects,

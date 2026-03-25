@@ -7,10 +7,21 @@ export interface AIEmployee {
   specialty: string
 }
 
-export type ContactType = "employee" | "group"
+export type ContactType = "curator" | "employee" | "group"
+
+/** 主理人：独立身份，不属于员工列表 */
+export interface CuratorProfile {
+  id: string
+  name: string
+  role: string
+  avatar?: string
+  status: "online" | "busy" | "offline"
+  specialty: string
+}
 
 export interface Contact {
   type: ContactType
+  curator?: CuratorProfile
   employee?: AIEmployee
   group?: {
     id: string
@@ -18,6 +29,18 @@ export interface Contact {
     participants: AIEmployee[]
   }
 }
+
+/** 常驻默认会话入口，通讯录置顶，独立于群聊与其它联系人 */
+export const PRIMARY_CURATOR: CuratorProfile = {
+  id: "curator-primary",
+  name: "主理人",
+  role: "数字员工统筹",
+  status: "online",
+  avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Curator",
+  specialty: "任务分派、会话路由与协作编排",
+}
+
+export const DEFAULT_SELECTED_CONTACT_ID = PRIMARY_CURATOR.id
 
 export const AI_EMPLOYEES: AIEmployee[] = [
   {
@@ -75,6 +98,7 @@ export const AI_GROUPS = [
 ]
 
 export const CONTACTS: Contact[] = [
+  { type: "curator" as const, curator: PRIMARY_CURATOR },
   ...AI_EMPLOYEES.map((emp) => ({
     type: "employee" as const,
     employee: emp,
@@ -87,6 +111,9 @@ export const CONTACTS: Contact[] = [
 
 export const getContactById = (id: string): Contact | undefined => {
   return CONTACTS.find((contact) => {
+    if (contact.type === "curator") {
+      return contact.curator?.id === id
+    }
     if (contact.type === "employee") {
       return contact.employee?.id === id
     }
@@ -96,6 +123,16 @@ export const getContactById = (id: string): Contact | undefined => {
 
 export const getEmployeeById = (id: string): AIEmployee | undefined => {
   return AI_EMPLOYEES.find((emp) => emp.id === id)
+}
+
+/** 消息发送方等场景：员工或主理人 */
+export function getPeerProfileById(
+  id: string
+): AIEmployee | CuratorProfile | undefined {
+  if (id === PRIMARY_CURATOR.id) {
+    return PRIMARY_CURATOR
+  }
+  return getEmployeeById(id)
 }
 
 export const getGroupById = (id: string) => {
