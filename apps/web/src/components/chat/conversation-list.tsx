@@ -145,6 +145,7 @@ export function ConversationList({
         variant="outline"
         onClick={() => {
           setDraftConversation(true)
+          setSelectedConversationId(null)
         }}
       >
         <IconCirclePlus className="size-4" />

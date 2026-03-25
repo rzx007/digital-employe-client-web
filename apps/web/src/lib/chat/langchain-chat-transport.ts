@@ -73,6 +73,16 @@ function buildChatApiUrl(conversationId: string) {
   return `/digital/api/v1/text2sql/stream?id=${conversationId}`
 }
 
+function getConversationIdFromBody(body: object | undefined) {
+  if (!body || typeof body !== "object") {
+    return null
+  }
+
+  const { conversationId } = body as { conversationId?: unknown }
+
+  return typeof conversationId === "string" ? conversationId : null
+}
+
 async function createEventSourceResponse(options: {
   conversationId: string
   prompt: string
@@ -103,10 +113,11 @@ export class LangChainChatTransport<
   UI_MESSAGE extends UIMessage,
 > implements ChatTransport<UI_MESSAGE> {
   async sendMessages({
-    chatId,
     messages,
     abortSignal,
+    body,
   }: Parameters<ChatTransport<UI_MESSAGE>["sendMessages"]>[0]) {
+    const conversationId = getConversationIdFromBody(body)
     const latestMessage = messages.at(-1)
     const latestText = latestMessage?.parts
       ?.filter((part) => part.type === "text")
@@ -114,12 +125,16 @@ export class LangChainChatTransport<
       .join("\n")
       .trim()
 
+    if (!conversationId) {
+      throw new Error("缺少会话 ID")
+    }
+
     if (!latestText) {
       throw new Error("消息内容不能为空")
     }
 
     const stream = await createEventSourceResponse({
-      conversationId: chatId,
+      conversationId,
       prompt: latestText,
       abortSignal,
     })

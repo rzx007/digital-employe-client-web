@@ -5,8 +5,6 @@ import {
   fetchContacts,
   fetchConversationsByContactId,
   fetchMessagesByConversationId,
-  persistAssistantMessage,
-  persistUserMessage,
 } from "@/api/chat"
 import { CONTACTS } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
@@ -58,46 +56,6 @@ export function useCreateConversationMutation() {
         chatKeys.messages(conversation.id),
         []
       )
-    },
-  })
-}
-
-export function usePersistUserMessageMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: persistUserMessage,
-    onSuccess: (userMessage, variables) => {
-      queryClient.setQueryData<Message[]>(
-        chatKeys.messages(variables.conversationId),
-        (current) => [...(current ?? []), userMessage]
-      )
-
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.conversations(variables.contactId),
-      })
-    },
-  })
-}
-
-export function usePersistAssistantMessageMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: persistAssistantMessage,
-    onSuccess: (assistantMessage, variables) => {
-      if (!assistantMessage) {
-        return
-      }
-
-      queryClient.setQueryData<Message[]>(
-        chatKeys.messages(variables.conversationId),
-        (current) => [...(current ?? []), assistantMessage]
-      )
-
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.conversations(variables.contactId),
-      })
     },
   })
 }
