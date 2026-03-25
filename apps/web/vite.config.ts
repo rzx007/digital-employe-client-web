@@ -19,4 +19,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    port: 3334,
+    host: '0.0.0.0',
+    open: true,
+    proxy: {
+      '/actus': {
+        target: 'http://10.172.246.179:5002',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/actus/, ''),
+      },
+    },
+  },
 })

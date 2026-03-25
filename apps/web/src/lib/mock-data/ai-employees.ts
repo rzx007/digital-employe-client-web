@@ -109,8 +109,11 @@ export const CONTACTS: Contact[] = [
   })),
 ]
 
-export const getContactById = (id: string): Contact | undefined => {
-  return CONTACTS.find((contact) => {
+export function findContactInList(
+  contacts: readonly Contact[],
+  id: string,
+): Contact | undefined {
+  return contacts.find((contact) => {
     if (contact.type === "curator") {
       return contact.curator?.id === id
     }
@@ -119,6 +122,10 @@ export const getContactById = (id: string): Contact | undefined => {
     }
     return contact.group?.id === id
   })
+}
+
+export const getContactById = (id: string): Contact | undefined => {
+  return findContactInList(CONTACTS, id)
 }
 
 export const getEmployeeById = (id: string): AIEmployee | undefined => {

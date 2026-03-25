@@ -1,51 +1,90 @@
 import * as React from "react"
-
-import { ScrollArea } from "@workspace/ui/components/scroll-area"
-import { cn } from "@workspace/ui/lib/utils"
-import { CONVERSATIONS } from "@/lib/mock-data/conversations"
-import { getConversationsByContactId } from "@/lib/mock-data/conversations"
-import { getContactById } from "@/lib/mock-data/ai-employees"
-import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
-import { Button } from "@workspace/ui/components/button"
 import { IconCirclePlus } from "@tabler/icons-react"
 
-import { ConversationItem } from "./conversation-item"
-import { useChatContext } from "./chat-context"
+import { useShallow } from "zustand/react/shallow"
+import { Button } from "@workspace/ui/components/button"
+import { ScrollArea } from "@workspace/ui/components/scroll-area"
+import { cn } from "@workspace/ui/lib/utils"
+import {
+  useContactsQuery,
+  useConversationsQuery,
+} from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { findContactInList } from "@/lib/mock-data/ai-employees"
+import { useChatStore } from "@/stores/chat-store"
+
+import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
+
+import { ConversationItem } from "./conversation-item"
 
 export function ConversationList({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   const {
+    isDraftConversation,
     selectedConversationId,
+    setDraftConversation,
     setSelectedConversationId,
     selectedContactId,
-  } = useChatContext()
+  } = useChatStore(
+    useShallow((state) => ({
+      isDraftConversation: state.isDraftConversation,
+      selectedConversationId: state.selectedConversationId,
+      setDraftConversation: state.setDraftConversation,
+      setSelectedConversationId: state.setSelectedConversationId,
+      selectedContactId: state.selectedContactId,
+    }))
+  )
   const isMobile = useIsMobile()
-  const conversations = React.useMemo(() => {
-    if (selectedContactId) {
-      return getConversationsByContactId(selectedContactId)
-    }
-    return CONVERSATIONS
-  }, [selectedContactId])
+  const { data: contacts = [] } = useContactsQuery()
+  const {
+    data: conversations = [],
+    isSuccess: conversationsQuerySuccess,
+    isPending: conversationsPending,
+  } = useConversationsQuery(selectedContactId)
 
+  // 监听会话列表变化
   React.useEffect(() => {
-    if (!setSelectedConversationId || conversations.length === 0) return
+    if (!selectedContactId) return
+    if (!conversationsQuerySuccess) return
+
+    if (conversations.length === 0) {
+      if (selectedConversationId != null) {
+        setSelectedConversationId(null)
+        return
+      }
+
+      if (!isDraftConversation) {
+        setDraftConversation(true)
+      }
+      return
+    }
+
+    if (isDraftConversation) {
+      return
+    }
 
     const hasSelected = conversations.some(
       (conversation) => conversation.id === selectedConversationId
     )
-
     if (!hasSelected) {
       setSelectedConversationId(conversations[0].id)
     }
-  }, [conversations, selectedConversationId, setSelectedConversationId])
+  }, [
+    conversations,
+    conversationsQuerySuccess,
+    isDraftConversation,
+    selectedContactId,
+    selectedConversationId,
+    setDraftConversation,
+    setSelectedConversationId,
+  ])
 
   const selectedContact = React.useMemo(() => {
     if (!selectedContactId) return null
-    return getContactById(selectedContactId) ?? null
-  }, [selectedContactId])
+    return findContactInList(contacts, selectedContactId) ?? null
+  }, [contacts, selectedContactId])
 
   return (
     <div
@@ -99,25 +138,13 @@ export function ConversationList({
         ) : (
           <h2 className="text-sm font-medium">最近消息</h2>
         )}
-        {/* <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => {
-            if (setSelectedConversationId) {
-              setSelectedConversationId(null)
-            }
-          }}
-        >
-          <IconCirclePlus className="size-4" />
-        </Button> */}
       </div>
+
       <Button
         className="m-2"
         variant="outline"
         onClick={() => {
-          if (setSelectedConversationId) {
-            setSelectedConversationId(null)
-          }
+          setDraftConversation(true)
         }}
       >
         <IconCirclePlus className="size-4" />
@@ -126,20 +153,30 @@ export function ConversationList({
 
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-2">
+          {selectedContactId && conversationsPending && (
+            <div className="py-6 text-center text-xs text-muted-foreground">
+              加载会话…
+            </div>
+          )}
           {conversations.map((conversation) => (
             <ConversationItem
               key={conversation.id}
               conversation={conversation}
               isSelected={selectedConversationId === conversation.id}
-              onClick={() => setSelectedConversationId?.(conversation.id)}
+              onClick={() => {
+                setDraftConversation(false)
+                setSelectedConversationId(conversation.id)
+              }}
             />
           ))}
-          {conversations.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-              <p className="text-xs">暂无会话记录</p>
-              <p className="mt-1 text-xs">选择联系人开始聊天</p>
-            </div>
-          )}
+          {selectedContactId &&
+            !conversationsPending &&
+            conversations.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <p className="text-xs">暂无会话记录</p>
+                <p className="mt-1 text-xs">选择联系人开始聊天</p>
+              </div>
+            )}
         </div>
       </ScrollArea>
     </div>

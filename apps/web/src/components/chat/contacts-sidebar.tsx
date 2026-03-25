@@ -1,23 +1,21 @@
 import * as React from "react"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { Button } from "@workspace/ui/components/button"
 import {
-  IconCirclePlus,
-  IconSettings,
-  IconSearch,
   IconChevronLeft,
   IconChevronRight,
+  IconCirclePlus,
+  IconSearch,
+  IconSettings,
 } from "@tabler/icons-react"
+import { useShallow } from "zustand/react/shallow"
+import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
-import {
-  CONTACTS,
-  PRIMARY_CURATOR,
-  type AIEmployee,
-} from "@/lib/mock-data/ai-employees"
+import { useContactsQuery } from "@/hooks/use-chat-queries"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { PRIMARY_CURATOR, type AIEmployee } from "@/lib/mock-data/ai-employees"
+import { useChatStore } from "@/stores/chat-store"
 
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { CreateGroupDialog } from "./create-group-dialog"
-import { useChatContext } from "./chat-context"
 
 export function ContactsSidebar({
   className,
@@ -25,7 +23,13 @@ export function ContactsSidebar({
 }: React.ComponentProps<"div">) {
   const [isCollapsed, setIsCollapsed] = React.useState(false)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const { selectedContactId, setSelectedContactId } = useChatContext()
+  const { selectedContactId, setSelectedContactId } = useChatStore(
+    useShallow((state) => ({
+      selectedContactId: state.selectedContactId,
+      setSelectedContactId: state.setSelectedContactId,
+    }))
+  )
+  const { data: contacts = [] } = useContactsQuery()
   const isMobile = useIsMobile()
   const handleCreateGroup = (selectedEmployees: AIEmployee[]) => {
     console.log("创建群聊，选择员工:", selectedEmployees)
@@ -33,12 +37,12 @@ export function ContactsSidebar({
   }
 
   const groupContacts = React.useMemo(
-    () => CONTACTS.filter((contact) => contact.type === "group"),
-    []
+    () => contacts.filter((contact) => contact.type === "group"),
+    [contacts]
   )
   const employeeContacts = React.useMemo(
-    () => CONTACTS.filter((contact) => contact.type === "employee"),
-    []
+    () => contacts.filter((contact) => contact.type === "employee"),
+    [contacts]
   )
 
   const curatorId = PRIMARY_CURATOR.id
@@ -98,7 +102,7 @@ export function ContactsSidebar({
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2">
               <div
-                onClick={() => setSelectedContactId?.(curatorId)}
+                onClick={() => setSelectedContactId(curatorId)}
                 className={cn(
                   "relative cursor-pointer transition-transform hover:scale-105",
                   isCuratorSelected &&
@@ -123,7 +127,7 @@ export function ContactsSidebar({
                 return (
                   <div
                     key={contactId}
-                    onClick={() => setSelectedContactId?.(contactId || null)}
+                    onClick={() => setSelectedContactId(contactId || null)}
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
@@ -146,7 +150,7 @@ export function ContactsSidebar({
                 return (
                   <div
                     key={contactId}
-                    onClick={() => setSelectedContactId?.(contactId || null)}
+                    onClick={() => setSelectedContactId(contactId || null)}
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
@@ -170,7 +174,7 @@ export function ContactsSidebar({
                   主理人
                 </p>
                 <div
-                  onClick={() => setSelectedContactId?.(curatorId)}
+                  onClick={() => setSelectedContactId(curatorId)}
                   className={cn(
                     "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
                     isCuratorSelected && "bg-accent text-accent-foreground"
@@ -206,7 +210,7 @@ export function ContactsSidebar({
                   return (
                     <div
                       key={contactId}
-                      onClick={() => setSelectedContactId?.(contactId || null)}
+                      onClick={() => setSelectedContactId(contactId || null)}
                       className={cn(
                         "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
                         isSelected && "bg-accent text-accent-foreground"
@@ -239,7 +243,7 @@ export function ContactsSidebar({
                   return (
                     <div
                       key={contactId}
-                      onClick={() => setSelectedContactId?.(contactId || null)}
+                      onClick={() => setSelectedContactId(contactId || null)}
                       className={cn(
                         "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
                         isSelected && "bg-accent text-accent-foreground"

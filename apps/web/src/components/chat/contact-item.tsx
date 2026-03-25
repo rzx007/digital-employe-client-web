@@ -1,9 +1,11 @@
 import * as React from "react"
+import { useShallow } from "zustand/react/shallow"
 
 import { cn } from "@workspace/ui/lib/utils"
 import type { Contact } from "@/lib/mock-data/ai-employees"
+import { useChatStore } from "@/stores/chat-store"
+
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
-import { useChatContext } from "./chat-context"
 
 interface ContactItemProps extends React.ComponentProps<"div"> {
   contact: Contact
@@ -16,7 +18,12 @@ export function ContactItem({
   className,
   ...props
 }: ContactItemProps) {
-  const { selectedContactId, setSelectedContactId } = useChatContext()
+  const { selectedContactId, setSelectedContactId } = useChatStore(
+    useShallow((state) => ({
+      selectedContactId: state.selectedContactId,
+      setSelectedContactId: state.setSelectedContactId,
+    }))
+  )
   const contactId =
     contact.type === "curator"
       ? contact.curator?.id
@@ -26,7 +33,7 @@ export function ContactItem({
   const isSelected = selectedContactId === contactId
 
   const handleClick = () => {
-    setSelectedContactId?.(contactId || null)
+    setSelectedContactId(contactId || null)
   }
 
   if (contact.type === "group") {
