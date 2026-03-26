@@ -9,6 +9,7 @@ import {
   type Spread,
 } from "lexical"
 import { cn } from "@workspace/ui/lib/utils"
+import type { ReactElement } from "react"
 
 export type SerializedCommandPillNode = Spread<
   {
@@ -34,7 +35,7 @@ function CommandPillComponent({ commandTitle }: { commandTitle: string }) {
   )
 }
 
-export class CommandPillNode extends DecoratorNode<JSX.Element> {
+export class CommandPillNode extends DecoratorNode<ReactElement | null> {
   __commandId: string
   __commandTitle: string
 
@@ -123,7 +124,7 @@ export class CommandPillNode extends DecoratorNode<JSX.Element> {
     return this.__commandTitle
   }
 
-  decorate(): JSX.Element {
+  decorate(): ReactElement {
     return <CommandPillComponent commandTitle={this.__commandTitle} />
   }
 }

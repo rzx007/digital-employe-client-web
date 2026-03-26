@@ -1,5 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils"
 import type { Artifact } from "../artifact-types"
+import { ScrollArea } from "@workspace/ui/components/scroll-area"
 
 export interface ImageRendererProps {
   artifact: Artifact
@@ -10,7 +11,7 @@ export const ImageRenderer = ({ artifact, className }: ImageRendererProps) => {
   const isDataUrl = artifact.content.startsWith("data:")
 
   return (
-    <div
+    <ScrollArea
       className={cn(
         "flex flex-1 items-center justify-center overflow-auto bg-background p-4",
         className
@@ -28,6 +29,6 @@ export const ImageRenderer = ({ artifact, className }: ImageRendererProps) => {
           <p className="text-xs">（外部链接，请点击查看）</p>
         </div>
       )}
-    </div>
+    </ScrollArea>
   )
 }

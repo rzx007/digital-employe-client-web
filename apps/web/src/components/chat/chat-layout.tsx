@@ -2,7 +2,9 @@ import * as React from "react"
 
 import { Sheet, SheetContent } from "@workspace/ui/components/sheet"
 import { cn } from "@workspace/ui/lib/utils"
+import { ArtifactPanel } from "@/components/artifact"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useArtifactStore } from "@/stores/artifact-store"
 import { ContactsSidebar } from "./contacts-sidebar"
 import { ConversationList } from "./conversation-list"
 import { ChatView } from "./chat-view"
@@ -14,36 +16,71 @@ export function ChatLayout({
   const [showContacts, setShowContacts] = React.useState(false)
   const [showConversations, setShowConversations] = React.useState(false)
   const isMobile = useIsMobile()
+  const {
+    activeArtifactId,
+    artifacts,
+    closeArtifact,
+    isFullscreen,
+    isPanelOpen,
+    setFullscreen,
+    toggleFullscreen,
+  } = useArtifactStore()
+  const activeArtifact = activeArtifactId
+    ? (artifacts.get(activeArtifactId) ?? null)
+    : null
+
+  React.useEffect(() => {
+    if (isMobile && isPanelOpen && activeArtifact) {
+      setFullscreen(true)
+    }
+  }, [activeArtifact, isMobile, isPanelOpen, setFullscreen])
 
   return (
     <div className={cn("relative flex h-full", className)} {...props}>
-      {isMobile ? (
-        <>
-          <div className="flex h-full flex-1">
-            <ChatView
-              onOpenContacts={() => setShowContacts(true)}
-              onOpenConversations={() => setShowConversations(true)}
+      <ContactsSidebar className="hidden md:flex" />
+      <ConversationList className="hidden md:flex" />
+
+      <div className="flex min-w-0 flex-1">
+        <ChatView
+          onOpenContacts={() => setShowContacts(true)}
+          onOpenConversations={() => setShowConversations(true)}
+          className="min-w-0 flex-1"
+        />
+
+        {isPanelOpen && activeArtifact && !isFullscreen && !isMobile && (
+          <div className="hidden w-[600px] border-l bg-muted/20 p-3 md:block">
+            <ArtifactPanel
+              artifact={activeArtifact}
+              isOpen={isPanelOpen}
+              isFullscreen={false}
+              onClose={closeArtifact}
+              onToggleFullscreen={toggleFullscreen}
+              className="h-full rounded-xl"
             />
           </div>
+        )}
+      </div>
 
-          <Sheet open={showContacts} onOpenChange={setShowContacts}>
-            <SheetContent side="left" className="w-64 p-0">
-              <ContactsSidebar />
-            </SheetContent>
-          </Sheet>
+      <Sheet open={showContacts} onOpenChange={setShowContacts}>
+        <SheetContent side="left" className="w-64 p-0 md:hidden">
+          <ContactsSidebar className="h-full w-full border-r-0" />
+        </SheetContent>
+      </Sheet>
 
-          <Sheet open={showConversations} onOpenChange={setShowConversations}>
-            <SheetContent side="left" className="w-64 p-0">
-              <ConversationList />
-            </SheetContent>
-          </Sheet>
-        </>
-      ) : (
-        <>
-          <ContactsSidebar />
-          <ConversationList />
-          <ChatView />
-        </>
+      <Sheet open={showConversations} onOpenChange={setShowConversations}>
+        <SheetContent side="left" className="w-64 p-0 md:hidden">
+          <ConversationList className="h-full w-full border-r-0" />
+        </SheetContent>
+      </Sheet>
+
+      {isPanelOpen && activeArtifact && (isFullscreen || isMobile) && (
+        <ArtifactPanel
+          artifact={activeArtifact}
+          isOpen={isPanelOpen}
+          isFullscreen={isFullscreen}
+          onClose={closeArtifact}
+          onToggleFullscreen={toggleFullscreen}
+        />
       )}
     </div>
   )

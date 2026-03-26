@@ -17,6 +17,7 @@ import {
   COMMAND_PRIORITY_LOW,
   KEY_ENTER_COMMAND,
   KEY_BACKSPACE_COMMAND,
+  $isElementNode,
 } from "lexical"
 import { useEffect, useRef } from "react"
 import { CommandPillNode, $isCommandPillNode } from "./command-pill-node"
@@ -39,20 +40,20 @@ function getEditorCommandAndValue(): PromptChangeEvent {
   const topLevelChildren = root.getChildren()
   for (const child of topLevelChildren) {
     // 只关心段落等元素里的第一个命令 Pill
-    // @ts-expect-error Lexical 节点在运行时有 getChildren
-    const grandChildren =
-      typeof child.getChildren === "function" ? child.getChildren() : []
-    for (const node of grandChildren as unknown as CommandPillNode[]) {
-      if ($isCommandPillNode(node)) {
-        const latest = node.getLatest() as CommandPillNode
-        command = {
-          id: latest.getCommandId(),
-          title: latest.getCommandTitle(),
+    if ($isElementNode(child)) {
+      const grandChildren = child.getChildren()
+      for (const node of grandChildren as unknown as CommandPillNode[]) {
+        if ($isCommandPillNode(node)) {
+          const latest = node.getLatest() as CommandPillNode
+          command = {
+            id: latest.getCommandId(),
+            title: latest.getCommandTitle(),
+          }
+          break
         }
-        break
       }
+      if (command) break
     }
-    if (command) break
   }
 
   const value = root.getTextContent()
@@ -306,9 +307,9 @@ export function LexicalPromptInputTextarea({
 
   const handleChange = controller
     ? (e: PromptChangeEvent) => {
-        controller.textInput.setInput(e.value)
-        onChange?.(e)
-      }
+      controller.textInput.setInput(e.value)
+      onChange?.(e)
+    }
     : (e: PromptChangeEvent) => onChange?.(e)
 
   const initialConfig = {

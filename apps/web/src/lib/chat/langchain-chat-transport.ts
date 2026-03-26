@@ -7,49 +7,18 @@ import {
 } from "ai"
 
 import { request, getRequestHeaders } from "@/lib/request"
+import {
+  createLangChainStreamParseState,
+  enqueueFinish,
+  enqueueTextStart,
+  enqueueTextEnd,
+  parseLangChainPayloadToChunks,
+} from "./langchain-stream-parser"
 
 const generatePartId = createIdGenerator({
   prefix: "lc-part",
   size: 16,
 })
-
-interface LangChainAIMessageChunk {
-  id?: string[]
-  type?: string
-  kwargs?: {
-    content?: unknown
-    type?: string
-    chunk_position?: string
-    response_metadata?: {
-      finish_reason?: string
-    }
-  }
-}
-
-function extractAssistantText(payload: unknown) {
-  if (!Array.isArray(payload) || payload.length === 0) {
-    return null
-  }
-
-  const chunk = payload[0] as LangChainAIMessageChunk
-  const isAiMessageChunk =
-    Array.isArray(chunk.id) &&
-    chunk.id.join(".") === "langchain.schema.messages.AIMessageChunk" &&
-    chunk.type === "constructor" &&
-    chunk.kwargs?.type === "AIMessageChunk"
-
-  if (!isAiMessageChunk) {
-    return null
-  }
-
-  const content = chunk.kwargs?.content
-
-  if (typeof content !== "string" || content.length === 0) {
-    return null
-  }
-
-  return content
-}
 
 function getEventBoundaryIndex(buffer: string) {
   const windowsBoundary = buffer.indexOf("\r\n\r\n")
@@ -225,9 +194,9 @@ export class LangChainChatTransport<
       async start(controller) {
         const textId = generatePartId()
         let buffer = ""
+        const state = createLangChainStreamParseState()
 
         controller.enqueue({ type: "start" })
-        controller.enqueue({ type: "text-start", id: textId })
 
         const flushEvent = (eventText: string) => {
           const lines = eventText
@@ -242,24 +211,30 @@ export class LangChainChatTransport<
           const data = lines.join("\n")
 
           if (data === "[DONE]") {
-            controller.enqueue({ type: "text-end", id: textId })
-            controller.enqueue({ type: "finish", finishReason: "stop" })
+            enqueueTextEnd(controller, state, textId)
+            enqueueFinish(controller, state)
             controller.close()
             return true
           }
 
           try {
             const payload = JSON.parse(data)
-            const assistantText = extractAssistantText(payload)
+            const chunks = parseLangChainPayloadToChunks({
+              payload,
+              state,
+              textId,
+            })
 
-            if (!assistantText) {
-              return false
+            const hasTextDelta = chunks.some(
+              (chunk) => chunk.type === "text-delta"
+            )
+
+            if (hasTextDelta) {
+              enqueueTextStart(controller, state, textId)
             }
 
-            controller.enqueue({
-              type: "text-delta",
-              id: textId,
-              delta: assistantText,
+            chunks.forEach((chunk) => {
+              controller.enqueue(chunk)
             })
           } catch {
             return false
@@ -298,8 +273,8 @@ export class LangChainChatTransport<
             flushEvent(buffer)
           }
 
-          controller.enqueue({ type: "text-end", id: textId })
-          controller.enqueue({ type: "finish", finishReason: "stop" })
+          enqueueTextEnd(controller, state, textId)
+          enqueueFinish(controller, state)
           controller.close()
         } catch (error) {
           controller.enqueue({

@@ -5,15 +5,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip"
-import type { LucideIcon } from "lucide-react"
 import {
-  CopyIcon,
-  DownloadIcon,
-  ExternalLinkIcon,
-  Maximize2Icon,
-  Minimize2Icon,
-  XIcon,
-} from "lucide-react"
+  IconCopy,
+  IconDownload,
+  IconMinimize,
+  IconMaximize,
+  IconX,
+} from "@tabler/icons-react"
+import type { Icon } from "@tabler/icons-react"
 import { cn } from "@workspace/ui/lib/utils"
 import type { Artifact } from "./artifact-types"
 
@@ -25,7 +24,7 @@ export interface ArtifactHeaderProps {
 }
 
 export interface ArtifactActionProps {
-  icon: LucideIcon
+  icon: Icon
   label: string
   tooltip: string
   onClick: () => void
@@ -94,25 +93,25 @@ export const ArtifactHeader = ({
 
       <div className="flex items-center gap-1">
         <ArtifactAction
-          icon={CopyIcon}
+          icon={IconCopy}
           label="复制"
           tooltip="复制内容"
           onClick={handleCopy}
         />
         <ArtifactAction
-          icon={DownloadIcon}
+          icon={IconDownload}
           label="下载"
           tooltip="下载文件"
           onClick={handleDownload}
         />
         <ArtifactAction
-          icon={isFullscreen ? Minimize2Icon : Maximize2Icon}
+          icon={isFullscreen ? IconMinimize : IconMaximize}
           label={isFullscreen ? "退出全屏" : "全屏"}
           tooltip={isFullscreen ? "退出全屏" : "全屏"}
           onClick={onToggleFullscreen}
         />
         <ArtifactAction
-          icon={XIcon}
+          icon={IconX}
           label="关闭"
           tooltip="关闭面板"
           onClick={onClose}

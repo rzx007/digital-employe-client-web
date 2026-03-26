@@ -1,0 +1,20 @@
+{
+  "name": "simple-agents",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@langchain/core": "^1.1.36",
+    "@langchain/tavily": "^1.2.0",
+    "deepagents": "^1.8.5",
+    "hono": "^4.12.9",
+    "langchain": "^1.2.37"
+  }
+}

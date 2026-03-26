@@ -19,9 +19,13 @@ import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { IconDots, IconMessages, IconUsers } from "@tabler/icons-react"
 
-import { getTextFromUIMessage } from "@/lib/chat/message-utils"
+import {
+  getLatestArtifactFromUIMessage,
+  getRenderBlocksFromUIMessage,
+} from "@/lib/chat/message-utils"
 import type { Message as StoredMessage } from "@/lib/mock-data/messages"
 import { Spinner } from "@/components/spinner"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useArtifactStore } from "@/stores/artifact-store"
 
 import { ArtifactPreview } from "../artifact"
@@ -67,7 +71,8 @@ export function ChatPanel({
   onOpenContacts?: () => void
   onOpenConversations?: () => void
 }) {
-  const { openArtifact } = useArtifactStore()
+  const isMobile = useIsMobile()
+  const { addArtifact, openArtifact, setFullscreen } = useArtifactStore()
 
   const contactDisplayName = contact
     ? getContactDisplayName(contact)
@@ -79,6 +84,16 @@ export function ChatPanel({
     (status === "submitted" || status === "streaming") &&
     !error &&
     displayMessages.length > 0
+
+  React.useEffect(() => {
+    displayMessages.forEach((message) => {
+      const artifact = getLatestArtifactFromUIMessage(message)
+
+      if (artifact) {
+        addArtifact(artifact)
+      }
+    })
+  }, [addArtifact, displayMessages])
 
   const formatTime = React.useCallback((date: Date) => {
     return format(date, "HH:mm", { locale: zhCN })
@@ -138,7 +153,8 @@ export function ChatPanel({
                 />
               ) : (
                 displayMessages.map((message) => {
-                  const messageText = getTextFromUIMessage(message)
+                  const liveArtifact = getLatestArtifactFromUIMessage(message)
+                  const renderBlocks = getRenderBlocksFromUIMessage(message)
                   const storedMessage = storedMessages.find(
                     (item) => item.id === message.id
                   )
@@ -146,7 +162,17 @@ export function ChatPanel({
                   const metadata = isMessageMetadata(storedMessage?.metadata)
                     ? storedMessage.metadata
                     : null
-                  const artifact = metadata?.artifact ?? null
+                  const artifact = liveArtifact ?? metadata?.artifact ?? null
+
+                  const handleOpenArtifact = () => {
+                    if (!artifact) {
+                      return
+                    }
+
+                    addArtifact(artifact)
+                    setFullscreen(isMobile)
+                    openArtifact(artifact.id)
+                  }
 
                   return (
                     <Message key={message.id} from={message.role}>
@@ -183,7 +209,33 @@ export function ChatPanel({
                         </div>
                       )}
                       <MessageContent>
-                        <MessageResponse>{messageText}</MessageResponse>
+                        <div className="space-y-3">
+                          {renderBlocks.length > 0 ? (
+                            renderBlocks.map((block) => {
+                              if (block.kind === "text") {
+                                return (
+                                  <MessageResponse key={block.key}>
+                                    {block.text}
+                                  </MessageResponse>
+                                )
+                              }
+
+                              return (
+                                <ArtifactPreview
+                                  key={block.key}
+                                  artifact={block.artifact}
+                                  onClick={() => {
+                                    addArtifact(block.artifact)
+                                    setFullscreen(isMobile)
+                                    openArtifact(block.artifact.id)
+                                  }}
+                                />
+                              )
+                            })
+                          ) : metadata?.artifact ? null : (
+                            <MessageResponse />
+                          )}
+                        </div>
                       </MessageContent>
                       {timestamp && (
                         <div
@@ -195,10 +247,10 @@ export function ChatPanel({
                           {formatTime(timestamp)}
                         </div>
                       )}
-                      {artifact && (
+                      {artifact && renderBlocks.length === 0 && (
                         <ArtifactPreview
                           artifact={artifact}
-                          onClick={() => openArtifact(artifact.id)}
+                          onClick={handleOpenArtifact}
                         />
                       )}
                     </Message>

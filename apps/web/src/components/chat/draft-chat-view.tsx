@@ -73,13 +73,12 @@ export function DraftChatView({
     return !inputValue.trim() || status === "streaming" || isBusy
   }, [inputValue, isBusy, status])
 
-
   const handleSendMessage = useCallback(
     async (message: PromptInputMessage) => {
       const hasText = Boolean(message.text)
       // const hasAttachments = Boolean(message.files?.length)
       const messageText = message.text?.trim() ?? ""
-      if (!(hasText)) {
+      if (!hasText) {
         return
       }
 
@@ -95,7 +94,7 @@ export function DraftChatView({
         if (!conversationId) {
           const createdConversation =
             await createConversationMutation.mutateAsync({
-              contactId: selectedContactId,
+              contactId: selectedContactId ?? "",
               title: messageText,
             })
 
@@ -134,23 +133,21 @@ export function DraftChatView({
   )
 
   return (
-    <>
-      <ChatPanel
-        contact={contact}
-        title="新对话"
-        messages={messages}
-        inputValue={inputValue}
-        status={status}
-        error={error}
-        isDraftMode={messages.length === 0}
-        isSubmitDisabled={isSubmitDisabled}
-        onInputChange={handleTextChange}
-        onSend={handleSendMessage}
-        onOpenContacts={onOpenContacts}
-        onOpenConversations={onOpenConversations}
-        className={className}
-        {...props}
-      />
-    </>
+    <ChatPanel
+      contact={contact}
+      title="新对话"
+      messages={messages}
+      inputValue={inputValue}
+      status={status}
+      error={error}
+      isDraftMode={messages.length === 0}
+      isSubmitDisabled={isSubmitDisabled}
+      onInputChange={handleTextChange}
+      onSend={handleSendMessage}
+      onOpenContacts={onOpenContacts}
+      onOpenConversations={onOpenConversations}
+      className={className}
+      {...props}
+    />
   )
 }

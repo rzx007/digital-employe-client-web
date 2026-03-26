@@ -16,6 +16,7 @@ import { useChatStore } from "@/stores/chat-store"
 
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { CreateGroupDialog } from "./create-group-dialog"
+import { ScrollArea } from "@workspace/ui/components/scroll-area"
 
 export function ContactsSidebar({
   className,
@@ -98,7 +99,7 @@ export function ContactsSidebar({
           </div>
         </div>
 
-        <div className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}>
+        <ScrollArea className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}>
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2">
               <div
@@ -106,7 +107,7 @@ export function ContactsSidebar({
                 className={cn(
                   "relative cursor-pointer transition-transform hover:scale-105",
                   isCuratorSelected &&
-                    "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                  "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                 )}
                 title={PRIMARY_CURATOR.name}
               >
@@ -131,7 +132,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <GroupMembersAvatar
@@ -154,7 +155,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <EmployeeContactAvatar
@@ -272,7 +273,7 @@ export function ContactsSidebar({
               </div>
             </div>
           )}
-        </div>
+        </ScrollArea>
 
         <div
           className={cn(
