@@ -42,6 +42,7 @@ export function DraftChatView({
     createdConversationIdRef.current = selectedConversationId
   }, [selectedConversationId])
 
+  // 草稿对话时，切换联系人或再次点击新增对话，重置createdConversationIdRef
   useEffect(() => {
     createdConversationIdRef.current = null
     setInputValue("")
@@ -69,43 +70,16 @@ export function DraftChatView({
     status === "streaming"
 
   const isSubmitDisabled = useMemo(() => {
-    return !(inputValue.trim() || status) || status === "streaming" || isBusy
+    return !inputValue.trim() || status === "streaming" || isBusy
   }, [inputValue, isBusy, status])
+
 
   const handleSendMessage = useCallback(
     async (message: PromptInputMessage) => {
       const hasText = Boolean(message.text)
-      const hasAttachments = Boolean(message.files?.length)
+      // const hasAttachments = Boolean(message.files?.length)
       const messageText = message.text?.trim() ?? ""
-
-      const hasImageAttachment = Boolean(
-        message.files?.some((file) => {
-          const mediaType = "mediaType" in file ? file.mediaType : undefined
-          const filename = "filename" in file ? file.filename : undefined
-
-          return (
-            mediaType?.startsWith("image/") ||
-            Boolean(filename?.match(/\.(png|jpe?g|gif|webp|bmp|svg)$/i))
-          )
-        })
-      )
-
-      if (!(hasText || hasAttachments)) {
-        return
-      }
-
-      if (hasImageAttachment) {
-        toast.error("当前模型不支持图片输入，请移除图片后再发送")
-        return
-      }
-
-      if (!messageText) {
-        toast.error("暂不支持仅发送附件")
-        return
-      }
-
-      if (!selectedContactId) {
-        toast.error("请先选择联系人")
+      if (!(hasText)) {
         return
       }
 
@@ -137,9 +111,13 @@ export function DraftChatView({
             text: messageText,
           },
           {
-            body: { conversationId },
+            body: {
+              attachments: message.files,
+              conversationId,
+            },
           }
         )
+        toast.success("发送成功")
       } catch (sendError) {
         toast.error("发送失败", {
           description:
@@ -156,21 +134,23 @@ export function DraftChatView({
   )
 
   return (
-    <ChatPanel
-      contact={contact}
-      title="新对话"
-      messages={messages}
-      inputValue={inputValue}
-      status={status}
-      error={error}
-      isDraftMode={messages.length === 0}
-      isSubmitDisabled={isSubmitDisabled}
-      onInputChange={handleTextChange}
-      onSend={handleSendMessage}
-      onOpenContacts={onOpenContacts}
-      onOpenConversations={onOpenConversations}
-      className={className}
-      {...props}
-    />
+    <>
+      <ChatPanel
+        contact={contact}
+        title="新对话"
+        messages={messages}
+        inputValue={inputValue}
+        status={status}
+        error={error}
+        isDraftMode={messages.length === 0}
+        isSubmitDisabled={isSubmitDisabled}
+        onInputChange={handleTextChange}
+        onSend={handleSendMessage}
+        onOpenContacts={onOpenContacts}
+        onOpenConversations={onOpenConversations}
+        className={className}
+        {...props}
+      />
+    </>
   )
 }

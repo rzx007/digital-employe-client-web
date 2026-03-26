@@ -40,12 +40,11 @@ export function ConversationChatView({
     [storedMessages]
   )
 
-  const chatSessionId = `conversation:${conversationId}`
-
   const { messages, setMessages, sendMessage, status, error } = useChat({
-    id: chatSessionId,
+    id: conversationId,
     messages: initialMessages,
     transport: chatTransport,
+    resume: true,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -70,13 +69,13 @@ export function ConversationChatView({
   })
 
   React.useEffect(() => {
-    if (previousSessionIdRef.current === chatSessionId) {
+    if (previousSessionIdRef.current === conversationId) {
       return
     }
 
-    previousSessionIdRef.current = chatSessionId
+    previousSessionIdRef.current = conversationId
     setMessages(initialMessages)
-  }, [chatSessionId, initialMessages, setMessages])
+  }, [conversationId, initialMessages, setMessages])
 
   const handleTextChange = React.useCallback((event: PromptChangeEvent) => {
     setInputValue(event.value)
@@ -135,7 +134,10 @@ export function ConversationChatView({
             text: messageText,
           },
           {
-            body: { conversationId },
+            body: {
+              attachments: message.files,
+              conversationId,
+            },
           }
         )
       } catch (sendError) {

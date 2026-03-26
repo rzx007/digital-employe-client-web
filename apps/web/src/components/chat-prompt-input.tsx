@@ -163,9 +163,8 @@ export function ChatPromptInput({
             onChange={onChange}
             value={value}
             placeholder={placeholder}
-            className={`resize-none placeholder:text-muted-foreground/60 ${
-              isCompact ? "min-h-[60px] text-base" : "min-h-28 text-lg"
-            }`}
+            className={`resize-none placeholder:text-muted-foreground/60 ${isCompact ? "min-h-[60px] text-base" : "min-h-28 text-lg"
+              }`}
           />
         </PromptInputBody>
         <PromptInputFooter>

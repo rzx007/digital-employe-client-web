@@ -1,6 +1,5 @@
-import * as React from "react"
+import { useEffect, useMemo, type ComponentProps } from "react"
 import { IconCirclePlus } from "@tabler/icons-react"
-
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@workspace/ui/components/button"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
@@ -12,15 +11,14 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 import { findContactInList } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
-
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
-
 import { ConversationItem } from "./conversation-item"
+
 
 export function ConversationList({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: ComponentProps<"div">) {
   const {
     isDraftConversation,
     selectedConversationId,
@@ -45,7 +43,7 @@ export function ConversationList({
   } = useConversationsQuery(selectedContactId)
 
   // 监听会话列表变化
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedContactId) return
     if (!conversationsQuerySuccess) return
 
@@ -81,7 +79,7 @@ export function ConversationList({
     setSelectedConversationId,
   ])
 
-  const selectedContact = React.useMemo(() => {
+  const selectedContact = useMemo(() => {
     if (!selectedContactId) return null
     return findContactInList(contacts, selectedContactId) ?? null
   }, [contacts, selectedContactId])

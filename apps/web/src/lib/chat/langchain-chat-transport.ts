@@ -1,6 +1,7 @@
 import {
   createIdGenerator,
   type ChatTransport,
+  type FileUIPart,
   type UIMessage,
   type UIMessageChunk,
 } from "ai"
@@ -73,6 +74,10 @@ function buildChatApiUrl(conversationId: string) {
   return `/digital/api/v1/text2sql/stream?id=${conversationId}`
 }
 
+function buildResumeApiUrl(conversationId: string) {
+  return `/digital/api/v1/text2sql/stream/resume?id=${conversationId}`
+}
+
 function getConversationIdFromBody(body: object | undefined) {
   if (!body || typeof body !== "object") {
     return null
@@ -81,6 +86,24 @@ function getConversationIdFromBody(body: object | undefined) {
   const { conversationId } = body as { conversationId?: unknown }
 
   return typeof conversationId === "string" ? conversationId : null
+}
+
+function getAttachmentsFromBody(body: object | undefined) {
+  if (!body || typeof body !== "object") {
+    return []
+  }
+
+  const { attachments } = body as { attachments?: unknown }
+
+  return Array.isArray(attachments)
+    ? (attachments.filter(
+        (attachment): attachment is FileUIPart =>
+          typeof attachment === "object" &&
+          attachment !== null &&
+          "type" in attachment &&
+          attachment.type === "file"
+      ) as FileUIPart[])
+    : []
 }
 
 async function createEventSourceResponse(options: {
@@ -109,6 +132,36 @@ async function createEventSourceResponse(options: {
   return response.body
 }
 
+async function createResumeEventSourceResponse(options: {
+  conversationId: string
+  abortSignal: AbortSignal | undefined
+}) {
+  const response = await request.raw(
+    buildResumeApiUrl(options.conversationId),
+    {
+      method: "GET",
+      headers: getRequestHeaders({
+        Accept: "text/event-stream",
+      }),
+      signal: options.abortSignal,
+    }
+  )
+
+  if (response.status === 204) {
+    return null
+  }
+
+  if (!response.ok) {
+    throw new Error(`恢复聊天请求失败 (${response.status})`)
+  }
+
+  if (!response.body) {
+    throw new Error("恢复聊天响应为空")
+  }
+
+  return response.body
+}
+
 export class LangChainChatTransport<
   UI_MESSAGE extends UIMessage,
 > implements ChatTransport<UI_MESSAGE> {
@@ -118,6 +171,7 @@ export class LangChainChatTransport<
     body,
   }: Parameters<ChatTransport<UI_MESSAGE>["sendMessages"]>[0]) {
     const conversationId = getConversationIdFromBody(body)
+    const attachments = getAttachmentsFromBody(body)
     const latestMessage = messages.at(-1)
     const latestText = latestMessage?.parts
       ?.filter((part) => part.type === "text")
@@ -133,6 +187,8 @@ export class LangChainChatTransport<
       throw new Error("消息内容不能为空")
     }
 
+    void attachments
+
     const stream = await createEventSourceResponse({
       conversationId,
       prompt: latestText,
@@ -142,8 +198,23 @@ export class LangChainChatTransport<
     return this.processResponseStream(stream)
   }
 
-  async reconnectToStream() {
-    return null
+  async reconnectToStream({
+    chatId,
+  }: Parameters<ChatTransport<UI_MESSAGE>["reconnectToStream"]>[0]) {
+    if (!chatId) {
+      return null
+    }
+
+    const stream = await createResumeEventSourceResponse({
+      conversationId: chatId,
+      abortSignal: undefined,
+    })
+
+    if (!stream) {
+      return null
+    }
+
+    return this.processResponseStream(stream)
   }
 
   private processResponseStream(stream: ReadableStream<Uint8Array>) {
