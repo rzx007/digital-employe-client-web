@@ -101,7 +101,7 @@ export function ContactsSidebar({
 
         <ScrollArea className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}>
           {isCollapsed ? (
-            <div className="flex flex-col items-center gap-2 px-2">
+            <div className="flex flex-col items-center gap-2 px-2 py-0.5">
               <div
                 onClick={() => setSelectedContactId(curatorId)}
                 className={cn(

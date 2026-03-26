@@ -11,6 +11,14 @@ export {
 
 import { getArtifactFromToolPart } from "./artifact-utils"
 
+type ToolRenderPart = Extract<
+  UIMessage["parts"][number],
+  {
+    type: `tool-${string}`
+    toolCallId: string
+  }
+>
+
 export type MessageRenderBlock =
   | {
       kind: "text"
@@ -22,6 +30,17 @@ export type MessageRenderBlock =
       key: string
       artifact: Artifact
     }
+  | {
+      kind: "tool"
+      key: string
+      part: ToolRenderPart
+    }
+
+function isToolRenderPart(
+  part: UIMessage["parts"][number]
+): part is ToolRenderPart {
+  return part.type.startsWith("tool-") && "toolCallId" in part
+}
 
 export function getTextFromUIMessage(message: UIMessage) {
   return message.parts
@@ -44,6 +63,14 @@ export function getRenderBlocksFromUIMessage(
       }
 
       return blocks
+    }
+
+    if (isToolRenderPart(part)) {
+      blocks.push({
+        kind: "tool",
+        key: `${message.id}:tool:${part.toolCallId}:${index}`,
+        part,
+      })
     }
 
     const artifact = getArtifactFromToolPart(part)

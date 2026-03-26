@@ -61,12 +61,14 @@ interface PendingToolCall {
   sentInputAvailable: boolean
 }
 
+type ParsePhase = "idle" | "text" | "tool"
+
 export interface LangChainStreamParseState {
   pendingToolCalls: Map<string, PendingToolCall>
   toolCallKeysById: Map<string, string>
   toolCallKeysByChunkIndex: Map<string, string>
-  didSendTextStart: boolean
-  didSendTextEnd: boolean
+  currentPhase: ParsePhase
+  currentTextId: string | null
   didSendFinish: boolean
 }
 
@@ -75,23 +77,39 @@ export function createLangChainStreamParseState(): LangChainStreamParseState {
     pendingToolCalls: new Map(),
     toolCallKeysById: new Map(),
     toolCallKeysByChunkIndex: new Map(),
-    didSendTextStart: false,
-    didSendTextEnd: false,
+    currentPhase: "idle",
+    currentTextId: null,
     didSendFinish: false,
   }
 }
 
-export function enqueueTextStart(
-  controller: ReadableStreamDefaultController<UIMessageChunk>,
-  state: LangChainStreamParseState,
-  textId: string
-) {
-  if (state.didSendTextStart) {
-    return
+function transitionToTextPhase(state: LangChainStreamParseState): string {
+  const textId = generatePartId()
+  state.currentPhase = "text"
+  state.currentTextId = textId
+  return textId
+}
+
+function closeCurrentTextPhase(
+  state: LangChainStreamParseState
+): UIMessageChunk[] {
+  if (state.currentPhase !== "text" || !state.currentTextId) {
+    return []
   }
 
-  controller.enqueue({ type: "text-start", id: textId })
-  state.didSendTextStart = true
+  const chunks: UIMessageChunk[] = [
+    { type: "text-end", id: state.currentTextId },
+  ]
+  state.currentPhase = "idle"
+  state.currentTextId = null
+  return chunks
+}
+
+function openNewTextPhase(state: LangChainStreamParseState): UIMessageChunk[] {
+  const lifecycle: UIMessageChunk[] = closeCurrentTextPhase(state)
+  const textId = transitionToTextPhase(state)
+  lifecycle.push({ type: "text-start", id: textId })
+  return lifecycle
 }
 
 function isLangChainAiMessageChunk(
@@ -285,6 +303,19 @@ function buildToolInputChunks(
         existingPending.toolName = toolName
       }
 
+      if (
+        !existingPending.sentInputStart &&
+        existingPending.toolName &&
+        existingPending.toolCallId
+      ) {
+        result.push({
+          type: "tool-input-start",
+          toolCallId: existingPending.toolCallId,
+          toolName: existingPending.toolName,
+        })
+        existingPending.sentInputStart = true
+      }
+
       return
     }
 
@@ -292,13 +323,22 @@ function buildToolInputChunks(
       return
     }
 
-    getOrCreatePendingToolCall({
+    const pending = getOrCreatePendingToolCall({
       state,
       messageChunkId,
       index,
       toolCallId,
       toolName,
     })
+
+    if (!pending.sentInputStart && pending.toolCallId && pending.toolName) {
+      result.push({
+        type: "tool-input-start",
+        toolCallId: pending.toolCallId,
+        toolName: pending.toolName,
+      })
+      pending.sentInputStart = true
+    }
   })
 
   const toolCallChunks = Array.isArray(chunk.kwargs?.tool_call_chunks)
@@ -453,17 +493,10 @@ function buildToolOutputChunk(
   }
 }
 
-export function enqueueTextEnd(
-  controller: ReadableStreamDefaultController<UIMessageChunk>,
-  state: LangChainStreamParseState,
-  textId: string
-) {
-  if (!state.didSendTextStart || state.didSendTextEnd) {
-    return
-  }
-
-  controller.enqueue({ type: "text-end", id: textId })
-  state.didSendTextEnd = true
+export function closeTextPhaseIfNeeded(
+  state: LangChainStreamParseState
+): UIMessageChunk[] {
+  return closeCurrentTextPhase(state)
 }
 
 export function enqueueFinish(
@@ -481,31 +514,74 @@ export function enqueueFinish(
 export function parseLangChainPayloadToChunks(options: {
   payload: unknown
   state: LangChainStreamParseState
-  textId: string
-}) {
+}): UIMessageChunk[] {
+  const { payload, state } = options
   const result: UIMessageChunk[] = []
-  const toolOutputChunk = buildToolOutputChunk(options.payload, options.state)
+
+  const toolOutputChunk = buildToolOutputChunk(payload, state)
+
+  const hasToolInput =
+    Array.isArray(payload) &&
+    isLangChainAiMessageChunk(payload[0]) &&
+    hasAnyToolDelta(payload[0])
+
+  const hasToolContent = !!(toolOutputChunk || hasToolInput)
+  const assistantText = extractAssistantText(payload)
+  const hasTextContent = !!assistantText
+
+  if (hasToolContent && state.currentPhase === "text") {
+    result.push(...closeCurrentTextPhase(state))
+    state.currentPhase = "tool"
+  }
 
   if (toolOutputChunk) {
+    state.currentPhase = "tool"
     result.push(toolOutputChunk)
   }
 
-  if (
-    Array.isArray(options.payload) &&
-    isLangChainAiMessageChunk(options.payload[0])
-  ) {
-    result.push(...buildToolInputChunks(options.payload[0], options.state))
+  if (hasToolInput) {
+    state.currentPhase = "tool"
+    result.push(
+      ...buildToolInputChunks(payload[0] as LangChainAIMessageChunk, state)
+    )
   }
 
-  const assistantText = extractAssistantText(options.payload)
-
-  if (assistantText) {
+  if (hasTextContent) {
+    if (state.currentPhase !== "text") {
+      result.push(...openNewTextPhase(state))
+    }
     result.push({
       type: "text-delta",
-      id: options.textId,
+      id: state.currentTextId!,
       delta: assistantText,
     })
   }
 
   return result
+}
+
+function hasAnyToolDelta(chunk: LangChainAIMessageChunk): boolean {
+  const toolCalls = Array.isArray(chunk.kwargs?.tool_calls)
+    ? chunk.kwargs.tool_calls
+    : []
+  const toolCallChunks = Array.isArray(chunk.kwargs?.tool_call_chunks)
+    ? chunk.kwargs.tool_call_chunks
+    : []
+  const invalidToolCalls = Array.isArray(chunk.kwargs?.invalid_tool_calls)
+    ? chunk.kwargs.invalid_tool_calls
+    : []
+
+  const hasCalls = toolCalls.some(
+    (tc) => getStringValue(tc.id) || getStringValue(tc.name)
+  )
+
+  const hasDeltas = toolCallChunks.some(
+    (tcc) => typeof tcc.args === "string" && tcc.args.length > 0
+  )
+
+  const hasFallbackDeltas = invalidToolCalls.some(
+    (itc) => typeof itc.args === "string" && itc.args.length > 0
+  )
+
+  return hasCalls || hasDeltas || hasFallbackDeltas
 }

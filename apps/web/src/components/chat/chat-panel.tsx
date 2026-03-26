@@ -13,6 +13,13 @@ import {
   MessageResponse,
 } from "@workspace/ui/components/ai-elements/message"
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@workspace/ui/components/ai-elements/tool"
 import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { format } from "date-fns"
@@ -39,6 +46,27 @@ import {
 } from "./chat-view-shared"
 
 const EMPTY_MESSAGES: UIMessage[] = []
+
+type ToolUIPart = Extract<
+  UIMessage["parts"][number],
+  {
+    type: `tool-${string}`
+    toolCallId: string
+  }
+>
+
+function renderToolOutput(output: unknown) {
+  if (output == null) {
+    return null
+  }
+
+  const content =
+    typeof output === "object"
+      ? JSON.stringify(output, null, 2)
+      : String(output)
+
+  return <MessageResponse>{content}</MessageResponse>
+}
 
 export function ChatPanel({
   contact,
@@ -217,6 +245,30 @@ export function ChatPanel({
                                   <MessageResponse key={block.key}>
                                     {block.text}
                                   </MessageResponse>
+                                )
+                              }
+
+                              if (block.kind === "tool") {
+                                const part = block.part as ToolUIPart
+
+                                return (
+                                  <Tool
+                                    key={block.key}
+                                    className="max-w-2xl"
+                                    defaultOpen={false}
+                                  >
+                                    <ToolHeader
+                                      state={part.state as ToolUIPart["state"]}
+                                      type={part.type as ToolUIPart["type"]}
+                                    />
+                                    <ToolContent>
+                                      <ToolInput input={part.input} />
+                                      <ToolOutput
+                                        errorText={part.errorText}
+                                        output={renderToolOutput(part.output)}
+                                      />
+                                    </ToolContent>
+                                  </Tool>
                                 )
                               }
 

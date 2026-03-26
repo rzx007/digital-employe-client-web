@@ -1,5 +1,4 @@
 import {
-  createIdGenerator,
   type ChatTransport,
   type FileUIPart,
   type UIMessage,
@@ -7,21 +6,29 @@ import {
 } from "ai"
 
 import { request, getRequestHeaders } from "@/lib/request"
+import { SeeData, createMockSSEStream } from "@/lib/mock-data/sse"
 import {
+  closeTextPhaseIfNeeded,
   createLangChainStreamParseState,
   enqueueFinish,
-  enqueueTextStart,
-  enqueueTextEnd,
   parseLangChainPayloadToChunks,
 } from "./langchain-stream-parser"
 
-const generatePartId = createIdGenerator({
-  prefix: "lc-part",
-  size: 16,
-})
+const useMock =
+  import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_SSE === "true"
 
+/**
+ * 获取事件边界的索引位置
+ * 该函数用于查找HTTP请求或响应头与正文之间的分隔边界
+ * 支持Windows风格(\r\n\r\n)和Unix风格(\n\n)的换行符格式
+ *
+ * @param buffer - 输入的字符串缓冲区，通常包含HTTP头部信息
+ * @returns 返回边界字符的位置索引，如果未找到则返回-1
+ */
 function getEventBoundaryIndex(buffer: string) {
+  // 查找Windows风格的换行符边界（\r\n\r\n）
   const windowsBoundary = buffer.indexOf("\r\n\r\n")
+  // 查找Unix风格的换行符边界（\n\n）
   const unixBoundary = buffer.indexOf("\n\n")
 
   if (windowsBoundary === -1) {
@@ -32,6 +39,7 @@ function getEventBoundaryIndex(buffer: string) {
     return windowsBoundary
   }
 
+  // 返回较早出现的边界位置
   return Math.min(windowsBoundary, unixBoundary)
 }
 
@@ -158,11 +166,13 @@ export class LangChainChatTransport<
 
     void attachments
 
-    const stream = await createEventSourceResponse({
-      conversationId,
-      prompt: latestText,
-      abortSignal,
-    })
+    const stream = useMock
+      ? createMockSSEStream(SeeData)
+      : await createEventSourceResponse({
+          conversationId,
+          prompt: latestText,
+          abortSignal,
+        })
 
     return this.processResponseStream(stream)
   }
@@ -186,13 +196,20 @@ export class LangChainChatTransport<
     return this.processResponseStream(stream)
   }
 
+  /**
+   * 处理服务器发送的响应流，将其转换为UI消息块流
+   * 该方法接收一个字节数组可读流，解析其中的SSE（Server-Sent Events）格式数据，
+   * 并将解析后的消息块输出到新的可读流中
+   *
+   * @param stream - 包含Uint8Array数据的可读流，预期包含SSE格式的消息
+   * @returns 返回一个可读流，产生UIMessageChunk类型的事件
+   */
   private processResponseStream(stream: ReadableStream<Uint8Array>) {
     const decoder = new TextDecoder()
     const reader = stream.getReader()
 
     return new ReadableStream<UIMessageChunk>({
       async start(controller) {
-        const textId = generatePartId()
         let buffer = ""
         const state = createLangChainStreamParseState()
 
@@ -211,7 +228,9 @@ export class LangChainChatTransport<
           const data = lines.join("\n")
 
           if (data === "[DONE]") {
-            enqueueTextEnd(controller, state, textId)
+            closeTextPhaseIfNeeded(state).forEach((chunk) =>
+              controller.enqueue(chunk)
+            )
             enqueueFinish(controller, state)
             controller.close()
             return true
@@ -222,18 +241,10 @@ export class LangChainChatTransport<
             const chunks = parseLangChainPayloadToChunks({
               payload,
               state,
-              textId,
             })
 
-            const hasTextDelta = chunks.some(
-              (chunk) => chunk.type === "text-delta"
-            )
-
-            if (hasTextDelta) {
-              enqueueTextStart(controller, state, textId)
-            }
-
             chunks.forEach((chunk) => {
+              console.log( chunk)
               controller.enqueue(chunk)
             })
           } catch {
@@ -273,7 +284,9 @@ export class LangChainChatTransport<
             flushEvent(buffer)
           }
 
-          enqueueTextEnd(controller, state, textId)
+          closeTextPhaseIfNeeded(state).forEach((chunk) =>
+            controller.enqueue(chunk)
+          )
           enqueueFinish(controller, state)
           controller.close()
         } catch (error) {
