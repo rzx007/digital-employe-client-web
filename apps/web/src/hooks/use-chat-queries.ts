@@ -6,7 +6,6 @@ import {
   fetchConversationsByContactId,
   fetchMessagesByConversationId,
 } from "@/api/chat"
-import { CONTACTS } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
 import type { Message } from "@/lib/mock-data/messages"
 import { chatKeys } from "@/lib/query-keys/chat"
@@ -15,7 +14,6 @@ export function useContactsQuery() {
   return useQuery({
     queryKey: chatKeys.contacts(),
     queryFn: fetchContacts,
-    initialData: () => [...CONTACTS],
   })
 }
 

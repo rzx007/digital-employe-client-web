@@ -14,7 +14,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: './',
+  base: "./",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -22,13 +22,13 @@ export default defineConfig({
   },
   server: {
     port: 3399,
-    host: '0.0.0.0',
+    host: "0.0.0.0",
     open: true,
     proxy: {
-      '/actus': {
-        target: 'http://10.172.246.179:5002',
+      "/actus": {
+        target: "http://10.172.246.122:8000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/actus/, ''),
+        rewrite: (path) => path.replace(/^\/actus/, ""),
       },
     },
   },

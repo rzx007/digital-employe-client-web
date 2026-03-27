@@ -134,12 +134,11 @@ export function ChatPanel({
     >
       {contact && (
         <>
-          <ChatPanelHeader
+          {!isDraftMode && (<ChatPanelHeader
             title={title}
             onOpenContacts={onOpenContacts}
             onOpenConversations={onOpenConversations}
-          />
-
+          />)}
           <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
               {isDraftMode ? (

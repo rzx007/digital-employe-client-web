@@ -41,6 +41,11 @@ export function ContactsSidebar({
   const { data: contacts = [] } = useContactsQuery()
   const isMobile = useIsMobile()
 
+  const employeeContacts = React.useMemo(
+    () => contacts.filter((contact) => contact.type === "employee"),
+    [contacts]
+  )
+
   const handleCreateGroup = (selectedEmployees: AIEmployee[]) => {
     console.log("创建群聊，选择员工:", selectedEmployees)
     setIsDialogOpen(false)
@@ -50,9 +55,11 @@ export function ContactsSidebar({
     () => contacts.filter((contact) => contact.type === "group"),
     [contacts]
   )
-  const employeeContacts = React.useMemo(
-    () => contacts.filter((contact) => contact.type === "employee"),
-    [contacts]
+
+  const employeeList = React.useMemo(
+    () =>
+      employeeContacts.map((c) => c.employee).filter(Boolean) as AIEmployee[],
+    [employeeContacts]
   )
 
   const curatorId = PRIMARY_CURATOR.id
@@ -63,12 +70,13 @@ export function ContactsSidebar({
       <CreateGroupDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        employees={employeeList}
         onCreate={handleCreateGroup}
       />
       <div
         className={cn(
           "flex h-full flex-col border-r bg-muted/50 transition-all duration-300",
-          isCollapsed ? "w-14" : isMobile ? "w-full" : "w-60",
+          isCollapsed ? "w-14" : isMobile ? "w-full" : "w-64",
           className
         )}
         {...props}
@@ -118,7 +126,7 @@ export function ContactsSidebar({
                 className={cn(
                   "relative cursor-pointer transition-transform hover:scale-105",
                   isCuratorSelected &&
-                    "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                  "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                 )}
                 title={PRIMARY_CURATOR.name}
               >
@@ -143,7 +151,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <GroupMembersAvatar
@@ -166,7 +174,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <EmployeeContactAvatar
@@ -180,7 +188,7 @@ export function ContactsSidebar({
               })}
             </div>
           ) : (
-            <div className="space-y-3 px-2 py-2">
+            <div className="space-y-3 px-2 py-2 w-full">
               <div className="space-y-0.5">
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   主理人
@@ -268,11 +276,11 @@ export function ContactsSidebar({
                         showStatus
                       />
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate font-medium">
+                        <span className="truncate font-medium text-sm max-w-[170px]">
                           {contact.employee?.name}
                         </span>
                         <span
-                          className="truncate text-muted-foreground"
+                          className="truncate text-muted-foreground max-w-[130px]"
                           title={contact.employee?.role}
                         >
                           {contact.employee?.role}

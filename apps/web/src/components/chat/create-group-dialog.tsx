@@ -13,18 +13,19 @@ import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Checkbox } from "@workspace/ui/components/checkbox"
 import { cn } from "@workspace/ui/lib/utils"
-import { AI_EMPLOYEES } from "@/lib/mock-data/ai-employees"
 import type { AIEmployee } from "@/lib/mock-data/ai-employees"
 
 interface CreateGroupDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  employees: AIEmployee[]
   onCreate: (selectedEmployees: AIEmployee[]) => void
 }
 
 export function CreateGroupDialog({
   open,
   onOpenChange,
+  employees = [],
   onCreate,
 }: CreateGroupDialogProps) {
   const [selectedEmployees, setSelectedEmployees] = React.useState<Set<string>>(
@@ -41,7 +42,7 @@ export function CreateGroupDialog({
     setSelectedEmployees(newSelected)
   }
 
-  const selectedEmployeesList = AI_EMPLOYEES.filter((emp) =>
+  const selectedEmployeesList = employees.filter((emp) =>
     selectedEmployees.has(emp.id)
   )
 
@@ -60,7 +61,7 @@ export function CreateGroupDialog({
 
         <ScrollArea className="max-h-[400px] px-1">
           <div className="space-y-2 py-2">
-            {AI_EMPLOYEES.map((employee) => (
+            {employees.map((employee) => (
               <div
                 key={employee.id}
                 className={cn(
