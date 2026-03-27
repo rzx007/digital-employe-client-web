@@ -84,7 +84,7 @@ function FloatingMenu({
   }
 
   const isBottomOverflow = rect.bottom + 300 > window.innerHeight
-  const topPosition = isBottomOverflow ? rect.top - 4 : rect.bottom + 4
+  const topPosition = isBottomOverflow ? rect.top - 40 : rect.bottom + 4
 
   return createPortal(
     <div
@@ -92,7 +92,7 @@ function FloatingMenu({
       style={{
         position: "fixed",
         top: topPosition,
-        left: rect.left,
+        left: rect.left - 18,
         maxHeight: "300px",
         overflowY: "auto",
         transform: isBottomOverflow ? "translateY(-100%)" : "none",
@@ -100,7 +100,7 @@ function FloatingMenu({
     >
       <Command>
         <CommandList>
-          <CommandGroup heading="Commands">
+          <CommandGroup heading="技能">
             {options.map((option, i) => (
               <CommandItem
                 key={option.key}
@@ -109,7 +109,7 @@ function FloatingMenu({
                   selectOptionAndCleanUp(option)
                 }}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-sm p-2 hover:bg-accent hover:text-accent-foreground",
+                  "flex cursor-pointer items-start gap-2 rounded-sm p-2 hover:bg-accent hover:text-accent-foreground",
                   selectedIndex === i && "bg-accent text-accent-foreground"
                 )}
                 onMouseEnter={() => {
@@ -126,7 +126,7 @@ function FloatingMenu({
                   <span className="text-sm leading-none font-medium">
                     {option.title}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground line-clamp-2 ">
                     {option.description}
                   </span>
                 </div>
