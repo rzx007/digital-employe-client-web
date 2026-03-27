@@ -71,6 +71,7 @@ function renderToolOutput(output: unknown) {
 export function ChatPanel({
   contact,
   title,
+  conversationId,
   messages,
   storedMessages = [],
   inputValue,
@@ -87,6 +88,7 @@ export function ChatPanel({
 }: React.ComponentProps<"div"> & {
   contact?: ChatViewContact
   title: string
+  conversationId?: string | number
   messages: UIMessage[]
   storedMessages?: StoredMessage[]
   inputValue: string
@@ -134,17 +136,24 @@ export function ChatPanel({
     >
       {contact && (
         <>
-          {!isDraftMode && (<ChatPanelHeader
-            title={title}
-            onOpenContacts={onOpenContacts}
-            onOpenConversations={onOpenConversations}
-          />)}
+          {!isDraftMode && (
+            <ChatPanelHeader
+              title={title}
+              conversationId={conversationId}
+              onOpenContacts={onOpenContacts}
+              onOpenConversations={onOpenConversations}
+            />
+          )}
           <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
               {isDraftMode ? (
                 <ConversationEmptyState className="py-16">
                   <div className="flex flex-col items-center gap-6">
-                    <img src="/logo.svg" alt="Logo" className="size-12 opacity-80" />
+                    <img
+                      src="/logo.svg"
+                      alt="Logo"
+                      className="size-12 opacity-80"
+                    />
                     <div className="space-y-3 text-center">
                       <h2 className="text-md font-semibold tracking-tight">
                         数字员工智能助手

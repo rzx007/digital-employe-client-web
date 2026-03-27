@@ -49,6 +49,12 @@ export async function fetchConversationMessages(
   )
 }
 
+export async function deleteConversation(conversationId: number | string) {
+  return request<ApiResponse<null>>(`/chat/conversations/${conversationId}`, {
+    method: "DELETE",
+  })
+}
+
 /**
  * 流式对话（SSE）
  * GET /chat/conversations/{conversation_id}/stream

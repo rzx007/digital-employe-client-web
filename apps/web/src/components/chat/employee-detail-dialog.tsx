@@ -1,6 +1,18 @@
-import { IconMessage, IconSparkles, IconTool } from "@tabler/icons-react"
-import { Badge } from "@workspace/ui/components/badge"
+import * as React from "react"
+
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconMessage,
+  IconSparkles,
+  IconTool,
+} from "@tabler/icons-react"
 import { Button } from "@workspace/ui/components/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@workspace/ui/components/collapsible"
 import {
   Dialog,
   DialogContent,
@@ -12,6 +24,7 @@ import {
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { Separator } from "@workspace/ui/components/separator"
 import { Skeleton } from "@workspace/ui/components/skeleton"
+import type { MetadataSkill } from "@/api/types"
 import type { Contact } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
 import { useEmployeeDetailQuery } from "@/hooks/use-chat-queries"
@@ -38,6 +51,47 @@ function formatDate(dateStr?: string) {
   })
 }
 
+function SkillCard({ skill }: { skill: MetadataSkill }) {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded-md border">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 p-2.5 text-left text-xs transition-colors hover:bg-accent/50"
+          >
+            {open ? (
+              <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <IconChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {skill.skillName}
+            </span>
+            <span className="shrink-0 text-[10px] text-muted-foreground">
+              {skill.status === 1 ? "已启用" : "未启用"}
+            </span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t px-2.5 pt-2 pb-2.5">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {skill.description}
+            </p>
+            {skill.directoryName && (
+              <div className="mt-1.5 text-[10px] text-muted-foreground">
+                目录: {skill.directoryName}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  )
+}
+
 export function EmployeeDetailDialog({
   contact,
   open,
@@ -57,10 +111,12 @@ export function EmployeeDetailDialog({
 
   const metadata = employee?.metadata
   const capabilities = metadata?.capabilities ?? []
-  const skills = employee?.skills ?? []
+  const skills = metadata?.skills ?? []
   const statusInfo = metadata
     ? (statusMap[metadata.status] ?? statusMap[0])
     : null
+
+  const hasContent = skills.length > 0 || capabilities.length > 0 || !isLoading
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,12 +158,11 @@ export function EmployeeDetailDialog({
               <div className="space-y-3">
                 <Skeleton className="h-5 w-16" />
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
                 </div>
               </div>
-            ) : (
+            ) : hasContent ? (
               <>
                 <div>
                   <div className="mb-2 flex items-center gap-1.5">
@@ -145,18 +200,38 @@ export function EmployeeDetailDialog({
                       <span className="text-muted-foreground">创建时间</span>
                       <span>{formatDate(employee?.created_at)}</span>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">更新时间</span>
+                      <span>{formatDate(employee?.updated_at)}</span>
+                    </div>
                   </div>
                 </div>
 
-                {capabilities.length > 0 && (
+                {skills.length > 0 && (
                   <div>
                     <div className="mb-2 flex items-center gap-1.5">
                       <IconSparkles className="size-3.5 text-muted-foreground" />
                       <span className="text-xs font-medium text-muted-foreground">
-                        能力
+                        技能 ({skills.length})
                       </span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
+                      {skills.map((skill) => (
+                        <SkillCard key={skill.id} skill={skill} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {capabilities.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <IconTool className="size-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        能力 ({capabilities.length})
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
                       {capabilities.map((cap, index) => (
                         <div
                           key={index}
@@ -182,29 +257,8 @@ export function EmployeeDetailDialog({
                     </div>
                   </div>
                 )}
-
-                {skills.length > 0 && (
-                  <div>
-                    <div className="mb-2 flex items-center gap-1.5">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        技能
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {skills.map((skill, index) => (
-                        <Badge
-                          key={index}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {skill.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
-            )}
+            ) : null}
           </div>
         </ScrollArea>
 

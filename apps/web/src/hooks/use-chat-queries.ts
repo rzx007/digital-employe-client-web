@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { deleteConversation as deleteConversationApi } from "@/api/conversation"
 import { fetchEmployeeById } from "@/api/employee"
 import { fetchGroupById } from "@/api/group"
 import {
@@ -79,5 +80,47 @@ export function useGroupDetailQuery(id: string | null) {
     queryFn: () => fetchGroupById(Number(id!)),
     enabled: Boolean(id),
     select: (res) => res.data,
+  })
+}
+
+export function useDeleteConversationMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+    }: {
+      conversationId: string
+      contactId: string
+    }) => deleteConversationApi(conversationId),
+    onMutate: async ({ conversationId, contactId }) => {
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.conversations(contactId),
+      })
+
+      const previousConversations = queryClient.getQueryData<Conversation[]>(
+        chatKeys.conversations(contactId)
+      )
+
+      queryClient.setQueryData<Conversation[]>(
+        chatKeys.conversations(contactId),
+        (current) => current?.filter((c) => c.id !== conversationId)
+      )
+
+      return { previousConversations, contactId }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousConversations) {
+        queryClient.setQueryData(
+          chatKeys.conversations(context.contactId),
+          context.previousConversations
+        )
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(variables.contactId),
+      })
+    },
   })
 }
