@@ -1,0 +1,222 @@
+import { IconMessage, IconSparkles, IconTool } from "@tabler/icons-react"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
+import { ScrollArea } from "@workspace/ui/components/scroll-area"
+import { Separator } from "@workspace/ui/components/separator"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import type { Contact } from "@/lib/mock-data/ai-employees"
+import { useChatStore } from "@/stores/chat-store"
+import { useEmployeeDetailQuery } from "@/hooks/use-chat-queries"
+
+import { EmployeeContactAvatar } from "./contact-avatars"
+
+interface EmployeeDetailDialogProps {
+  contact: Contact
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+const statusMap: Record<number, { label: string; color: string }> = {
+  1: { label: "在线", color: "bg-green-500" },
+  0: { label: "离线", color: "bg-gray-400" },
+}
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "-"
+  return new Date(dateStr).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+}
+
+export function EmployeeDetailDialog({
+  contact,
+  open,
+  onOpenChange,
+}: EmployeeDetailDialogProps) {
+  const employeeId = contact.employee?.id ?? ""
+  const { data: employee, isLoading } = useEmployeeDetailQuery(
+    open ? employeeId : null
+  )
+
+  const { setSelectedContactId } = useChatStore()
+
+  const handleSendMessage = () => {
+    onOpenChange(false)
+    setSelectedContactId(employeeId)
+  }
+
+  const metadata = employee?.metadata
+  const capabilities = metadata?.capabilities ?? []
+  const skills = employee?.skills ?? []
+  const statusInfo = metadata
+    ? (statusMap[metadata.status] ?? statusMap[0])
+    : null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-md">
+        <DialogHeader className="px-4 pt-5 pb-3 text-center">
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Skeleton className="h-16 w-16" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-center">
+                <EmployeeContactAvatar
+                  name={employee?.name ?? contact.employee?.name}
+                  avatar={`https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(employee?.id ?? contact.employee?.id ?? "")}`}
+                  status={contact.employee?.status}
+                  showStatus
+                  avatarClassName="h-16 w-16"
+                  statusClassName="h-3.5 w-3.5 border-2"
+                />
+              </div>
+              <DialogTitle className="text-base">
+                {employee?.name ?? contact.employee?.name}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {metadata?.capability_desc ?? contact.employee?.role}
+              </DialogDescription>
+            </>
+          )}
+        </DialogHeader>
+
+        <Separator />
+
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-4 px-4 py-3">
+            {isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-16" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      基础信息
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">状态</span>
+                      <span className="flex items-center gap-1.5">
+                        {statusInfo && (
+                          <span
+                            className={`inline-block h-2 w-2 rounded-full ${statusInfo.color}`}
+                          />
+                        )}
+                        {statusInfo?.label ?? "未知"}
+                      </span>
+                    </div>
+                    {employee?.employee_code && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">编码</span>
+                        <span className="font-mono">
+                          {employee.employee_code}
+                        </span>
+                      </div>
+                    )}
+                    {employee?.version && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">版本</span>
+                        <span>v{employee.version}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">创建时间</span>
+                      <span>{formatDate(employee?.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {capabilities.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <IconSparkles className="size-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        能力
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {capabilities.map((cap, index) => (
+                        <div
+                          key={index}
+                          className="rounded-md border p-2.5 text-xs"
+                        >
+                          <div className="mb-0.5 font-medium">
+                            {cap.capability_name}
+                          </div>
+                          <div className="leading-relaxed text-muted-foreground">
+                            {cap.capability_desc}
+                          </div>
+                          {(cap.mcp_server_name || cap.mcp_tool_name) && (
+                            <div className="mt-1.5 flex items-center gap-1 text-muted-foreground">
+                              <IconTool className="size-3" />
+                              <span className="font-mono text-[11px]">
+                                {cap.mcp_server_name}
+                                {cap.mcp_tool_name && ` / ${cap.mcp_tool_name}`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {skills.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        技能
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {skills.map((skill, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {skill.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </ScrollArea>
+
+        <Separator />
+
+        <DialogFooter className="px-4 py-3">
+          <Button onClick={handleSendMessage} className="w-full" size="sm">
+            <IconMessage className="size-3.5" />
+            发消息
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

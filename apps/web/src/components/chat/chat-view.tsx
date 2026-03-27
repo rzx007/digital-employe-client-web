@@ -21,10 +21,13 @@ export function ChatView({
   const isDraftConversation = useChatStore((s) => s.isDraftConversation)
   const selectedConversationId = useChatStore((s) => s.selectedConversationId)
   const contact = useChatStore((s) => s.getSelectedContact())
-  const { data: conversations = [] } = useConversationsQuery(selectedContactId)
+  const { data: conversations = [] } = useConversationsQuery(
+    selectedContactId,
+    contact
+  )
 
   const selectedConversation = conversations.find(
-    (conversation) => conversation.id === selectedConversationId
+    (conversation) => String(conversation.id) === String(selectedConversationId)
   )
 
   return isDraftConversation || !selectedConversationId ? (

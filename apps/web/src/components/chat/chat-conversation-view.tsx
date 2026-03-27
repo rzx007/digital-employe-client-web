@@ -24,7 +24,7 @@ export function ConversationChatView({
 }: React.ComponentProps<"div"> & {
   contact?: ChatViewContact
   title: string
-  conversationId: string
+  conversationId: string | number
   onOpenContacts?: () => void
   onOpenConversations?: () => void
 }) {
@@ -41,10 +41,10 @@ export function ConversationChatView({
   )
 
   const { messages, setMessages, sendMessage, status, error } = useChat({
-    id: conversationId,
+    id: String(conversationId),
     messages: initialMessages,
     transport: chatTransport,
-    resume: true,
+    resume: false,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -52,7 +52,7 @@ export function ConversationChatView({
     },
     onFinish: () => {
       void queryClient.invalidateQueries({
-        queryKey: chatKeys.messages(conversationId),
+        queryKey: chatKeys.messages(String(conversationId)),
       })
 
       if (selectedContactId) {
@@ -62,18 +62,18 @@ export function ConversationChatView({
       }
 
       void queryClient.refetchQueries({
-        queryKey: chatKeys.messages(conversationId),
+        queryKey: chatKeys.messages(String(conversationId)),
         type: "active",
       })
     },
   })
 
   React.useEffect(() => {
-    if (previousSessionIdRef.current === conversationId) {
+    if (previousSessionIdRef.current === String(conversationId)) {
       return
     }
 
-    previousSessionIdRef.current = conversationId
+    previousSessionIdRef.current = String(conversationId)
     setMessages(initialMessages)
   }, [conversationId, initialMessages, setMessages])
 

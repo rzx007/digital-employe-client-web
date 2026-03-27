@@ -34,15 +34,15 @@ export function DraftChatView({
   const setSelectedConversationId = useChatStore(
     (s) => s.setSelectedConversationId
   )
+  const selectedContact = useChatStore((s) => s.getSelectedContact())
   const [inputValue, setInputValue] = useState("")
-  const createdConversationIdRef = useRef<string | null>(null)
+  const createdConversationIdRef = useRef<string | number | null>(null)
   const createConversationMutation = useCreateConversationMutation()
 
   useEffect(() => {
     createdConversationIdRef.current = selectedConversationId
   }, [selectedConversationId])
 
-  // 草稿对话时，切换联系人或再次点击新增对话，重置createdConversationIdRef
   useEffect(() => {
     createdConversationIdRef.current = null
     setInputValue("")
@@ -76,7 +76,6 @@ export function DraftChatView({
   const handleSendMessage = useCallback(
     async (message: PromptInputMessage) => {
       const hasText = Boolean(message.text)
-      // const hasAttachments = Boolean(message.files?.length)
       const messageText = message.text?.trim() ?? ""
       if (!hasText) {
         return
@@ -96,6 +95,7 @@ export function DraftChatView({
             await createConversationMutation.mutateAsync({
               contactId: selectedContactId ?? "",
               title: messageText,
+              contact: selectedContact,
             })
 
           conversationId = createdConversation.id
@@ -127,6 +127,7 @@ export function DraftChatView({
     [
       createConversationMutation,
       selectedContactId,
+      selectedContact,
       sendMessage,
       setSelectedConversationId,
     ]

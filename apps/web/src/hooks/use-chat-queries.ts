@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { fetchEmployeeById } from "@/api/employee"
+import { fetchGroupById } from "@/api/group"
 import {
   createConversation,
   fetchContacts,
   fetchConversationsByContactId,
   fetchMessagesByConversationId,
 } from "@/api/chat"
+import type { Contact } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
 import type { Message } from "@/lib/mock-data/messages"
 import { chatKeys } from "@/lib/query-keys/chat"
@@ -17,17 +20,20 @@ export function useContactsQuery() {
   })
 }
 
-export function useConversationsQuery(contactId: string | null) {
+export function useConversationsQuery(
+  contactId: string | null,
+  contact?: Contact | undefined
+) {
   return useQuery({
     queryKey: chatKeys.conversations(contactId ?? ""),
-    queryFn: () => fetchConversationsByContactId(contactId!),
-    enabled: Boolean(contactId),
+    queryFn: () => fetchConversationsByContactId(contactId!, contact),
+    enabled: Boolean(contactId) && contact?.type !== "curator",
   })
 }
 
-export function useMessagesQuery(conversationId: string | null) {
+export function useMessagesQuery(conversationId: string | number | null) {
   return useQuery({
-    queryKey: chatKeys.messages(conversationId ?? ""),
+    queryKey: chatKeys.messages(String(conversationId ?? "")),
     queryFn: () => fetchMessagesByConversationId(conversationId!),
     enabled: Boolean(conversationId),
   })
@@ -55,5 +61,23 @@ export function useCreateConversationMutation() {
         []
       )
     },
+  })
+}
+
+export function useEmployeeDetailQuery(id: string | null) {
+  return useQuery({
+    queryKey: chatKeys.employee(id ?? ""),
+    queryFn: () => fetchEmployeeById(Number(id!)),
+    enabled: Boolean(id),
+    select: (res) => res.data,
+  })
+}
+
+export function useGroupDetailQuery(id: string | null) {
+  return useQuery({
+    queryKey: chatKeys.group(id ?? ""),
+    queryFn: () => fetchGroupById(Number(id!)),
+    enabled: Boolean(id),
+    select: (res) => res.data,
   })
 }

@@ -9,12 +9,12 @@ import {
 interface ChatStore {
   contacts: Contact[]
   selectedContactId: string | null
-  selectedConversationId: string | null
+  selectedConversationId: string | number | null
   isDraftConversation: boolean
   draftSessionKey: number
   setContacts: (contacts: Contact[]) => void
   setSelectedContactId: (id: string | null) => void
-  setSelectedConversationId: (id: string | null) => void
+  setSelectedConversationId: (id: string | number | null) => void
   setDraftConversation: (isDraft: boolean) => void
   getSelectedContact: () => Contact | undefined
 }

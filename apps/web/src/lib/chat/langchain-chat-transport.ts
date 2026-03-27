@@ -47,8 +47,8 @@ function getEventBoundaryLength(buffer: string, index: number) {
   return buffer.startsWith("\r\n\r\n", index) ? 4 : 2
 }
 
-function buildChatApiUrl(conversationId: string) {
-  return `/digital/api/v1/text2sql/stream?id=${conversationId}`
+function buildChatApiUrl(options: any) {
+  return `/chat/conversations/${options.conversationId}/stream?question=${options.prompt}`
 }
 
 function buildResumeApiUrl(conversationId: string) {
@@ -74,12 +74,12 @@ function getAttachmentsFromBody(body: object | undefined) {
 
   return Array.isArray(attachments)
     ? (attachments.filter(
-        (attachment): attachment is FileUIPart =>
-          typeof attachment === "object" &&
-          attachment !== null &&
-          "type" in attachment &&
-          attachment.type === "file"
-      ) as FileUIPart[])
+      (attachment): attachment is FileUIPart =>
+        typeof attachment === "object" &&
+        attachment !== null &&
+        "type" in attachment &&
+        attachment.type === "file"
+    ) as FileUIPart[])
     : []
 }
 
@@ -88,13 +88,13 @@ async function createEventSourceResponse(options: {
   prompt: string
   abortSignal: AbortSignal | undefined
 }) {
-  const response = await request.raw(buildChatApiUrl(options.conversationId), {
-    method: "POST",
-    headers: getRequestHeaders({
-      Accept: "text/event-stream",
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({ prompt: options.prompt }),
+  const response = await request.raw(buildChatApiUrl(options), {
+    method: "GET",
+    // headers: getRequestHeaders({
+    //   Accept: "text/event-stream",
+    //   "Content-Type": "application/json",
+    // }),
+    // body: JSON.stringify({ question: options.prompt }),
     signal: options.abortSignal,
   })
 
@@ -169,10 +169,10 @@ export class LangChainChatTransport<
     const stream = useMock
       ? createMockSSEStream(SeeData)
       : await createEventSourceResponse({
-          conversationId,
-          prompt: latestText,
-          abortSignal,
-        })
+        conversationId,
+        prompt: latestText,
+        abortSignal,
+      })
 
     return this.processResponseStream(stream)
   }
@@ -244,7 +244,7 @@ export class LangChainChatTransport<
             })
 
             chunks.forEach((chunk) => {
-              console.log( chunk)
+              console.log(chunk)
               controller.enqueue(chunk)
             })
           } catch {

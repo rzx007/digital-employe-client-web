@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { PRIMARY_CURATOR, type AIEmployee } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
 
-import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
+import { ContactItem } from "./contact-item"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 
@@ -32,10 +32,8 @@ export function ContactsSidebar({
     }
   )
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const { selectedContactId, setSelectedContactId, setContacts } = useChatStore(
+  const { setContacts } = useChatStore(
     useShallow((state) => ({
-      selectedContactId: state.selectedContactId,
-      setSelectedContactId: state.setSelectedContactId,
       setContacts: state.setContacts,
     }))
   )
@@ -69,9 +67,6 @@ export function ContactsSidebar({
     [employeeContacts]
   )
 
-  const curatorId = PRIMARY_CURATOR.id
-  const isCuratorSelected = selectedContactId === curatorId
-
   return (
     <>
       <CreateGroupDialog
@@ -90,7 +85,7 @@ export function ContactsSidebar({
       >
         <div
           className={cn(
-            "flex items-center border-b p-4",
+            "flex shrink-0 items-center border-b p-4 wrap-break-word",
             isCollapsed ? "flex-col space-y-4" : "justify-between"
           )}
         >
@@ -128,71 +123,30 @@ export function ContactsSidebar({
         >
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2 py-0.5">
-              <div
-                onClick={() => setSelectedContactId(curatorId)}
-                className={cn(
-                  "relative cursor-pointer transition-transform hover:scale-105",
-                  isCuratorSelected &&
-                    "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
-                )}
-                title={PRIMARY_CURATOR.name}
-              >
-                <EmployeeContactAvatar
-                  name={PRIMARY_CURATOR.name}
-                  avatar={PRIMARY_CURATOR.avatar}
-                  status={PRIMARY_CURATOR.status}
-                  showStatus
-                  avatarClassName="h-8 w-8"
+              <ContactItem
+                contact={{ type: "curator", curator: PRIMARY_CURATOR }}
+                isCollapsed={isCollapsed}
+              />
+
+              <div className="my-1 h-px w-7 bg-border" />
+
+              {groupContacts.map((contact) => (
+                <ContactItem
+                  key={contact.group?.id}
+                  contact={contact}
+                  isCollapsed={isCollapsed}
                 />
-              </div>
+              ))}
 
               <div className="my-1 h-px w-7 bg-border" />
 
-              {groupContacts.map((contact) => {
-                const contactId = contact.group?.id
-                const isSelected = selectedContactId === contactId
-                return (
-                  <div
-                    key={contactId}
-                    onClick={() => setSelectedContactId(contactId || null)}
-                    className={cn(
-                      "relative cursor-pointer transition-transform hover:scale-105",
-                      isSelected &&
-                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
-                    )}
-                  >
-                    <GroupMembersAvatar
-                      participants={contact.group?.participants}
-                      className="h-8 w-8"
-                    />
-                  </div>
-                )
-              })}
-
-              <div className="my-1 h-px w-7 bg-border" />
-
-              {employeeContacts.map((contact) => {
-                const contactId = contact.employee?.id
-                const isSelected = selectedContactId === contactId
-                return (
-                  <div
-                    key={contactId}
-                    onClick={() => setSelectedContactId(contactId || null)}
-                    className={cn(
-                      "relative cursor-pointer transition-transform hover:scale-105",
-                      isSelected &&
-                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
-                    )}
-                  >
-                    <EmployeeContactAvatar
-                      name={contact.employee?.name}
-                      avatar={contact.employee?.avatar}
-                      status={contact.employee?.status}
-                      showStatus
-                    />
-                  </div>
-                )
-              })}
+              {employeeContacts.map((contact) => (
+                <ContactItem
+                  key={contact.employee?.id}
+                  contact={contact}
+                  isCollapsed={isCollapsed}
+                />
+              ))}
             </div>
           ) : (
             <div className="w-full space-y-3 px-2 py-2">
@@ -200,102 +154,36 @@ export function ContactsSidebar({
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   主理人
                 </p>
-                <div
-                  onClick={() => setSelectedContactId(curatorId)}
-                  className={cn(
-                    "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
-                    isCuratorSelected && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <EmployeeContactAvatar
-                    name={PRIMARY_CURATOR.name}
-                    avatar={PRIMARY_CURATOR.avatar}
-                    status={PRIMARY_CURATOR.status}
-                    showStatus
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate font-medium">
-                      {PRIMARY_CURATOR.name}
-                    </span>
-                    <span
-                      className="truncate text-muted-foreground"
-                      title={PRIMARY_CURATOR.role}
-                    >
-                      {PRIMARY_CURATOR.role}
-                    </span>
-                  </div>
-                </div>
+                <ContactItem
+                  contact={{ type: "curator", curator: PRIMARY_CURATOR }}
+                  isCollapsed={isCollapsed}
+                />
               </div>
 
               <div className="space-y-0.5">
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   群聊
                 </p>
-                {groupContacts.map((contact) => {
-                  const contactId = contact.group?.id
-                  const isSelected = selectedContactId === contactId
-                  return (
-                    <div
-                      key={contactId}
-                      onClick={() => setSelectedContactId(contactId || null)}
-                      className={cn(
-                        "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
-                        isSelected && "bg-accent text-accent-foreground"
-                      )}
-                    >
-                      <GroupMembersAvatar
-                        participants={contact.group?.participants}
-                        className="size-9"
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate font-medium">
-                          {contact.group?.name}
-                        </span>
-                        <span className="truncate text-muted-foreground">
-                          {contact.group?.participants.length} 位成员
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
+                {groupContacts.map((contact) => (
+                  <ContactItem
+                    key={contact.group?.id}
+                    contact={contact}
+                    isCollapsed={isCollapsed}
+                  />
+                ))}
               </div>
 
               <div className="space-y-0.5">
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   联系人
                 </p>
-                {employeeContacts.map((contact) => {
-                  const contactId = contact.employee?.id
-                  const isSelected = selectedContactId === contactId
-                  return (
-                    <div
-                      key={contactId}
-                      onClick={() => setSelectedContactId(contactId || null)}
-                      className={cn(
-                        "group flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
-                        isSelected && "bg-accent text-accent-foreground"
-                      )}
-                    >
-                      <EmployeeContactAvatar
-                        name={contact.employee?.name}
-                        avatar={contact.employee?.avatar}
-                        status={contact.employee?.status}
-                        showStatus
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="max-w-[170px] truncate text-sm font-medium">
-                          {contact.employee?.name}
-                        </span>
-                        <span
-                          className="max-w-[130px] truncate text-muted-foreground"
-                          title={contact.employee?.role}
-                        >
-                          {contact.employee?.role}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
+                {employeeContacts.map((contact) => (
+                  <ContactItem
+                    key={contact.employee?.id}
+                    contact={contact}
+                    isCollapsed={isCollapsed}
+                  />
+                ))}
               </div>
             </div>
           )}

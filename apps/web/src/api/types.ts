@@ -104,6 +104,10 @@ export interface ConversationItem {
   title: string
   created_at: string
   updated_at: string
+  status?: string
+  lastMessage?: string
+  lastMessageTime?: string
+  unreadCount?: number
 }
 
 /**
@@ -111,7 +115,11 @@ export interface ConversationItem {
  */
 export interface ChatMessage {
   id: string
+  conversationId?: number
+  senderId?: string
+  senderName?: string
   role: "user" | "assistant" | "system"
   content: string
-  created_at: string
+  timestamp?: string
+  created_at?: string
 }

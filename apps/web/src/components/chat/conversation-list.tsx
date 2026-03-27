@@ -35,7 +35,7 @@ export function ConversationList({
     data: conversations = [],
     isSuccess: conversationsQuerySuccess,
     isPending: conversationsPending,
-  } = useConversationsQuery(selectedContactId)
+  } = useConversationsQuery(selectedContactId, selectedContact)
 
   useEffect(() => {
     if (!selectedContactId) return
