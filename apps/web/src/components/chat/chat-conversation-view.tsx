@@ -150,20 +150,12 @@ export function ConversationChatView({
     [conversationId, sendMessage]
   )
 
-  const displayMessages = React.useMemo(() => {
-    if (messages.length > 0) {
-      return messages
-    }
-
-    return initialMessages
-  }, [initialMessages, messages])
-
   return (
     <ChatPanel
       contact={contact}
       title={title}
       conversationId={conversationId}
-      messages={displayMessages}
+      messages={messages}
       storedMessages={storedMessages}
       inputValue={inputValue}
       status={chatStatus}

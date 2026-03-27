@@ -10,6 +10,7 @@ export interface Message {
   timestamp: Date
   type?: "text" | "image" | "file"
   metadata?: Record<string, any>
+  chunkJson?: string
 }
 
 export const MOCK_MESSAGES: Record<string, Message[]> = {

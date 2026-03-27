@@ -120,6 +120,7 @@ export interface ChatMessage {
   senderName?: string
   role: "user" | "assistant" | "system"
   content: string
+  chunk_json?: string
   timestamp?: string
   created_at?: string
 }

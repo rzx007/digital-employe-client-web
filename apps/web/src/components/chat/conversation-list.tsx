@@ -77,7 +77,7 @@ export function ConversationList({
     <div
       className={cn(
         "flex flex-col border-r bg-muted/50",
-        isMobile ? "h-full w-full" : "w-[275px]",
+        isMobile ? "h-full w-full" : "w-[295px]",
         className
       )}
       {...props}
