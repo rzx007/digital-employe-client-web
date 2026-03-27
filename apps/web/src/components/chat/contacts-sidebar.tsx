@@ -17,6 +17,7 @@ import {
   findContactInList,
   PRIMARY_CURATOR,
   type AIEmployee,
+  type Contact,
 } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
 
@@ -25,6 +26,11 @@ import { CreateGroupDialog } from "./create-group-dialog"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 
 const CONTACTS_SIDEBAR_COLLAPSED_STORAGE_KEY = "chat:contacts-sidebar:collapsed"
+
+const CURATOR_CONTACT: Contact = {
+  type: "curator",
+  curator: PRIMARY_CURATOR,
+}
 
 export function ContactsSidebar({
   className,
@@ -44,13 +50,16 @@ export function ContactsSidebar({
       setSelectedContactId: state.setSelectedContactId,
     }))
   )
-  const { data: contacts = [] } = useContactsQuery()
+  const { data: apiContacts } = useContactsQuery()
   const isMobile = useIsMobile()
 
+  const contacts = React.useMemo(
+    () => [CURATOR_CONTACT, ...(apiContacts ?? [])],
+    [apiContacts]
+  )
+
   React.useEffect(() => {
-    if (contacts.length > 0) {
-      setContacts(contacts)
-    }
+    setContacts(contacts)
   }, [contacts, setContacts])
 
   React.useEffect(() => {
@@ -62,6 +71,11 @@ export function ContactsSidebar({
       setSelectedContactId(DEFAULT_SELECTED_CONTACT_ID)
     }
   }, [contacts, selectedContactId, setSelectedContactId])
+
+  const curatorContacts = React.useMemo(
+    () => contacts.filter((contact) => contact.type === "curator"),
+    [contacts]
+  )
 
   const employeeContacts = React.useMemo(
     () => contacts.filter((contact) => contact.type === "employee"),
@@ -140,10 +154,13 @@ export function ContactsSidebar({
         >
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2 py-0.5">
-              <ContactItem
-                contact={{ type: "curator", curator: PRIMARY_CURATOR }}
-                isCollapsed={isCollapsed}
-              />
+              {curatorContacts.map((contact) => (
+                <ContactItem
+                  key={contact.curator?.id}
+                  contact={contact}
+                  isCollapsed={isCollapsed}
+                />
+              ))}
 
               <div className="my-1 h-px w-7 bg-border" />
 
@@ -171,10 +188,13 @@ export function ContactsSidebar({
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   主理人
                 </p>
-                <ContactItem
-                  contact={{ type: "curator", curator: PRIMARY_CURATOR }}
-                  isCollapsed={isCollapsed}
-                />
+                {curatorContacts.map((contact) => (
+                  <ContactItem
+                    key={contact.curator?.id}
+                    contact={contact}
+                    isCollapsed={isCollapsed}
+                  />
+                ))}
               </div>
 
               <div className="space-y-0.5">

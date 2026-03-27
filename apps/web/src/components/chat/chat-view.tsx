@@ -30,6 +30,10 @@ export function ChatView({
     (conversation) => String(conversation.id) === String(selectedConversationId)
   )
 
+  // React.useEffect(() => {
+  //   console.log("selectedContactId", isDraftConversation, selectedConversationId)
+  // }, [selectedConversationId])
+
   return isDraftConversation || !selectedConversationId ? (
     <DraftChatView
       contact={contact}

@@ -6,8 +6,6 @@ import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/pr
 import { mapStoredMessagesToUIMessages } from "@/lib/chat/message-utils"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
 import { useMessagesQuery } from "@/hooks/use-chat-queries"
-import { chatKeys } from "@/lib/query-keys/chat"
-import { useChatStore } from "@/stores/chat-store"
 
 import { ChatPanel } from "./chat-panel"
 import { chatTransport, type ChatViewContact } from "./chat-view-shared"
@@ -28,11 +26,9 @@ export function ConversationChatView({
   onOpenContacts?: () => void
   onOpenConversations?: () => void
 }) {
-  const selectedContactId = useChatStore((s) => s.selectedContactId)
   const [inputValue, setInputValue] = React.useState("")
   const [command, setCommand] = React.useState<{ id: string; title: string } | null>(null)
   const previousSessionIdRef = React.useRef<string | null>(null)
-  const queryClient = useQueryClient()
 
   const { data: storedMessages = [] } = useMessagesQuery(conversationId)
 

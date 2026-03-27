@@ -39,6 +39,7 @@ export function ConversationList({
 
   useEffect(() => {
     if (!selectedContactId) return
+
     if (!conversationsQuerySuccess) return
 
     if (conversations.length === 0) {
@@ -63,6 +64,7 @@ export function ConversationList({
     if (!hasSelected) {
       setSelectedConversationId(conversations[0].id)
     }
+
   }, [
     conversations,
     conversationsQuerySuccess,
