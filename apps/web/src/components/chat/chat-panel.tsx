@@ -143,15 +143,47 @@ export function ChatPanel({
           <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
               {isDraftMode ? (
-                <ConversationEmptyState
-                  title="开始新对话"
-                  description="发送第一条消息后将自动创建会话"
-                />
+                <ConversationEmptyState className="py-16">
+                  <div className="flex flex-col items-center gap-6">
+                    <img src="/logo.svg" alt="Logo" className="size-12 opacity-80" />
+                    <div className="space-y-3 text-center">
+                      <h2 className="text-md font-semibold tracking-tight">
+                        数字员工智能助手
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        随时为您解答问题、处理任务、提升效率
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      {["智能问答", "数据分析", "文档生成", "流程自动化"].map(
+                        (label) => (
+                          <span
+                            key={label}
+                            className="rounded-full border border-border/60 bg-muted/50 px-3 py-1 text-xs text-muted-foreground"
+                          >
+                            {label}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </ConversationEmptyState>
               ) : displayMessages.length === 0 ? (
-                <ConversationEmptyState
-                  title="暂无消息"
-                  description="开始对话，在这里看到消息"
-                />
+                <ConversationEmptyState className="py-16">
+                  <div className="flex flex-col items-center gap-5">
+                    <img
+                      src="/logo.svg"
+                      alt="Logo"
+                      className="h-10 w-10 opacity-50"
+                    />
+                    <div className="space-y-1.5 text-center">
+                      <h3 className="text-sm font-medium">开始新对话</h3>
+                      <p className="text-xs text-muted-foreground">
+                        在下方输入消息，开启与 {contactDisplayName} 的对话
+                      </p>
+                    </div>
+                  </div>
+                </ConversationEmptyState>
               ) : (
                 displayMessages.map((message) => {
                   const liveArtifact = getLatestArtifactFromUIMessage(message)
