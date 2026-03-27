@@ -187,9 +187,9 @@ function buildArtifactFromToolPart(part: ToolPart): Artifact | null {
     metadata: {
       filePath,
       sourceToolCallId: part.toolCallId,
-      sourceToolName: output.toolName ?? part.type.replace(/^tool-/, ""),
-      status: output.status ?? null,
-      outputText: output.text ?? "",
+      sourceToolName: output?.toolName ?? part.type.replace(/^tool-/, ""),
+      status: output?.status ?? null,
+      outputText: output?.text ?? "",
     },
   }
 }
