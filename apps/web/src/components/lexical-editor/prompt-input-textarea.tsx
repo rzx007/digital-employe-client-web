@@ -21,7 +21,10 @@ import {
 } from "lexical"
 import { useEffect, useRef } from "react"
 import { CommandPillNode, $isCommandPillNode } from "./command-pill-node"
-import { SlashCommandPlugin } from "./slash-command-plugin"
+import {
+  SlashCommandPlugin,
+  type SlashCommandItem,
+} from "./slash-command-plugin"
 
 export interface PromptChangeEvent {
   value: string
@@ -242,6 +245,8 @@ export interface LexicalPromptInputTextareaProps {
   className?: string
   /** 挂载后是否自动聚焦到输入框，默认 true */
   autoFocus?: boolean
+  /** 斜杠命令选项，不传则不启用斜杠命令 */
+  commands?: SlashCommandItem[]
 }
 
 // 组件
@@ -251,6 +256,7 @@ export function LexicalPromptInputTextarea({
   placeholder = "请输入任务...",
   value: propValue,
   autoFocus = true,
+  commands,
 }: LexicalPromptInputTextareaProps) {
   const controller = useOptionalPromptInputController()
   const attachments = usePromptInputAttachments()
@@ -307,9 +313,9 @@ export function LexicalPromptInputTextarea({
 
   const handleChange = controller
     ? (e: PromptChangeEvent) => {
-      controller.textInput.setInput(e.value)
-      onChange?.(e)
-    }
+        controller.textInput.setInput(e.value)
+        onChange?.(e)
+      }
     : (e: PromptChangeEvent) => onChange?.(e)
 
   const initialConfig = {
@@ -366,7 +372,7 @@ export function LexicalPromptInputTextarea({
         <FocusOnMountPlugin autoFocus={autoFocus} />
         {!isComposing && <SubmitKeyPlugin />}
         <BackspaceAttachmentPlugin attachments={attachments} />
-        <SlashCommandPlugin />
+        <SlashCommandPlugin commands={commands} />
       </div>
     </LexicalComposer>
   )

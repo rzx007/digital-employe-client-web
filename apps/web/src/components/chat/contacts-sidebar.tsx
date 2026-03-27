@@ -12,7 +12,12 @@ import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { useContactsQuery } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { PRIMARY_CURATOR, type AIEmployee } from "@/lib/mock-data/ai-employees"
+import {
+  DEFAULT_SELECTED_CONTACT_ID,
+  findContactInList,
+  PRIMARY_CURATOR,
+  type AIEmployee,
+} from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
 
 import { ContactItem } from "./contact-item"
@@ -32,9 +37,11 @@ export function ContactsSidebar({
     }
   )
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const { setContacts } = useChatStore(
+  const { setContacts, selectedContactId, setSelectedContactId } = useChatStore(
     useShallow((state) => ({
       setContacts: state.setContacts,
+      selectedContactId: state.selectedContactId,
+      setSelectedContactId: state.setSelectedContactId,
     }))
   )
   const { data: contacts = [] } = useContactsQuery()
@@ -45,6 +52,16 @@ export function ContactsSidebar({
       setContacts(contacts)
     }
   }, [contacts, setContacts])
+
+  React.useEffect(() => {
+    if (
+      contacts.length > 0 &&
+      selectedContactId &&
+      !findContactInList(contacts, selectedContactId)
+    ) {
+      setSelectedContactId(DEFAULT_SELECTED_CONTACT_ID)
+    }
+  }, [contacts, selectedContactId, setSelectedContactId])
 
   const employeeContacts = React.useMemo(
     () => contacts.filter((contact) => contact.type === "employee"),

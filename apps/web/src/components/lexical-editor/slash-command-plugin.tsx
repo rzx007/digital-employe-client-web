@@ -20,14 +20,15 @@ import {
   CommandItem,
   CommandList,
 } from "@workspace/ui/components/command"
-import {
-  IconGlobe,
-  IconBolt,
-  IconTerminal,
-  IconFileText,
-  IconCode,
-} from "@tabler/icons-react"
 import { $createCommandPillNode } from "./command-pill-node"
+
+export interface SlashCommandItem {
+  id: string
+  title: string
+  icon: React.ReactElement
+  description: string
+  keywords: string[]
+}
 
 class SlashCommandOption extends MenuOption {
   id: string
@@ -37,23 +38,14 @@ class SlashCommandOption extends MenuOption {
   keywords: Array<string>
   onSelect: (queryString: string) => void
 
-  constructor(
-    title: string,
-    options: {
-      id: string
-      icon: React.ReactElement
-      description: string
-      keywords: Array<string>
-      onSelect: (queryString: string) => void
-    }
-  ) {
-    super(title)
-    this.id = options.id
-    this.title = title
-    this.icon = options.icon
-    this.description = options.description
-    this.keywords = options.keywords
-    this.onSelect = options.onSelect.bind(this)
+  constructor(item: SlashCommandItem, onSelect: (queryString: string) => void) {
+    super(item.title)
+    this.id = item.id
+    this.title = item.title
+    this.icon = item.icon
+    this.description = item.description
+    this.keywords = item.keywords
+    this.onSelect = onSelect.bind(this)
   }
 }
 
@@ -77,8 +69,6 @@ function FloatingMenu({
   } | null>(null)
 
   React.useEffect(() => {
-    // Adding a small delay helps to get the correct bounding box
-    // after Lexical finishes its selection rendering.
     const timeoutId = setTimeout(() => {
       if (anchorElementRef.current) {
         const { top, left, bottom } =
@@ -87,17 +77,14 @@ function FloatingMenu({
       }
     }, 10)
     return () => clearTimeout(timeoutId)
-  }, [anchorElementRef, options.length]) // Recalculate when anchor changes or options change
+  }, [anchorElementRef, options.length])
 
   if (!rect || options.length === 0) {
     return null
   }
 
-  // Calculate position avoiding screen overflow
   const isBottomOverflow = rect.bottom + 300 > window.innerHeight
-  const topPosition = isBottomOverflow
-    ? rect.top - 4 // We will use transform translateY(-100%) to push it up
-    : rect.bottom + 4
+  const topPosition = isBottomOverflow ? rect.top - 4 : rect.bottom + 4
 
   return createPortal(
     <div
@@ -153,7 +140,11 @@ function FloatingMenu({
   )
 }
 
-export function SlashCommandPlugin() {
+export function SlashCommandPlugin({
+  commands = [],
+}: {
+  commands?: SlashCommandItem[]
+}) {
   const [editor] = useLexicalComposerContext()
   const [queryString, setQueryString] = useState<string | null>(null)
 
@@ -161,108 +152,33 @@ export function SlashCommandPlugin() {
     minLength: 0,
   })
 
-  const getOptions = useCallback(() => {
-    const options = [
-      new SlashCommandOption("Web Search", {
-        id: "web-search",
-        icon: <IconGlobe className="h-4 w-4" />,
-        description: "Search the web for information",
-        keywords: ["web", "search", "google", "network"],
-        onSelect: () => {
+  const options = useMemo(() => {
+    const items = commands.map(
+      (cmd) =>
+        new SlashCommandOption(cmd, () => {
           editor.update(() => {
             const selection = $getSelection()
             if ($isRangeSelection(selection)) {
               selection.insertNodes([
-                $createCommandPillNode("web-search", "Web Search"),
+                $createCommandPillNode(cmd.id, cmd.title),
                 $createTextNode(" "),
               ])
             }
           })
-        },
-      }),
-      new SlashCommandOption("Agent", {
-        id: "agent",
-        icon: <IconBolt className="h-4 w-4" />,
-        description: "Call a specific Agent",
-        keywords: ["agent", "ai", "bot"],
-        onSelect: () => {
-          editor.update(() => {
-            const selection = $getSelection()
-            if ($isRangeSelection(selection)) {
-              selection.insertNodes([
-                $createCommandPillNode("agent", "Agent"),
-                $createTextNode(" "),
-              ])
-            }
-          })
-        },
-      }),
-      new SlashCommandOption("Terminal", {
-        id: "terminal",
-        icon: <IconTerminal className="h-4 w-4" />,
-        description: "Run a terminal command",
-        keywords: ["terminal", "bash", "shell", "cmd"],
-        onSelect: () => {
-          editor.update(() => {
-            const selection = $getSelection()
-            if ($isRangeSelection(selection)) {
-              selection.insertNodes([
-                $createCommandPillNode("terminal", "Terminal"),
-                $createTextNode(" "),
-              ])
-            }
-          })
-        },
-      }),
-      new SlashCommandOption("Docs", {
-        id: "docs",
-        icon: <IconFileText className="h-4 w-4" />,
-        description: "Search documentation",
-        keywords: ["docs", "documentation", "help", "guide"],
-        onSelect: () => {
-          editor.update(() => {
-            const selection = $getSelection()
-            if ($isRangeSelection(selection)) {
-              selection.insertNodes([
-                $createCommandPillNode("docs", "Docs"),
-                $createTextNode(" "),
-              ])
-            }
-          })
-        },
-      }),
-      new SlashCommandOption("Code", {
-        id: "code",
-        icon: <IconCode className="h-4 w-4" />,
-        description: "Generate or analyze code",
-        keywords: ["code", "dev", "program"],
-        onSelect: () => {
-          editor.update(() => {
-            const selection = $getSelection()
-            if ($isRangeSelection(selection)) {
-              selection.insertNodes([
-                $createCommandPillNode("code", "Code"),
-                $createTextNode(" "),
-              ])
-            }
-          })
-        },
-      }),
-    ]
+        })
+    )
 
     if (!queryString) {
-      return options
+      return items
     }
 
     const regex = new RegExp(queryString, "i")
-    return options.filter(
+    return items.filter(
       (option) =>
         regex.test(option.title) ||
         option.keywords.some((keyword) => regex.test(keyword))
     )
-  }, [editor, queryString])
-
-  const options = useMemo(() => getOptions(), [getOptions])
+  }, [commands, editor, queryString])
 
   const onSelectOption = useCallback(
     (
@@ -281,6 +197,10 @@ export function SlashCommandPlugin() {
     },
     [editor]
   )
+
+  if (commands.length === 0) {
+    return null
+  }
 
   return (
     <LexicalTypeaheadMenuPlugin<SlashCommandOption>

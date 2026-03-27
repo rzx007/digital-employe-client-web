@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 
 import {
   DEFAULT_SELECTED_CONTACT_ID,
@@ -19,35 +20,46 @@ interface ChatStore {
   getSelectedContact: () => Contact | undefined
 }
 
-export const useChatStore = create<ChatStore>((set, get) => ({
-  contacts: [],
-  selectedContactId: DEFAULT_SELECTED_CONTACT_ID,
-  selectedConversationId: null,
-  isDraftConversation: false,
-  draftSessionKey: 0,
-  setContacts: (contacts) => set({ contacts }),
-  setSelectedContactId: (id) =>
-    set({
-      selectedContactId: id,
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set, get) => ({
+      contacts: [],
+      selectedContactId: DEFAULT_SELECTED_CONTACT_ID,
       selectedConversationId: null,
       isDraftConversation: false,
       draftSessionKey: 0,
+      setContacts: (contacts) => set({ contacts }),
+      setSelectedContactId: (id) =>
+        set({
+          selectedContactId: id,
+          selectedConversationId: null,
+          isDraftConversation: false,
+          draftSessionKey: 0,
+        }),
+      setSelectedConversationId: (id) =>
+        set({
+          selectedConversationId: id,
+        }),
+      setDraftConversation: (isDraft) =>
+        set((state) => ({
+          isDraftConversation: isDraft,
+          selectedConversationId: isDraft ? null : state.selectedConversationId,
+          draftSessionKey: isDraft
+            ? state.draftSessionKey + 1
+            : state.draftSessionKey,
+        })),
+      getSelectedContact: () => {
+        const { contacts, selectedContactId } = get()
+        if (!selectedContactId) return undefined
+        return findContactInList(contacts, selectedContactId)
+      },
     }),
-  setSelectedConversationId: (id) =>
-    set({
-      selectedConversationId: id,
-    }),
-  setDraftConversation: (isDraft) =>
-    set((state) => ({
-      isDraftConversation: isDraft,
-      selectedConversationId: isDraft ? null : state.selectedConversationId,
-      draftSessionKey: isDraft
-        ? state.draftSessionKey + 1
-        : state.draftSessionKey,
-    })),
-  getSelectedContact: () => {
-    const { contacts, selectedContactId } = get()
-    if (!selectedContactId) return undefined
-    return findContactInList(contacts, selectedContactId)
-  },
-}))
+    {
+      name: "chat:selection",
+      partialize: (state) => ({
+        selectedContactId: state.selectedContactId,
+        selectedConversationId: state.selectedConversationId,
+      }),
+    }
+  )
+)
