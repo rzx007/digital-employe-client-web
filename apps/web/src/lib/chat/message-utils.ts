@@ -190,15 +190,6 @@ function accumulateChunksToParts(chunks: UIMessageChunk[]): UIMessage["parts"] {
       }
 
       case "text-end": {
-        const acc = textMap.get(chunk.id)
-        if (acc && acc.text) {
-          parts.push({
-            type: "text",
-            text: acc.text,
-            state: "done",
-          })
-        }
-        textMap.delete(chunk.id)
         break
       }
 

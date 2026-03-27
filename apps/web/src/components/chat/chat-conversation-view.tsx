@@ -50,23 +50,7 @@ export function ConversationChatView({
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
       })
-    },
-    onFinish: () => {
-      void queryClient.invalidateQueries({
-        queryKey: chatKeys.messages(String(conversationId)),
-      })
-
-      if (selectedContactId) {
-        void queryClient.invalidateQueries({
-          queryKey: chatKeys.conversations(selectedContactId),
-        })
-      }
-
-      void queryClient.refetchQueries({
-        queryKey: chatKeys.messages(String(conversationId)),
-        type: "active",
-      })
-    },
+    }
   })
 
   React.useEffect(() => {
@@ -79,7 +63,6 @@ export function ConversationChatView({
   }, [conversationId, initialMessages, setMessages])
 
   const handleTextChange = React.useCallback((event: PromptChangeEvent) => {
-    console.log("🚀 ~ ConversationChatView ~ event:", event)
     setCommand(event.command)
     setInputValue(event.value)
   }, [])
