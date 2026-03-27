@@ -18,6 +18,21 @@ export interface Capability {
 }
 
 /**
+ * 员工技能（metadata.skills 中的项）
+ */
+export interface MetadataSkill {
+  id: number
+  skillName: string
+  description: string
+  prompt: string
+  directoryId: number | null
+  status: number
+  createTime: string
+  updateTime: string
+  directoryName: string | null
+}
+
+/**
  * 员工元数据（能力描述、MCP 工具绑定等）
  */
 export interface EmployeeMetadata {
@@ -29,7 +44,7 @@ export interface EmployeeMetadata {
   created_at: string
   updated_at: string
   capabilities: Capability[]
-  skills: unknown[]
+  skills: MetadataSkill[]
 }
 
 /**

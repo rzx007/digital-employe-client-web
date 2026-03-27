@@ -1,3 +1,5 @@
+import type { MetadataSkill } from "@/api/types"
+
 export interface AIEmployee {
   id: string
   name: string
@@ -5,6 +7,7 @@ export interface AIEmployee {
   avatar?: string
   status: "online" | "busy" | "offline"
   specialty: string
+  skills?: MetadataSkill[]
 }
 
 export type ContactType = "curator" | "employee" | "group"
@@ -111,7 +114,7 @@ export const CONTACTS: Contact[] = [
 
 export function findContactInList(
   contacts: readonly Contact[],
-  id: string,
+  id: string
 ): Contact | undefined {
   return contacts.find((contact) => {
     if (contact.type === "curator") {

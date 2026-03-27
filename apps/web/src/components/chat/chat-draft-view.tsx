@@ -36,6 +36,7 @@ export function DraftChatView({
   )
   const selectedContact = useChatStore((s) => s.getSelectedContact())
   const [inputValue, setInputValue] = useState("")
+  const [command, setCommand] = useState<{ id: string; title: string } | null>(null)
   const createdConversationIdRef = useRef<string | number | null>(null)
   const createConversationMutation = useCreateConversationMutation()
 
@@ -61,6 +62,7 @@ export function DraftChatView({
   })
 
   const handleTextChange = useCallback((event: PromptChangeEvent) => {
+    setCommand(event.command)
     setInputValue(event.value)
   }, [])
 
@@ -113,6 +115,7 @@ export function DraftChatView({
             body: {
               attachments: message.files,
               conversationId,
+              skill: command?.title ?? ''
             },
           }
         )

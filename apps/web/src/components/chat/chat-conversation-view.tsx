@@ -30,6 +30,7 @@ export function ConversationChatView({
 }) {
   const selectedContactId = useChatStore((s) => s.selectedContactId)
   const [inputValue, setInputValue] = React.useState("")
+  const [command, setCommand] = React.useState<{ id: string; title: string } | null>(null)
   const previousSessionIdRef = React.useRef<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -44,7 +45,7 @@ export function ConversationChatView({
     id: String(conversationId),
     messages: initialMessages,
     transport: chatTransport,
-    resume: false,
+    // resume: false,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -78,6 +79,8 @@ export function ConversationChatView({
   }, [conversationId, initialMessages, setMessages])
 
   const handleTextChange = React.useCallback((event: PromptChangeEvent) => {
+    console.log("🚀 ~ ConversationChatView ~ event:", event)
+    setCommand(event.command)
     setInputValue(event.value)
   }, [])
 
@@ -137,6 +140,7 @@ export function ConversationChatView({
             body: {
               attachments: message.files,
               conversationId,
+              skill: command?.title ?? ''
             },
           }
         )
@@ -150,12 +154,20 @@ export function ConversationChatView({
     [conversationId, sendMessage]
   )
 
+  const displayMessages = React.useMemo(() => {
+    if (messages.length > 0) {
+      return messages
+    }
+
+    return initialMessages
+  }, [initialMessages, messages])
+
   return (
     <ChatPanel
       contact={contact}
       title={title}
       conversationId={conversationId}
-      messages={messages}
+      messages={displayMessages}
       storedMessages={storedMessages}
       inputValue={inputValue}
       status={chatStatus}

@@ -48,7 +48,7 @@ function getEventBoundaryLength(buffer: string, index: number) {
 }
 
 function buildChatApiUrl(options: any) {
-  return `/chat/conversations/${options.conversationId}/stream?question=${options.prompt}`
+  return `/chat/conversations/${options.conversationId}/stream?question=${options.prompt}&skill=${options.skill}`
 }
 
 function buildResumeApiUrl(conversationId: string) {
@@ -65,6 +65,15 @@ function getConversationIdFromBody(body: object | undefined) {
   return typeof conversationId === "string" ? conversationId : null
 }
 
+function getSkillFromBody(body: object | undefined) {
+  if (!body || typeof body !== "object") {
+    return ''
+  }
+
+  const { skill } = body as { skill?: unknown }
+
+  return typeof skill === "string" ? skill : ''
+}
 function getAttachmentsFromBody(body: object | undefined) {
   if (!body || typeof body !== "object") {
     return []
@@ -86,6 +95,7 @@ function getAttachmentsFromBody(body: object | undefined) {
 async function createEventSourceResponse(options: {
   conversationId: string
   prompt: string
+  skill: string
   abortSignal: AbortSignal | undefined
 }) {
   const response = await request.raw(buildChatApiUrl(options), {
@@ -148,6 +158,7 @@ export class LangChainChatTransport<
     body,
   }: Parameters<ChatTransport<UI_MESSAGE>["sendMessages"]>[0]) {
     const conversationId = getConversationIdFromBody(body)
+    const skill = getSkillFromBody(body)
     const attachments = getAttachmentsFromBody(body)
     const latestMessage = messages.at(-1)
     const latestText = latestMessage?.parts
@@ -170,6 +181,7 @@ export class LangChainChatTransport<
       ? createMockSSEStream(SeeData)
       : await createEventSourceResponse({
         conversationId,
+        skill,
         prompt: latestText,
         abortSignal,
       })

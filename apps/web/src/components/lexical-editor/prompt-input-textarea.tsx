@@ -60,13 +60,7 @@ function getEditorCommandAndValue(): PromptChangeEvent {
   }
 
   const value = root.getTextContent()
-  const rawValue =
-    command && value
-      ? `/${command.id} ${value}`
-      : command
-        ? `/${command.id}`
-        : value
-
+  const rawValue = command ? `/${command.title}` : `${value}`
   return {
     value,
     rawValue,
@@ -313,9 +307,9 @@ export function LexicalPromptInputTextarea({
 
   const handleChange = controller
     ? (e: PromptChangeEvent) => {
-        controller.textInput.setInput(e.value)
-        onChange?.(e)
-      }
+      controller.textInput.setInput(e.value)
+      onChange?.(e)
+    }
     : (e: PromptChangeEvent) => onChange?.(e)
 
   const initialConfig = {

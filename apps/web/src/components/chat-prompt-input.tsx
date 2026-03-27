@@ -36,15 +36,7 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@workspace/ui/components/ai-elements/model-selector"
-import {
-  IconSettings,
-  IconMap,
-  IconGlobe,
-  IconBolt,
-  IconTerminal,
-  IconFileText,
-  IconCode,
-} from "@tabler/icons-react"
+import { IconSettings, IconMap } from "@tabler/icons-react"
 import type { SlashCommandItem } from "./lexical-editor/slash-command-plugin"
 
 // Ensure models logic is shared or injected. We'll use a local constant for now.
@@ -55,44 +47,6 @@ const models = [
     id: "zhipu-glm-5.0",
     name: "GLM 5.0",
     providers: ["zhipu"],
-  },
-]
-
-const slashCommands: SlashCommandItem[] = [
-  {
-    id: "web-search",
-    title: "Web Search",
-    icon: <IconGlobe className="h-4 w-4" />,
-    description: "Search the web for information",
-    keywords: ["web", "search", "google", "network"],
-  },
-  {
-    id: "agent",
-    title: "Agent",
-    icon: <IconBolt className="h-4 w-4" />,
-    description: "Call a specific Agent",
-    keywords: ["agent", "ai", "bot"],
-  },
-  {
-    id: "terminal",
-    title: "Terminal",
-    icon: <IconTerminal className="h-4 w-4" />,
-    description: "Run a terminal command",
-    keywords: ["terminal", "bash", "shell", "cmd"],
-  },
-  {
-    id: "docs",
-    title: "Docs",
-    icon: <IconFileText className="h-4 w-4" />,
-    description: "Search documentation",
-    keywords: ["docs", "documentation", "help", "guide"],
-  },
-  {
-    id: "code",
-    title: "Code",
-    icon: <IconCode className="h-4 w-4" />,
-    description: "Generate or analyze code",
-    keywords: ["code", "dev", "program"],
   },
 ]
 
@@ -170,6 +124,8 @@ interface ChatPromptInputProps {
   placeholder?: string
   size?: "default" | "compact"
   className?: string
+  /** 员工技能生成的斜杠命令 */
+  slashCommands?: SlashCommandItem[]
 }
 
 export function ChatPromptInput({
@@ -181,6 +137,7 @@ export function ChatPromptInput({
   placeholder = "请输入任务，然后交给 Aios Agent",
   size = "default",
   className,
+  slashCommands,
 }: ChatPromptInputProps) {
   const [model, setModel] = useState<string>(models[0]!.id)
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)

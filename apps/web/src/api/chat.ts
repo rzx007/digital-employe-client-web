@@ -27,6 +27,7 @@ function mapEmployeeToAIEmployee(emp: Employee): AIEmployee {
     avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(emp.id)}`,
     status: mapStatus(emp.metadata?.status ?? 0),
     specialty: emp.metadata?.capability_desc ?? "",
+    skills: emp.metadata?.skills ?? [],
   }
 }
 

@@ -22,6 +22,7 @@ import {
   ToolOutput,
 } from "@workspace/ui/components/ai-elements/tool"
 import { cn } from "@workspace/ui/lib/utils"
+import { IconSparkles } from "@tabler/icons-react"
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 
@@ -37,6 +38,7 @@ import { useArtifactStore } from "@/stores/artifact-store"
 import { ArtifactPreview } from "../artifact"
 import { ChatPromptInput } from "../chat-prompt-input"
 import type { PromptChangeEvent } from "../lexical-editor/prompt-input-textarea"
+import type { SlashCommandItem } from "../lexical-editor/slash-command-plugin"
 import { ChatPanelHeader } from "./chat-panel-header"
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import {
@@ -128,6 +130,22 @@ export function ChatPanel({
   const formatTime = React.useCallback((date: Date) => {
     return format(date, "HH:mm", { locale: zhCN })
   }, [])
+
+  const slashCommands = React.useMemo<SlashCommandItem[]>(() => {
+    const skills =
+      contact?.type === "employee" ? contact.employee?.skills : undefined
+    if (!skills?.length) return []
+    return skills.map((skill) => ({
+      id: String(skill.id),
+      title: skill.skillName,
+      icon: <IconSparkles className="h-4 w-4" />,
+      description: skill.description,
+      keywords: [
+        skill.skillName.toLowerCase(),
+        ...skill.description.toLowerCase().split(/\s+/).slice(0, 3),
+      ],
+    }))
+  }, [contact])
 
   return (
     <div
@@ -349,6 +367,7 @@ export function ChatPanel({
               disabled={isSubmitDisabled}
               size="compact"
               className="w-full overflow-hidden"
+              slashCommands={slashCommands}
             />
             {error && (
               <p className="mt-2 text-xs text-destructive">{error.message}</p>
