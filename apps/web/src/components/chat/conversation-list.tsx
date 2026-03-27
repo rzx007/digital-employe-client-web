@@ -1,48 +1,42 @@
-import { useEffect, useMemo, type ComponentProps } from "react"
+import { useEffect, type ComponentProps } from "react"
 import { IconCirclePlus } from "@tabler/icons-react"
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@workspace/ui/components/button"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { cn } from "@workspace/ui/lib/utils"
-import {
-  useContactsQuery,
-  useConversationsQuery,
-} from "@/hooks/use-chat-queries"
+import { useConversationsQuery } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { findContactInList } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { ConversationItem } from "./conversation-item"
-
 
 export function ConversationList({
   className,
   ...props
 }: ComponentProps<"div">) {
   const {
-    isDraftConversation,
+    selectedContactId,
     selectedConversationId,
+    isDraftConversation,
     setDraftConversation,
     setSelectedConversationId,
-    selectedContactId,
   } = useChatStore(
     useShallow((state) => ({
-      isDraftConversation: state.isDraftConversation,
+      selectedContactId: state.selectedContactId,
       selectedConversationId: state.selectedConversationId,
+      isDraftConversation: state.isDraftConversation,
       setDraftConversation: state.setDraftConversation,
       setSelectedConversationId: state.setSelectedConversationId,
-      selectedContactId: state.selectedContactId,
     }))
   )
+  const selectedContact = useChatStore((s) => s.getSelectedContact())
   const isMobile = useIsMobile()
-  const { data: contacts = [] } = useContactsQuery()
   const {
     data: conversations = [],
     isSuccess: conversationsQuerySuccess,
     isPending: conversationsPending,
   } = useConversationsQuery(selectedContactId)
 
-  // 监听会话列表变化
   useEffect(() => {
     if (!selectedContactId) return
     if (!conversationsQuerySuccess) return
@@ -78,11 +72,6 @@ export function ConversationList({
     setDraftConversation,
     setSelectedConversationId,
   ])
-
-  const selectedContact = useMemo(() => {
-    if (!selectedContactId) return null
-    return findContactInList(contacts, selectedContactId) ?? null
-  }, [contacts, selectedContactId])
 
   return (
     <div

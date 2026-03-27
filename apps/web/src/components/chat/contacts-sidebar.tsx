@@ -32,14 +32,21 @@ export function ContactsSidebar({
     }
   )
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const { selectedContactId, setSelectedContactId } = useChatStore(
+  const { selectedContactId, setSelectedContactId, setContacts } = useChatStore(
     useShallow((state) => ({
       selectedContactId: state.selectedContactId,
       setSelectedContactId: state.setSelectedContactId,
+      setContacts: state.setContacts,
     }))
   )
   const { data: contacts = [] } = useContactsQuery()
   const isMobile = useIsMobile()
+
+  React.useEffect(() => {
+    if (contacts.length > 0) {
+      setContacts(contacts)
+    }
+  }, [contacts, setContacts])
 
   const employeeContacts = React.useMemo(
     () => contacts.filter((contact) => contact.type === "employee"),
@@ -126,7 +133,7 @@ export function ContactsSidebar({
                 className={cn(
                   "relative cursor-pointer transition-transform hover:scale-105",
                   isCuratorSelected &&
-                  "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                    "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                 )}
                 title={PRIMARY_CURATOR.name}
               >
@@ -151,7 +158,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <GroupMembersAvatar
@@ -174,7 +181,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <EmployeeContactAvatar
@@ -188,7 +195,7 @@ export function ContactsSidebar({
               })}
             </div>
           ) : (
-            <div className="space-y-3 px-2 py-2 w-full">
+            <div className="w-full space-y-3 px-2 py-2">
               <div className="space-y-0.5">
                 <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                   主理人
@@ -276,11 +283,11 @@ export function ContactsSidebar({
                         showStatus
                       />
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate font-medium text-sm max-w-[170px]">
+                        <span className="max-w-[170px] truncate text-sm font-medium">
                           {contact.employee?.name}
                         </span>
                         <span
-                          className="truncate text-muted-foreground max-w-[130px]"
+                          className="max-w-[130px] truncate text-muted-foreground"
                           title={contact.employee?.role}
                         >
                           {contact.employee?.role}

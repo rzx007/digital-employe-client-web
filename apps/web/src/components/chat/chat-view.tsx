@@ -2,11 +2,7 @@ import * as React from "react"
 
 import { cn } from "@workspace/ui/lib/utils"
 
-import {
-  useContactsQuery,
-  useConversationsQuery,
-} from "@/hooks/use-chat-queries"
-import { findContactInList } from "@/lib/mock-data/ai-employees"
+import { useConversationsQuery } from "@/hooks/use-chat-queries"
 import { useChatStore } from "@/stores/chat-store"
 
 import { ConversationChatView } from "./chat-conversation-view"
@@ -24,13 +20,8 @@ export function ChatView({
   const selectedContactId = useChatStore((s) => s.selectedContactId)
   const isDraftConversation = useChatStore((s) => s.isDraftConversation)
   const selectedConversationId = useChatStore((s) => s.selectedConversationId)
-
-  const { data: contacts = [] } = useContactsQuery()
+  const contact = useChatStore((s) => s.getSelectedContact())
   const { data: conversations = [] } = useConversationsQuery(selectedContactId)
-
-  const contact = selectedContactId
-    ? findContactInList(contacts, selectedContactId)
-    : undefined
 
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId
