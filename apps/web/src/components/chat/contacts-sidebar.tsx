@@ -6,6 +6,7 @@ import {
   IconSearch,
   IconSettings,
 } from "@tabler/icons-react"
+import { useLocalStorageState } from "ahooks"
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
@@ -18,11 +19,18 @@ import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 
+const CONTACTS_SIDEBAR_COLLAPSED_STORAGE_KEY = "chat:contacts-sidebar:collapsed"
+
 export function ContactsSidebar({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [isCollapsed, setIsCollapsed] = React.useState(false)
+  const [isCollapsed = false, setIsCollapsed] = useLocalStorageState<boolean>(
+    CONTACTS_SIDEBAR_COLLAPSED_STORAGE_KEY,
+    {
+      defaultValue: false,
+    }
+  )
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const { selectedContactId, setSelectedContactId } = useChatStore(
     useShallow((state) => ({
@@ -32,6 +40,7 @@ export function ContactsSidebar({
   )
   const { data: contacts = [] } = useContactsQuery()
   const isMobile = useIsMobile()
+
   const handleCreateGroup = (selectedEmployees: AIEmployee[]) => {
     console.log("创建群聊，选择员工:", selectedEmployees)
     setIsDialogOpen(false)
@@ -59,7 +68,7 @@ export function ContactsSidebar({
       <div
         className={cn(
           "flex h-full flex-col border-r bg-muted/50 transition-all duration-300",
-          isCollapsed ? "w-14" : isMobile ? "w-full" : "w-64",
+          isCollapsed ? "w-14" : isMobile ? "w-full" : "w-60",
           className
         )}
         {...props}
@@ -99,7 +108,9 @@ export function ContactsSidebar({
           </div>
         </div>
 
-        <ScrollArea className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}>
+        <ScrollArea
+          className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}
+        >
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2 py-0.5">
               <div
@@ -107,7 +118,7 @@ export function ContactsSidebar({
                 className={cn(
                   "relative cursor-pointer transition-transform hover:scale-105",
                   isCuratorSelected &&
-                  "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                    "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                 )}
                 title={PRIMARY_CURATOR.name}
               >
@@ -132,7 +143,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <GroupMembersAvatar
@@ -155,7 +166,7 @@ export function ContactsSidebar({
                     className={cn(
                       "relative cursor-pointer transition-transform hover:scale-105",
                       isSelected &&
-                      "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
+                        "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary"
                     )}
                   >
                     <EmployeeContactAvatar

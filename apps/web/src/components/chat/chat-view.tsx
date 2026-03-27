@@ -9,8 +9,8 @@ import {
 import { findContactInList } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
 
-import { ConversationChatView } from "./conversation-chat-view"
-import { DraftChatView } from "./draft-chat-view"
+import { ConversationChatView } from "./chat-conversation-view"
+import { DraftChatView } from "./chat-draft-view"
 
 export function ChatView({
   onOpenContacts,

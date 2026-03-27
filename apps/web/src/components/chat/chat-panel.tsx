@@ -7,6 +7,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@workspace/ui/components/ai-elements/conversation"
+import { Shimmer } from "@workspace/ui/components/ai-elements/shimmer"
 import {
   Message,
   MessageContent,
@@ -20,11 +21,9 @@ import {
   ToolInput,
   ToolOutput,
 } from "@workspace/ui/components/ai-elements/tool"
-import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
-import { IconDots, IconMessages, IconUsers } from "@tabler/icons-react"
 
 import {
   getLatestArtifactFromUIMessage,
@@ -38,6 +37,7 @@ import { useArtifactStore } from "@/stores/artifact-store"
 import { ArtifactPreview } from "../artifact"
 import { ChatPromptInput } from "../chat-prompt-input"
 import type { PromptChangeEvent } from "../lexical-editor/prompt-input-textarea"
+import { ChatPanelHeader } from "./chat-panel-header"
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import {
   getContactDisplayName,
@@ -134,38 +134,11 @@ export function ChatPanel({
     >
       {contact && (
         <>
-          <div className="flex items-center justify-between border-b px-6 py-3">
-            <div className="flex items-center gap-3">
-              {(onOpenContacts || onOpenConversations) && (
-                <>
-                  {onOpenContacts && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={onOpenContacts}
-                    >
-                      <IconUsers className="size-4" />
-                    </Button>
-                  )}
-                  {onOpenConversations && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={onOpenConversations}
-                    >
-                      <IconMessages className="size-4" />
-                    </Button>
-                  )}
-                </>
-              )}
-              <h3 className="min-w-0 flex-1 truncate text-sm font-medium">
-                {title}
-              </h3>
-            </div>
-            <Button variant="ghost" size="icon-sm">
-              <IconDots className="size-4" />
-            </Button>
-          </div>
+          <ChatPanelHeader
+            title={title}
+            onOpenContacts={onOpenContacts}
+            onOpenConversations={onOpenConversations}
+          />
 
           <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
@@ -311,11 +284,14 @@ export function ChatPanel({
               )}
 
               {showStreamingIndicator && (
-                <Message from="assistant">
+                <Message from="assistant" className="-mt-4">
                   <MessageContent className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Spinner className="size-3.5" />
-                      <span className="text-xs">正在生成回复...</span>
+                      <Spinner
+                        className="size-3.5"
+                        style={{ color: "#8B5CF6" }}
+                      />
+                      <Shimmer className="text-xs">正在生成回复...</Shimmer>
                     </div>
                   </MessageContent>
                 </Message>
