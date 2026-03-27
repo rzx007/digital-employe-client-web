@@ -8,7 +8,7 @@ const defaultHeaders: HeadersInit = {
   "Content-Type": "application/json",
 }
 
-const baseURL = import.meta.env.DEV ? "/actus" : "localhost:8000"
+const baseURL = import.meta.env.DEV ? "/actus" : "localhost:58000"
 
 const headers = { ...defaultHeaders }
 
