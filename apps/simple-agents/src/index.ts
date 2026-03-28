@@ -1,5 +1,7 @@
 import "dotenv/config"
 import { serve } from "@hono/node-server"
+import { Scalar } from '@scalar/hono-api-reference'
+
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import sessionRoutes from "./routes/sessions"
@@ -26,11 +28,13 @@ app.get("/", (c) =>
   })
 )
 
+app.get('/scalar', Scalar({ url: '/doc' }))
+
 app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
 app.route("/api/sessions", artifactRoutes)
 
-const port = Number(process.env.PORT) || 3000
+const port = Number(process.env.PORT) || 3001
 console.log(`Agent server running on http://localhost:${port}`)
 console.log(`Data directory: ${DATA_DIR}`)
 
