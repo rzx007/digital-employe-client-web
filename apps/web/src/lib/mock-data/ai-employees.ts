@@ -1,4 +1,5 @@
 import type { MetadataSkill } from "@/api/types"
+import { createDiceBearAvatar } from "@/lib/avatar"
 
 export interface AIEmployee {
   id: string
@@ -39,7 +40,7 @@ export const PRIMARY_CURATOR: CuratorProfile = {
   name: "主理人",
   role: "数字员工统筹",
   status: "online",
-  avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Curator",
+  avatar: createDiceBearAvatar("Curator"),
   specialty: "任务分派、会话路由与协作编排",
 }
 
@@ -51,7 +52,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "陈小红",
     role: "HR经理",
     status: "online",
-    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Alice",
+    avatar: createDiceBearAvatar("Alice"),
     specialty: "员工关系、福利政策、招聘流程",
   },
   {
@@ -59,7 +60,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "王大明",
     role: "首席工程师",
     status: "busy",
-    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Bob",
+    avatar: createDiceBearAvatar("Bob"),
     specialty: "技术架构、代码审查、基础设施",
   },
   {
@@ -67,7 +68,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "李晓琳",
     role: "产品设计师",
     status: "online",
-    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Charlie",
+    avatar: createDiceBearAvatar("Charlie"),
     specialty: "UX设计、用户研究、原型制作",
   },
   {
@@ -75,7 +76,7 @@ export const AI_EMPLOYEES: AIEmployee[] = [
     name: "赵伟",
     role: "营销总监",
     status: "offline",
-    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=David",
+    avatar: createDiceBearAvatar("David"),
     specialty: "品牌策略、营销活动、数据分析",
   },
 ]

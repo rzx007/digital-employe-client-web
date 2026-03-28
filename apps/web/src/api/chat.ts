@@ -1,4 +1,5 @@
 import type { ChatTargetType, Employee, Group as ApiGroup } from "@/api/types"
+import { createDiceBearAvatar } from "@/lib/avatar"
 import { fetchEmployees } from "@/api/employee"
 import { createGroup as createGroupApi, fetchGroups } from "@/api/group"
 import {
@@ -24,7 +25,7 @@ function mapEmployeeToAIEmployee(emp: Employee): AIEmployee {
     id: String(emp.id),
     name: emp.name,
     role: emp.metadata?.capability_desc ?? emp.employee_code,
-    avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(emp.id)}`,
+    avatar: createDiceBearAvatar(String(emp.id)),
     status: mapStatus(emp.metadata?.status ?? 0),
     specialty: emp.metadata?.capability_desc ?? "",
     skills: emp.metadata?.skills ?? [],

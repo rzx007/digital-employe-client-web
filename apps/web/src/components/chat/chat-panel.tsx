@@ -25,7 +25,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { IconSparkles } from "@tabler/icons-react"
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
-
+import logo from "@/assets/logo.svg"
 import {
   getLatestArtifactFromUIMessage,
   getRenderBlocksFromUIMessage,
@@ -177,7 +177,7 @@ export function ChatPanel({
                 <ConversationEmptyState className="py-16">
                   <div className="flex flex-col items-center gap-6">
                     <img
-                      src="/logo.svg"
+                      src={logo}
                       alt="Logo"
                       className="size-12 opacity-80"
                     />
@@ -207,7 +207,7 @@ export function ChatPanel({
                 <ConversationEmptyState className="py-16">
                   <div className="flex flex-col items-center gap-5">
                     <img
-                      src="/logo.svg"
+                      src={logo}
                       alt="Logo"
                       className="h-10 w-10 opacity-50"
                     />

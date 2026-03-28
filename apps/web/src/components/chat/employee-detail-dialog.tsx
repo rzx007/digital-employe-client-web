@@ -26,6 +26,7 @@ import { Separator } from "@workspace/ui/components/separator"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import type { MetadataSkill } from "@/api/types"
 import type { Contact } from "@/lib/mock-data/ai-employees"
+import { createDiceBearAvatar } from "@/lib/avatar"
 import { useChatStore } from "@/stores/chat-store"
 import { useEmployeeDetailQuery } from "@/hooks/use-chat-queries"
 
@@ -133,7 +134,9 @@ export function EmployeeDetailDialog({
               <div className="flex justify-center">
                 <EmployeeContactAvatar
                   name={employee?.name ?? contact.employee?.name}
-                  avatar={`https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(employee?.id ?? contact.employee?.id ?? "")}`}
+                  avatar={createDiceBearAvatar(
+                    String(employee?.id ?? contact.employee?.id ?? "")
+                  )}
                   status={contact.employee?.status}
                   showStatus
                   avatarClassName="h-16 w-16"

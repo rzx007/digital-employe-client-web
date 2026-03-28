@@ -227,13 +227,6 @@ export function unsubscribe(streamId: string, subscriber: Subscriber): void {
  * @param event 要广播的事件
  */
 export function broadcast(task: ActiveTask, event: StreamEvent): void {
-  // 诊断日志：当没有订阅者时发出警告
-  if (task.subscribers.size === 0) {
-    console.warn(
-      `[stream:${task.id}] broadcast with 0 subscribers, event: ${event.type}`
-    )
-  }
-
   for (const sub of task.subscribers) {
     try {
       sub(event)

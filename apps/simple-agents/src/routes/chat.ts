@@ -172,6 +172,15 @@ app.post("/:id/chat/stream", async (c) => {
       while (queue.length > 0) {
         const event = queue.shift()!
         await stream.writeSSE({ data: JSON.stringify(event) })
+        // 终止事件：关闭 SSE 连接
+        if (
+          event.type === "done" ||
+          event.type === "error" ||
+          event.type === "cancelled"
+        ) {
+          unsub()
+          return
+        }
       }
       // 队列空时休眠 100ms，避免空转
       await stream.sleep(100)
@@ -262,6 +271,15 @@ app.get("/:id/stream/:streamId", async (c) => {
         while (queue.length > 0) {
           const event = queue.shift()!
           await stream.writeSSE({ data: JSON.stringify(event) })
+          // 终止事件：关闭 SSE 连接
+          if (
+            event.type === "done" ||
+            event.type === "error" ||
+            event.type === "cancelled"
+          ) {
+            unsub()
+            return
+          }
         }
         await stream.sleep(100)
       }
