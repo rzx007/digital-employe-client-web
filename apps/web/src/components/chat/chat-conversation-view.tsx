@@ -1,7 +1,5 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
-import { useQueryClient } from "@tanstack/react-query"
-
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
 import { mapStoredMessagesToUIMessages } from "@/lib/chat/message-utils"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"

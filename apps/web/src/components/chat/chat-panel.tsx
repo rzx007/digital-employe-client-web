@@ -145,6 +145,15 @@ export function ChatPanel({
         ...skill.description.toLowerCase().split(/\s+/).slice(0, 3),
       ],
     }))
+    // return [
+    //   {
+    //     id: "skill-1",
+    //     title: "技能 1",
+    //     icon: <IconSparkles className="h-4 w-4" />,
+    //     description: 'Answer questions about the AI SDK and help build AI-powered features. ',
+    //     keywords: ["技能", "技能 1", "描述 1"],
+    //   }
+    // ]
   }, [contact])
 
   return (
