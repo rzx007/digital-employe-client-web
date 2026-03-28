@@ -26,8 +26,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@workspace/ui/*": ["../../packages/ui/src/*"]
+      "@workspace/ui/*": ["../../packages/ui/src/*"],
+      "@electron/*": [
+        "./electron/*"
+      ]
     }
   },
-  "include": ["src"]
+  "include": ["src", "src/**/*.d.ts"]
 }
