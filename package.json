@@ -23,6 +23,13 @@
     "onlyBuiltDependencies": [
       "better-sqlite3",
       "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "better-sqlite3",
+      "core-js-pure",
+      "electron-winstaller",
+      "esbuild",
+      "msw"
     ]
   }
 }
