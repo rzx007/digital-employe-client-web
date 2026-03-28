@@ -1,18 +1,46 @@
 import "dotenv/config"
 import { serve } from "@hono/node-server"
-import { Scalar } from "@scalar/hono-api-reference"
-
 import { Hono } from "hono"
 import { cors } from "hono/cors"
+import { readFileSync, existsSync, statSync } from "node:fs"
+import { join } from "node:path"
 import sessionRoutes from "./routes/sessions"
 import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import { DATA_DIR } from "./db"
 import openApiDoc from "./doc/openapi.json"
 
+const STATIC_DIR = join(process.cwd(), "static")
+
 const app = new Hono()
 
 app.use("/*", cors())
+
+app.use(async (c, next) => {
+  if (c.req.path.startsWith("/static/")) {
+    const filePath = c.req.path.replace("/static/", "")
+    const fullPath = join(STATIC_DIR, filePath)
+
+    if (!existsSync(fullPath) || !statSync(fullPath).isFile()) {
+      return c.text("Not Found", 404)
+    }
+
+    const ext = fullPath.split(".").pop() || ""
+    const mimeTypes: Record<string, string> = {
+      html: "text/html",
+      js: "text/javascript",
+      css: "text/css",
+      json: "application/json",
+      png: "image/png",
+      jpg: "image/jpeg",
+      svg: "image/svg+xml",
+    }
+
+    c.header("Content-Type", mimeTypes[ext] || "text/plain")
+    return c.body(readFileSync(fullPath))
+  }
+  await next()
+})
 
 app.get("/", (c) =>
   c.json({
@@ -30,7 +58,6 @@ app.get("/", (c) =>
 )
 
 app.get("/doc", (c) => c.json(openApiDoc))
-app.get("/scalar", Scalar({ url: "/doc", pageTitle: "Simple Agents API" }))
 
 app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
