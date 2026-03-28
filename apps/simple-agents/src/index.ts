@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { serve } from "@hono/node-server"
-import { Scalar } from '@scalar/hono-api-reference'
+import { Scalar } from "@scalar/hono-api-reference"
 
 import { Hono } from "hono"
 import { cors } from "hono/cors"
@@ -8,6 +8,7 @@ import sessionRoutes from "./routes/sessions"
 import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import { DATA_DIR } from "./db"
+import openApiDoc from "./doc/openapi.json"
 
 const app = new Hono()
 
@@ -28,7 +29,8 @@ app.get("/", (c) =>
   })
 )
 
-app.get('/scalar', Scalar({ url: '/doc' }))
+app.get("/doc", (c) => c.json(openApiDoc))
+app.get("/scalar", Scalar({ url: "/doc", pageTitle: "Simple Agents API" }))
 
 app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
