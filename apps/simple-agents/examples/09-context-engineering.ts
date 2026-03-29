@@ -7,7 +7,6 @@
  * 运行：npx tsx examples/09-context-engineering.ts
  */
 
-import "dotenv/config"
 import {
   createDeepAgent,
   CompositeBackend,

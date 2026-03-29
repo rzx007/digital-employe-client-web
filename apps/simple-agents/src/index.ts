@@ -1,5 +1,3 @@
-import "dotenv/config"
-import { serve } from "@hono/node-server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { readFileSync, existsSync, statSync } from "node:fs"
@@ -67,18 +65,13 @@ const port = Number(process.env.PORT) || 3001
 console.log(`Agent server running on http://localhost:${port}`)
 console.log(`Data directory: ${DATA_DIR}`)
 
-const server = serve({ fetch: app.fetch, port })
+const server = Bun.serve({ fetch: app.fetch, port })
 
 process.on("SIGINT", () => {
-  server.close()
+  server.stop()
   process.exit(0)
 })
 process.on("SIGTERM", () => {
-  server.close((err) => {
-    if (err) {
-      console.error(err)
-      process.exit(1)
-    }
-    process.exit(0)
-  })
+  server.stop()
+  process.exit(0)
 })

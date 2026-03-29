@@ -7,7 +7,6 @@
  * 运行：npx tsx examples/08-structured-output.ts
  */
 
-import "dotenv/config"
 import { createDeepAgent } from "deepagents"
 import { tool } from "langchain"
 import { ChatOpenAI } from "@langchain/openai"

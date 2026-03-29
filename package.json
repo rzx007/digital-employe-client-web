@@ -2,6 +2,10 @@
   "name": "digital-employe-client-web",
   "version": "0.0.1",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
@@ -12,24 +16,7 @@
   "devDependencies": {
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "turbo": "^2.8.17",
+    "turbo": "^2.8.21",
     "typescript": "5.9.3"
-  },
-  "packageManager": "pnpm@10.33.0",
-  "engines": {
-    "node": ">=20"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "esbuild"
-    ],
-    "ignoredBuiltDependencies": [
-      "better-sqlite3",
-      "core-js-pure",
-      "electron-winstaller",
-      "esbuild",
-      "msw"
-    ]
   }
 }

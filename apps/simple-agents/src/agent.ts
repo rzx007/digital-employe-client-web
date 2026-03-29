@@ -13,7 +13,6 @@
  * - 每个会话有独立的虚拟文件系统，互不干扰
  */
 
-import "dotenv/config"
 import { createDeepAgent, FilesystemBackend } from "deepagents"
 import { ChatOpenAI } from "@langchain/openai"
 import path from "node:path"

@@ -7,7 +7,6 @@
  * 运行：npx tsx examples/05-backend-types.ts
  */
 
-import "dotenv/config"
 import {
   createDeepAgent,
   FilesystemBackend,

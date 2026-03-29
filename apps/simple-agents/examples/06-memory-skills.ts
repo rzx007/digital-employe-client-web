@@ -7,7 +7,6 @@
  * 运行：npx tsx examples/06-memory-skills.ts
  */
 
-import "dotenv/config"
 import { createDeepAgent, type FileData } from "deepagents"
 import { ChatOpenAI } from "@langchain/openai"
 const model = new ChatOpenAI({

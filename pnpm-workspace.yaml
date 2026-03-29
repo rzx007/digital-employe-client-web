@@ -1,8 +1,0 @@
-packages:
-  - "apps/*"
-  - "packages/*"
-allowBuilds:
-  better-sqlite3: false
-  core-js-pure: false
-  esbuild: false
-  msw: false

@@ -13,7 +13,6 @@
  * 运行：npx tsx examples/10-realworld-research-agent.ts
  */
 
-import "dotenv/config"
 import { createDeepAgent, FilesystemBackend } from "deepagents"
 import { tool } from "langchain"
 import { ChatOpenAI } from "@langchain/openai"

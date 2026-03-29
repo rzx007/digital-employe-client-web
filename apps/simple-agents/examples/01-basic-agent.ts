@@ -6,7 +6,6 @@
  * 运行：npx tsx examples/01-basic-agent.ts
  */
 
-import "dotenv/config"
 import { createDeepAgent } from "deepagents"
 import { ChatOpenAI } from "@langchain/openai"
 

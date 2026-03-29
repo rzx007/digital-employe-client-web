@@ -7,7 +7,6 @@
  * 运行：npx tsx examples/03-streaming.ts
  */
 
-import "dotenv/config"
 import { createDeepAgent } from "deepagents"
 import { ChatOpenAI } from "@langchain/openai"
 

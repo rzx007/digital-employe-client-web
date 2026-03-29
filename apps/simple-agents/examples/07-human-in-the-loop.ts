@@ -9,7 +9,6 @@
  * 运行：npx tsx examples/07-human-in-the-loop.ts
  */
 
-import "dotenv/config"
 import { createDeepAgent } from "deepagents"
 import { tool } from "langchain"
 import { ChatOpenAI } from "@langchain/openai"
