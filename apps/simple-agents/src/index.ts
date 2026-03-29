@@ -5,12 +5,17 @@ import { cors } from "hono/cors"
 import { readFileSync, existsSync, statSync } from "node:fs"
 import { join } from "node:path"
 import sessionRoutes from "./routes/sessions"
+import employeeRoutes from "./routes/employees"
 import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import { DATA_DIR } from "./db"
 import openApiDoc from "./doc/openapi.json"
+import { ensureSkillDirs } from "./services/skill-service"
 
 const STATIC_DIR = join(process.cwd(), "static")
+
+// 确保技能和员工目录结构存在
+ensureSkillDirs()
 
 const app = new Hono()
 
@@ -48,6 +53,7 @@ app.get("/", (c) =>
     version: "2.0.0",
     dataDir: DATA_DIR,
     endpoints: {
+      employees: "RESTful /api/employees",
       sessions: "RESTful /api/sessions",
       chat: "POST /api/sessions/:id/chat",
       chatStream: "POST /api/sessions/:id/chat/stream",
@@ -59,6 +65,7 @@ app.get("/", (c) =>
 
 app.get("/doc", (c) => c.json(openApiDoc))
 
+app.route("/api/employees", employeeRoutes)
 app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
 app.route("/api/sessions", artifactRoutes)

@@ -3,15 +3,19 @@
  *
  * 职责：
  * 1. 创建/获取/更新/删除会话
- * 2. 列出所有会话（支持分页和过滤）
+ * 2. 列出所有会话（支持分页、过滤、按员工过滤）
  * 3. 管理会话对应的文件目录
+ * 4. 创建会话时同步技能文件
  *
  * 会话是系统的基本组织单位，每个会话有：
  * - 唯一 ID
  * - 标题
+ * - 所属员工 ID（可选，关联 employees 表）
  * - 时间戳
  * - 元数据（JSON）
  * - 独立的文件目录（data/workspace/{sessionId}/）
+ *   ├── skills/              ← 全局技能副本
+ *   └── employee-skills/     ← 员工专属技能副本
  */
 
 import type { CreateSessionInput, UpdateSessionInput, Session } from "../types"
@@ -21,29 +25,47 @@ import { eq, desc, sql, and } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import path from "node:path"
 import fs from "node:fs"
+import { linkSessionSkills } from "./skill-service"
+import { getEmployee } from "./employee-service"
 
 /**
  * 创建新会话
  *
  * 执行逻辑：
  * 1. 生成或使用指定的会话 ID
- * 2. 在数据库中创建会话记录
- * 3. 创建对应的文件目录
+ * 2. 如果指定了 employeeId，验证员工存在
+ * 3. 在数据库中创建会话记录
+ * 4. 创建对应的文件目录
+ * 5. 同步全局技能和员工专属技能到会话目录
  *
  * @param input 会话创建参数（可选）
  * @returns 创建的会话对象
+ * @throws Error 当 employeeId 指定的员工不存在时
  */
 export async function createSession(
   input: CreateSessionInput = {}
 ): Promise<Session> {
-  // 生成或使用指定的会话 ID
   const id = input.id || nanoid()
+  const employeeId = input.employeeId || null
   const metadata = input.metadata ? JSON.stringify(input.metadata) : null
+
+  // 验证员工存在（如果指定了 employeeId）
+  if (employeeId) {
+    const emp = await getEmployee(employeeId)
+    if (!emp) {
+      throw new Error(`Employee not found: ${employeeId}`)
+    }
+  }
 
   // 在数据库中创建会话记录
   const [session] = await db
     .insert(sessions)
-    .values({ id, title: input.title || "新会话", metadata })
+    .values({
+      id,
+      title: input.title || "新会话",
+      employeeId,
+      metadata,
+    })
     .returning()
 
   // 创建对应的文件目录
@@ -51,6 +73,9 @@ export async function createSession(
   if (!fs.existsSync(sessionDir)) {
     fs.mkdirSync(sessionDir, { recursive: true })
   }
+
+  // 创建技能目录符号链接（全局 + 员工专属）
+  linkSessionSkills(id, employeeId || undefined)
 
   return session
 }
@@ -77,33 +102,41 @@ export async function getSession(id: string): Promise<Session | null> {
  * - page: 页码（从 1 开始）
  * - pageSize: 每页条数（默认 20）
  * - includeArchived: 是否包含已归档的会话
+ * - employeeId: 按员工过滤（可选）
  *
  * @param page 页码
  * @param pageSize 每页条数
  * @param includeArchived 是否包含已归档会话
+ * @param employeeId 按员工过滤
  * @returns 分页的会话列表
  */
 export async function listSessions(
   page = 1,
   pageSize = 20,
-  includeArchived = false
+  includeArchived = false,
+  employeeId?: string
 ) {
   // 构建查询条件
-  const where = includeArchived
+  const conditions = includeArchived
     ? undefined
     : and(eq(sessions.isArchived, false))
+
+  // 按员工过滤
+  const finalWhere = employeeId
+    ? and(conditions, eq(sessions.employeeId, employeeId))
+    : conditions
 
   // 查询总数
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)` })
     .from(sessions)
-    .where(where)
+    .where(finalWhere)
 
   // 查询数据（按更新时间降序，支持分页）
   const data = await db
     .select()
     .from(sessions)
-    .where(where)
+    .where(finalWhere)
     .orderBy(desc(sessions.updatedAt))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
@@ -155,7 +188,7 @@ export async function updateSession(
  * 删除会话
  *
  * 执行逻辑：
- * 1. 删除会话对应的文件目录（递归删除，包括所有文件）
+ * 1. 删除会话对应的文件目录（递归删除，包括技能副本和所有文件）
  * 2. 删除数据库中的会话记录（级联删除消息和产物记录）
  *
  * @param id 会话 ID

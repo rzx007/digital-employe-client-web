@@ -4,7 +4,7 @@
  * 提供会话相关的 HTTP 端点：
  *
  * 1. POST   /api/sessions      - 创建新会话
- * 2. GET    /api/sessions      - 列出所有会话（支持分页）
+ * 2. GET    /api/sessions      - 列出所有会话（支持分页、按员工过滤）
  * 3. GET    /api/sessions/:id  - 获取单个会话
  * 4. PATCH  /api/sessions/:id  - 更新会话
  * 5. DELETE /api/sessions/:id  - 删除会话
@@ -25,13 +25,24 @@ const app = new Hono()
 /**
  * POST / - 创建新会话
  *
- * @param body 创建会话的参数（title、metadata）
+ * @param body.title 会话标题（可选，默认 "新会话"）
+ * @param body.employeeId 所属员工 ID（可选）
+ * @param body.metadata 元数据（可选）
  * @returns 创建的会话对象
  */
 app.post("/", async (c) => {
   const body = await c.req.json<CreateSessionInput>()
-  const session = await createSession(body)
-  return c.json(session, 201)
+
+  try {
+    const session = await createSession(body)
+    return c.json(session, 201)
+  } catch (error: any) {
+    // employeeId 对应的员工不存在时返回 400
+    if (error.message?.startsWith("Employee not found")) {
+      return c.json({ error: error.message }, 400)
+    }
+    return c.json({ error: error.message || "Failed to create session" }, 500)
+  }
 })
 
 /**
@@ -40,14 +51,16 @@ app.post("/", async (c) => {
  * @param page 页码（默认 1）
  * @param pageSize 每页条数（默认 20）
  * @param includeArchived 是否包含已归档会话
+ * @param employeeId 按员工过滤
  * @returns 分页的会话列表
  */
 app.get("/", async (c) => {
   const page = Number(c.req.query("page")) || 1
   const pageSize = Number(c.req.query("pageSize")) || 20
   const includeArchived = c.req.query("includeArchived") === "true"
+  const employeeId = c.req.query("employeeId") || undefined
 
-  const result = await listSessions(page, pageSize, includeArchived)
+  const result = await listSessions(page, pageSize, includeArchived, employeeId)
   return c.json(result)
 })
 

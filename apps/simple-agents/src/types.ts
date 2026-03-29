@@ -8,13 +8,30 @@
 // ============ 核心数据类型 ============
 
 /**
+ * 员工类型
+ *
+ * 对应数据库中的 employees 表
+ * 每个员工代表一个独立的 AI 角色，拥有专属的系统提示词和技能
+ */
+export type Employee = {
+  id: string
+  name: string
+  systemPrompt: string
+  description: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
  * 会话类型
  *
  * 对应数据库中的 sessions 表
+ * 会话可选关联一个员工（employeeId），继承员工的配置
  */
 export type Session = {
   id: string
   title: string
+  employeeId: string | null
   createdAt: string
   updatedAt: string
   metadata: string | null
@@ -56,12 +73,32 @@ export type Artifact = {
 // ============ 请求/响应类型 ============
 
 /**
+ * 创建员工的输入参数
+ */
+export type CreateEmployeeInput = {
+  id?: string
+  name: string
+  systemPrompt?: string
+  description?: string
+}
+
+/**
+ * 更新员工的输入参数
+ */
+export type UpdateEmployeeInput = {
+  name?: string
+  systemPrompt?: string
+  description?: string
+}
+
+/**
  * 创建会话的输入参数
  */
 export type CreateSessionInput = {
   id?: string
   title?: string
   metadata?: Record<string, unknown>
+  employeeId?: string
 }
 
 /**

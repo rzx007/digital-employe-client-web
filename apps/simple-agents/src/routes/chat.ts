@@ -15,6 +15,7 @@
  * - 通过队列 + 轮询机制实现事件推送
  * - 支持断线重连（通过 streamId 标识）
  * - 后台任务与 SSE 连接解耦
+ * - employeeId 从会话自动继承，客户端无需额外传递
  */
 
 import { Hono } from "hono"
@@ -61,8 +62,9 @@ app.get("/:id/messages", async (c) => {
  * 1. 验证请求参数
  * 2. 检查会话是否存在
  * 3. 检查是否有活跃的流（有则返回 409）
- * 4. 调用 agent.chat() 获取回复
- * 5. 返回回复内容和消息 ID
+ * 4. 从会话获取 employeeId，选择对应的 Agent
+ * 5. 调用 agent.chat() 获取回复
+ * 6. 返回回复内容和消息 ID
  *
  * @param id 会话 ID
  * @param message 用户输入的消息
@@ -94,7 +96,8 @@ app.post("/:id/chat", async (c) => {
   }
 
   try {
-    const result = await chat(id, body.message)
+    const employeeId = session.employeeId || undefined
+    const result = await chat(id, body.message, employeeId)
     return c.json({
       content: result.content,
       messageId: result.message.id,
@@ -112,9 +115,10 @@ app.post("/:id/chat", async (c) => {
  * 完整流程：
  * 1. 验证请求参数
  * 2. 检查会话是否存在
- * 3. 调用 startStream() 启动后台任务
- * 4. 建立 SSE 连接，订阅事件并推送给客户端
- * 5. 客户端断开时清理订阅
+ * 3. 从会话获取 employeeId，选择对应的 Agent
+ * 4. 调用 startStream() 启动后台任务
+ * 5. 建立 SSE 连接，订阅事件并推送给客户端
+ * 6. 客户端断开时清理订阅
  *
  * @param id 会话 ID
  * @param message 用户输入的消息
@@ -133,8 +137,11 @@ app.post("/:id/chat/stream", async (c) => {
   const session = await getSession(id)
   if (!session) return c.json({ error: "Session not found" }, 404)
 
+  // 从会话获取 employeeId
+  const employeeId = session.employeeId || undefined
+
   // 启动流式对话
-  const result = startStream(id, body.message)
+  const result = startStream(id, body.message, employeeId)
 
   // 如果启动失败（已有活跃流），返回 409
   if (!result.ok) {
@@ -163,7 +170,7 @@ app.post("/:id/chat/stream", async (c) => {
     let aborted = false
     stream.onAbort(() => {
       aborted = true
-      unsub() // 取消订阅
+      unsub()
     })
 
     // 保持 SSE 连接活跃（Hono 要求回调保持运行）
@@ -196,8 +203,8 @@ app.post("/:id/chat/stream", async (c) => {
  * 用途：客户端断线后重新连接，获取流的当前状态
  *
  * 恢复策略：
- * - 内存任务存在 → 返回任务状态（如果 completed 则直接返回 JSON，否则 SSE 续流）
- * - 内存任务不存在 → 降级查数据库（三级降级：内存 → DB → 消息表）
+ * - 内存任务存在 -> 返回任务状态（如果 completed 则直接返回 JSON，否则 SSE 续流）
+ * - 内存任务不存在 -> 降级查数据库（三级降级：内存 -> DB -> 消息表）
  *
  * @param id 会话 ID
  * @param streamId 流标识符
@@ -349,9 +356,9 @@ app.post("/:id/stream/:streamId/cancel", async (c) => {
  * 用途：前端页面加载时，检查会话是否有活跃的流
  *
  * 返回值：
- * - 如果有活跃流 → { active: true, streamId, status }
- * - 如果没有活跃流但有历史流 → { active: false, lastStreamId, lastStatus, lastMessageId }
- * - 如果从未有过流 → { active: false }
+ * - 如果有活跃流 -> { active: true, streamId, status }
+ * - 如果没有活跃流但有历史流 -> { active: false, lastStreamId, lastStatus, lastMessageId }
+ * - 如果从未有过流 -> { active: false }
  *
  * @param id 会话 ID
  * @returns 流状态信息

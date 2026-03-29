@@ -1,0 +1,36 @@
+[
+    {
+        "employee_name": "测试员工",
+        "status": 1,
+        "capability_desc": null,
+        "detail_page_url": null,
+        "user_id": "9368",
+        "system_prompt":"",
+        "description": "",
+        "created_at": "2026-03-27T14:31:11.030321+08:00",
+        "updated_at": "2026-03-27T14:31:27.634721+08:00",
+        "capabilities": [
+            {
+                "capability_name": "jdzs",
+                "capability_desc": "酒店小助手",
+                "mcp_server_name": "蒋氏测试知识库",
+                "mcp_tool_name": "jdzs"
+            }
+        ],
+        "skills": [
+            {
+                "id": 19,
+                "skillName": "agent-browser",
+                "description": "Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to "open a website", "fill out a form", "click a button", "take a screenshot", "scrape data from a page", "test this web app", "login to a site", "automate browser actions", or any task requiring programmatic web interaction.",
+                "prompt": "Test prompt",
+                "inputSchema": null,
+                "skillContent": null,
+                "directoryId": null,
+                "status": 1,
+                "createTime": "2026-03-24 13:29:33",
+                "updateTime": "2026-03-24 13:29:33",
+                "directoryName": null
+            }
+        ]
+    }
+]

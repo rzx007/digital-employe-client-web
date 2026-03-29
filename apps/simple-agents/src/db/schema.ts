@@ -2,16 +2,51 @@
  * Database Schema - 数据库表结构定义
  *
  * 使用 Drizzle ORM 定义 SQLite 数据库的表结构
- * 包含 4 个核心表：sessions、messages、artifacts、stream_tasks
+ * 包含 5 个核心表：employees、sessions、messages、artifacts、stream_tasks
  *
  * 关系说明：
- * - sessions 是父表
+ * - employees 是员工表（顶层实体）
+ * - sessions 关联 employees（可选，onDelete: set null）
  * - messages、artifacts、stream_tasks 都有外键关联到 sessions
  * - 使用 CASCADE 删除，删除会话时自动删除关联记录
+ *
+ * 分层架构：
+ * - employees → sessions（一对多，员工下有多个对话）
+ * - sessions → messages/artifacts/stream_tasks（一对多）
  */
 
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
 import { sql } from "drizzle-orm"
+
+/**
+ * 员工表 (employees)
+ *
+ * 存储所有员工的基本信息，每个员工代表一个 AI 角色
+ *
+ * 字段说明：
+ * - id: 唯一标识符（nanoid 生成）
+ * - name: 员工名称（如 "代码专家"、"数据分析师"）
+ * - system_prompt: 员工专属系统提示词（定义 AI 行为和能力）
+ * - description: 员工描述信息
+ * - created_at: 创建时间
+ * - updated_at: 更新时间
+ *
+ * 与会话的关系：
+ * - 一个员工可以有多个会话（sessions 表通过 employee_id 关联）
+ * - 删除员工时，关联会话的 employee_id 被置为 null（保留会话数据）
+ */
+export const employees = sqliteTable("employees", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  systemPrompt: text("system_prompt").notNull().default(""),
+  description: text("description").notNull().default(""),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
 
 /**
  * 会话表 (sessions)
@@ -21,6 +56,7 @@ import { sql } from "drizzle-orm"
  * 字段说明：
  * - id: 唯一标识符（nanoid 生成）
  * - title: 会话标题（默认 "新会话"）
+ * - employee_id: 所属员工 ID（外键，可选，关联 employees 表）
  * - created_at: 创建时间
  * - updated_at: 更新时间（每次对话后更新）
  * - metadata: 元数据（JSON 字符串）
@@ -29,6 +65,9 @@ import { sql } from "drizzle-orm"
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
   title: text("title").notNull().default("新会话"),
+  employeeId: text("employee_id").references(() => employees.id, {
+    onDelete: "set null",
+  }),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

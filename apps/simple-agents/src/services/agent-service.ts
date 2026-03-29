@@ -6,15 +6,17 @@
  * 2. 管理流式对话的生命周期（启动/取消/恢复）
  * 3. 处理消息持久化和文件产物检测
  * 4. 实现三级降级的流恢复机制（内存 → 数据库 → 消息表）
+ * 5. 根据员工 ID 选择对应的 Agent 实例
  *
  * 架构要点：
  * - agent 调用与 SSE 连接完全解耦
  * - 后台任务独立运行，客户端可随时断开/重连
  * - 通过 stream-registry 管理事件订阅和广播
+ * - 通过 agent 工厂按 employeeId 获取缓存的 agent 实例
  */
 
 import type { Message, StreamEvent } from "../types"
-import { agent, getSessionDir } from "../agent"
+import { getAgent, getSessionDir } from "../agent"
 import {
   createMessage,
   getSessionMessages,
@@ -38,6 +40,7 @@ import {
   type ActiveTask,
 } from "./stream-registry"
 import { nanoid } from "nanoid"
+import { getEmployee } from "./employee-service"
 
 /**
  * 将内部 Message 转换为 LangChain 消息格式
@@ -75,23 +78,46 @@ function detectNewArtifacts(sessionId: string) {
 }
 
 /**
+ * 根据 employeeId 获取对应的 Agent 实例
+ *
+ * 如果有员工，用员工的 systemPrompt；否则用默认 prompt
+ *
+ * @param employeeId 员工 ID（可选）
+ * @returns Agent 实例
+ */
+async function resolveAgent(employeeId?: string) {
+  const cacheKey = employeeId || "__default__"
+  let systemPrompt: string | undefined
+
+  if (employeeId) {
+    const emp = await getEmployee(employeeId)
+    systemPrompt = emp?.systemPrompt || undefined
+  }
+
+  return getAgent(cacheKey, systemPrompt)
+}
+
+/**
  * 同步对话（非流式）
  *
  * 流程：
  * 1. 保存用户消息到数据库
  * 2. 获取完整对话历史
- * 3. 调用 agent.invoke() 获取回复（阻塞直到完成）
- * 4. 保存代理回复到数据库
- * 5. 检测新增的文件产物
- * 6. 更新会话时间戳
+ * 3. 根据 employeeId 获取对应的 Agent 实例
+ * 4. 调用 agent.invoke() 获取回复（阻塞直到完成）
+ * 5. 保存代理回复到数据库
+ * 6. 检测新增的文件产物
+ * 7. 更新会话时间戳
  *
  * @param sessionId 会话 ID
  * @param userMessage 用户输入的消息
+ * @param employeeId 员工 ID（可选，从会话继承）
  * @returns 回复内容和消息记录
  */
 export async function chat(
   sessionId: string,
-  userMessage: string
+  userMessage: string,
+  employeeId?: string
 ): Promise<{ content: string; message: Message }> {
   // 1. 保存用户消息
   await createMessage(sessionId, "user", userMessage)
@@ -100,23 +126,26 @@ export async function chat(
   const history = await getSessionMessages(sessionId)
   const langchainMessages = toLangchainMessages(history)
 
-  // 3. 调用 agent（阻塞等待完整回复）
+  // 3. 获取对应的 Agent 实例
+  const agent = await resolveAgent(employeeId)
+
+  // 4. 调用 agent（阻塞等待完整回复）
   const result = await agent.invoke(
     { messages: langchainMessages as any },
     { configurable: { thread_id: sessionId } }
   )
 
-  // 4. 提取代理回复内容
+  // 5. 提取代理回复内容
   const lastMessage = result.messages[result.messages.length - 1]
   const content =
     typeof lastMessage.content === "string"
       ? lastMessage.content
       : JSON.stringify(lastMessage.content)
 
-  // 5. 保存代理回复到数据库
+  // 6. 保存代理回复到数据库
   const savedMessage = await createMessage(sessionId, "assistant", content)
 
-  // 6. 同步文件产物，更新会话时间
+  // 7. 同步文件产物，更新会话时间
   await detectNewArtifacts(sessionId)
   await updateSession(sessionId, {})
 
@@ -147,11 +176,13 @@ export type StartStreamResult =
  *
  * @param sessionId 会话 ID
  * @param userMessage 用户输入的消息
+ * @param employeeId 员工 ID（可选，从会话继承）
  * @returns 启动结果（包含 streamId 和 subscribe 函数）
  */
 export function startStream(
   sessionId: string,
-  userMessage: string
+  userMessage: string,
+  employeeId?: string
 ): StartStreamResult {
   // 检查是否已有活跃的流式任务
   const activeTask = getActiveTaskForSession(sessionId)
@@ -178,9 +209,11 @@ export function startStream(
   // 延迟启动后台任务，给 SSE 连接的 route handler 先执行 subscribe() 的时间
   // 这样能确保订阅者在后台任务广播第一个事件时就已就绪
   setTimeout(() => {
-    runAgentInBackground(sessionId, userMessage, task).catch((err) => {
-      console.error(`[stream:${streamId}] unhandled error:`, err)
-    })
+    runAgentInBackground(sessionId, userMessage, task, employeeId).catch(
+      (err) => {
+        console.error(`[stream:${streamId}] unhandled error:`, err)
+      }
+    )
   }, 50)
 
   return {
@@ -201,21 +234,24 @@ export function startStream(
  * 1. 保存用户消息到数据库
  * 2. 创建 stream_tasks 记录（用于恢复）
  * 3. 广播 stream_start 事件
- * 4. 获取对话历史并调用 agent.streamEvents()
- * 5. 逐个 token 地广播事件给所有订阅者
- * 6. 定期将进度刷入数据库（每10个token或每2秒）
- * 7. 完成后保存代理回复、同步文件产物、更新任务状态
+ * 4. 根据 employeeId 获取对应的 Agent 实例
+ * 5. 获取对话历史并调用 agent.streamEvents()
+ * 6. 逐个 token 地广播事件给所有订阅者
+ * 7. 定期将进度刷入数据库（每10个token或每2秒）
+ * 8. 完成后保存代理回复、同步文件产物、更新任务状态
  *
  * 注意：此函数是 fire-and-forget，不会阻塞 SSE 连接
  *
  * @param sessionId 会话 ID
  * @param userMessage 用户输入的消息
  * @param task 内存中的任务引用
+ * @param employeeId 员工 ID（可选）
  */
 async function runAgentInBackground(
   sessionId: string,
   userMessage: string,
-  task: ActiveTask
+  task: ActiveTask,
+  employeeId?: string
 ) {
   try {
     // 1. 保存用户消息
@@ -232,21 +268,24 @@ async function runAgentInBackground(
     // 3. 广播 stream_start 事件
     broadcast(task, { type: "stream_start", streamId: task.id })
 
-    // 4. 获取对话历史
+    // 4. 获取对应的 Agent 实例
+    const agent = await resolveAgent(employeeId)
+
+    // 5. 获取对话历史
     const history = await getSessionMessages(sessionId)
     const langchainMessages = toLangchainMessages(history)
 
-    // 5. 调用 agent.streamEvents() 获取流式事件
+    // 6. 调用 agent.streamEvents() 获取流式事件
     const config = { configurable: { thread_id: sessionId } }
     const eventStream = agent.streamEvents(
       { messages: langchainMessages as any },
       config
     )
 
-    // 6. 流式事件处理变量
+    // 7. 流式事件处理变量
     let fullContent = ""
     let tokenCount = 0
-    const FLUSH_INTERVAL = 2000 // 定期刷入数据库的间隔（毫秒）
+    const FLUSH_INTERVAL = 2000
     let lastFlush = Date.now()
 
     /**
@@ -266,7 +305,7 @@ async function runAgentInBackground(
       lastFlush = Date.now()
     }
 
-    // 7. 处理流式事件
+    // 8. 处理流式事件
     for await (const event of eventStream) {
       // 检查是否被取消
       if (task.abortController.signal.aborted) break
@@ -312,7 +351,7 @@ async function runAgentInBackground(
       }
     }
 
-    // 8. 检查是否被用户取消
+    // 9. 检查是否被用户取消
     if (task.abortController.signal.aborted) {
       await db
         .update(streamTasks)
@@ -322,14 +361,14 @@ async function runAgentInBackground(
       return
     }
 
-    // 9. 保存代理回复到数据库
+    // 10. 保存代理回复到数据库
     const savedMessage = await createMessage(
       sessionId,
       "assistant",
       fullContent
     )
 
-    // 10. 同步文件产物，更新任务状态
+    // 11. 同步文件产物，更新任务状态
     await flushToDb()
     await db
       .update(streamTasks)
@@ -343,7 +382,7 @@ async function runAgentInBackground(
     await detectNewArtifacts(sessionId)
     await updateSession(sessionId, {})
 
-    // 11. 广播 done 事件，标记任务完成
+    // 12. 广播 done 事件，标记任务完成
     broadcast(task, {
       type: "done",
       messageId: savedMessage.id,
@@ -352,7 +391,7 @@ async function runAgentInBackground(
 
     completeTask(task.id, savedMessage.id)
   } catch (error: any) {
-    // 12. 错误处理：更新任务状态，广播错误
+    // 13. 错误处理：更新任务状态，广播错误
     const errMsg = error?.message || "Unknown error"
 
     await db
@@ -454,7 +493,7 @@ export function getStreamStatus(sessionId: string): StreamStatus {
 export type ResolvedStream =
   | {
       ok: true
-      source: "memory" | "db" // 数据来源：内存或数据库
+      source: "memory" | "db"
       status: "streaming" | "completed" | "failed" | "cancelled"
       content: string
       errorMessage?: string | null
@@ -469,15 +508,15 @@ export type ResolvedStream =
  * 这是页面重载恢复的核心函数，实现三级降级查找：
  *
  * 第一级：内存注册表（stream-registry）
- *   - 找到 → 返回活跃的任务（可能是 streaming 或刚 completed）
- *   - 未找到 → 继续到第二级
+ *   - 找到 -> 返回活跃的任务（可能是 streaming 或刚 completed）
+ *   - 未找到 -> 继续到第二级
  *
  * 第二级：数据库 stream_tasks 表
  *   - 根据 session_id 查找最近一条流任务记录
- *   - completed → 从 messages 表读取完整内容
- *   - streaming → 标记为 failed（僵尸任务，服务器可能重启了）
- *   - failed → 返回错误信息
- *   - cancelled → 返回取消内容
+ *   - completed -> 从 messages 表读取完整内容
+ *   - streaming -> 标记为 failed（僵尸任务，服务器可能重启了）
+ *   - failed -> 返回错误信息
+ *   - cancelled -> 返回取消内容
  *
  * @param sessionId 会话 ID
  * @returns 解析后的流信息
@@ -531,7 +570,6 @@ export async function resolveStream(
   }
 
   // 处理僵尸任务（服务器重启或进程崩溃）
-  // 将 status 从 streaming 更新为 failed，并附带错误信息
   if (latest.status === "streaming") {
     await db
       .update(streamTasks)
