@@ -47,16 +47,43 @@ data/
 ### 数据层
 
 ```
-employees (员工表)
-├── id, name, systemPrompt, description
-└── createdAt, updatedAt
+employees
+├── id (PK)              = 管理端 user_id
+├── name                 = 管理端 employee_name
+├── systemPrompt         = 管理端 system_prompt
+├── description
+├── capabilities (JSON)  = 管理端 capabilities 数组，前端展示用
+├── skills (JSON)        = 管理端 skills 数组，前端展示用（非实际 SKILL.md）
+├── createdAt / updatedAt
 
-sessions (会话表)
-├── id, title, employeeId → employees.id (ON DELETE SET NULL)
-├── metadata, isArchived
-└── createdAt, updatedAt
+sessions
+├── id (PK)
+├── employeeId → employees.id (ON DELETE SET NULL)
+├── title, metadata, isArchived
+├── createdAt / updatedAt
+
+messages / artifacts / stream_tasks（不变）
 
 messages / artifacts / stream_tasks (已有，不变)
+```
+
+### 员工来源
+
+| 方式 | 接口 | 说明 |
+|------|------|------|
+| 管理端导入（主流程） | `POST /api/employees/import/:userId` | 从管理端拉数据+技能zip，upsert DB |
+| 重新同步 | `POST /api/employees/:id/sync` | 管理端改了员工/技能后更新 |
+| 本地创建（开发用） | `POST /api/employees` | 手动指定 name/systemPrompt |
+
+
+### 导入/同步流程：
+```
+POST /api/employees/import/9368
+  → GET {MANAGEMENT_BASE_URL}/employees/9368       → 拉员工数据
+  → GET {MANAGEMENT_BASE_URL}/employees/9368/skills.zip → 下载技能
+  → 解压到 data/employees/9368/skills/
+  → upsert DB（含 capabilities + skills JSON）
+  → invalidateAgentCache()
 ```
 
 ### Agent 工厂 + 缓存
@@ -118,13 +145,28 @@ Agent 需要时通过 read_file 工具读取完整 SKILL.md
 ### API 端点
 
 ```
-员工:  POST/GET/PATCH/DELETE  /api/employees
-会话:  POST/GET/PATCH/DELETE  /api/sessions       (支持 ?employeeId= 过滤)
-对话:  POST /api/sessions/:id/chat               (同步)
-       POST /api/sessions/:id/chat/stream        (SSE)
-       GET  /api/sessions/:id/stream             (状态查询)
-       GET  /api/sessions/:id/stream/:streamId   (恢复)
-       POST /api/sessions/:id/stream/:streamId/cancel
-消息:  GET  /api/sessions/:id/messages
-产物:  GET/DELETE /api/sessions/:id/artifacts
+员工:
+  POST   /api/employees                    - 本地创建
+  POST   /api/employees/import/:userId     - 管理端导入
+  POST   /api/employees/:id/sync           - 重新同步
+  GET    /api/employees                    - 列表
+  GET    /api/employees/:id                - 详情
+  PATCH  /api/employees/:id                - 更新
+  DELETE /api/employees/:id                - 删除
+
+会话:
+  POST   /api/sessions                     - 创建（employeeId 可选）
+  GET    /api/sessions?employeeId=         - 列表（支持过滤）
+  GET    /api/sessions/:id                 - 详情
+  PATCH  /api/sessions/:id                 - 更新
+  DELETE /api/sessions/:id                 - 删除
+
+对话:
+  POST   /api/sessions/:id/chat            - 同步
+  POST   /api/sessions/:id/chat/stream     - SSE 流式
+  GET    /api/sessions/:id/stream          - 流状态
+  GET    /api/sessions/:id/stream/:sid     - 恢复流
+  POST   /api/sessions/:id/stream/:sid/cancel
+
+消息/产物: GET/DELETE /api/sessions/:id/messages|artifacts
 ```

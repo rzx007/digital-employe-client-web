@@ -338,15 +338,38 @@ async function runAgentInBackground(
         })
       }
 
-      // 处理工具调用结束事件（截取前200字符）
+      // 处理工具调用结束事件
       if (event.event === "on_tool_end") {
+        const output =
+          typeof event.data?.output === "string"
+            ? event.data.output
+            : event.data?.output
+        broadcast(task, { type: "tool_end", name: event.name, output })
+      }
+
+      // 处理 agent 推理轮次开始（仅透传 agent 层级的 chain 事件）
+      if (
+        event.event === "on_chain_start" &&
+        Array.isArray(event.tags) &&
+        event.tags.includes("agent")
+      ) {
         broadcast(task, {
-          type: "tool_end",
+          type: "chain_start",
           name: event.name,
-          output:
-            typeof event.data?.output === "string"
-              ? event.data.output.substring(0, 200)
-              : JSON.stringify(event.data?.output).substring(0, 200),
+          input: event.data?.input,
+        })
+      }
+
+      // 处理 agent 推理轮次结束（仅透传 agent 层级的 chain 事件）
+      if (
+        event.event === "on_chain_end" &&
+        Array.isArray(event.tags) &&
+        event.tags.includes("agent")
+      ) {
+        broadcast(task, {
+          type: "chain_end",
+          name: event.name,
+          output: event.data?.output,
         })
       }
     }

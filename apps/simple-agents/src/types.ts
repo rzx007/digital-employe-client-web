@@ -185,6 +185,8 @@ export type StreamTask = {
  *
  * 事件类型：
  * - stream_start: 流开始
+ * - chain_start: Agent 推理轮次开始
+ * - chain_end: Agent 推理轮次结束
  * - token: 模型逐 token 输出
  * - tool_start: 工具调用开始
  * - tool_end: 工具调用结束
@@ -194,9 +196,11 @@ export type StreamTask = {
  */
 export type StreamEvent =
   | { type: "stream_start"; streamId: string }
+  | { type: "chain_start"; name: string; input?: unknown }
+  | { type: "chain_end"; name: string; output?: unknown }
   | { type: "token"; content: string }
   | { type: "tool_start"; name: string; input?: unknown }
-  | { type: "tool_end"; name: string; output?: string }
+  | { type: "tool_end"; name: string; output?: unknown }
   | { type: "done"; messageId: number; streamId: string }
   | { type: "error"; message: string; streamId: string }
   | { type: "cancelled"; streamId: string }

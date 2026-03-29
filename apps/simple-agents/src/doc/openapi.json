@@ -624,6 +624,24 @@
           {
             "type": "object",
             "properties": {
+              "type": { "type": "string", "const": "chain_start" },
+              "name": { "type": "string" },
+              "input": {}
+            },
+            "required": ["type", "name"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "chain_end" },
+              "name": { "type": "string" },
+              "output": {}
+            },
+            "required": ["type", "name"]
+          },
+          {
+            "type": "object",
+            "properties": {
               "type": { "type": "string", "const": "token" },
               "content": { "type": "string" }
             },
@@ -643,7 +661,7 @@
             "properties": {
               "type": { "type": "string", "const": "tool_end" },
               "name": { "type": "string" },
-              "output": { "type": "string" }
+              "output": {}
             },
             "required": ["type", "name"]
           },
