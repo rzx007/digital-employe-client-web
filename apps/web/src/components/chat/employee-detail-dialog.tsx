@@ -24,7 +24,7 @@ import {
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { Separator } from "@workspace/ui/components/separator"
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import type { MetadataSkill } from "@/api/types"
+import type { Capability, MetadataSkill } from "@/api/types"
 import type { Contact } from "@/lib/mock-data/ai-employees"
 import { createDiceBearAvatar } from "@/lib/avatar"
 import { useChatStore } from "@/stores/chat-store"
@@ -38,18 +38,13 @@ interface EmployeeDetailDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-const statusMap: Record<number, { label: string; color: string }> = {
-  1: { label: "在线", color: "bg-green-500" },
-  0: { label: "离线", color: "bg-gray-400" },
-}
-
-function formatDate(dateStr?: string) {
-  if (!dateStr) return "-"
-  return new Date(dateStr).toLocaleDateString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
+function parseJSON<T>(str: string | null, fallback: T): T {
+  if (!str) return fallback
+  try {
+    return JSON.parse(str) as T
+  } catch {
+    return fallback
+  }
 }
 
 function SkillCard({ skill }: { skill: MetadataSkill }) {
@@ -110,12 +105,11 @@ export function EmployeeDetailDialog({
     setSelectedContactId(employeeId)
   }
 
-  const metadata = employee?.metadata
-  const capabilities = metadata?.capabilities ?? []
-  const skills = metadata?.skills ?? []
-  const statusInfo = metadata
-    ? (statusMap[metadata.status] ?? statusMap[0])
-    : null
+  const capabilities = parseJSON<Capability[]>(
+    employee?.capabilities ?? null,
+    []
+  )
+  const skills = parseJSON<MetadataSkill[]>(employee?.skills ?? null, [])
 
   const hasContent = skills.length > 0 || capabilities.length > 0 || !isLoading
 
@@ -147,7 +141,7 @@ export function EmployeeDetailDialog({
                 {employee?.name ?? contact.employee?.name}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                {metadata?.capability_desc ?? contact.employee?.role}
+                {employee?.description ?? contact.employee?.role}
               </DialogDescription>
             </>
           )}
@@ -175,37 +169,34 @@ export function EmployeeDetailDialog({
                   </div>
                   <div className="space-y-1.5 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">状态</span>
-                      <span className="flex items-center gap-1.5">
-                        {statusInfo && (
-                          <span
-                            className={`inline-block h-2 w-2 rounded-full ${statusInfo.color}`}
-                          />
-                        )}
-                        {statusInfo?.label ?? "未知"}
-                      </span>
-                    </div>
-                    {employee?.employee_code && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">编码</span>
-                        <span className="font-mono">
-                          {employee.employee_code}
-                        </span>
-                      </div>
-                    )}
-                    {employee?.version && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">版本</span>
-                        <span>v{employee.version}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">创建时间</span>
-                      <span>{formatDate(employee?.created_at)}</span>
+                      <span>
+                        {employee?.createdAt
+                          ? new Date(employee.createdAt).toLocaleDateString(
+                              "zh-CN",
+                              {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                              }
+                            )
+                          : "-"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">更新时间</span>
-                      <span>{formatDate(employee?.updated_at)}</span>
+                      <span>
+                        {employee?.updatedAt
+                          ? new Date(employee.updatedAt).toLocaleDateString(
+                              "zh-CN",
+                              {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                              }
+                            )
+                          : "-"}
+                      </span>
                     </div>
                   </div>
                 </div>

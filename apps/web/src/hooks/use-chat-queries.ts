@@ -69,9 +69,8 @@ export function useCreateConversationMutation() {
 export function useEmployeeDetailQuery(id: string | null) {
   return useQuery({
     queryKey: chatKeys.employee(id ?? ""),
-    queryFn: () => fetchEmployeeById(Number(id!)),
+    queryFn: () => fetchEmployeeById(id!),
     enabled: Boolean(id),
-    select: (res) => res.data,
   })
 }
 

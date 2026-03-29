@@ -11,6 +11,7 @@ import artifactRoutes from "./routes/artifacts"
 import { DATA_DIR } from "./db"
 import openApiDoc from "./doc/openapi.json"
 import { ensureSkillDirs } from "./services/skill-service"
+import mockManagementRoutes from "./routes/mock-management"
 
 const STATIC_DIR = join(process.cwd(), "static")
 
@@ -69,6 +70,8 @@ app.route("/api/employees", employeeRoutes)
 app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
 app.route("/api/sessions", artifactRoutes)
+// 模拟员工数据管理
+app.route("/management", mockManagementRoutes)
 
 const port = Number(process.env.PORT) || 3001
 console.log(`Agent server running on http://localhost:${port}`)

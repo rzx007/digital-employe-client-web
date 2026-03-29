@@ -57,7 +57,30 @@ export interface Skill {
 }
 
 /**
- * 数字员工
+ * simple-agents 员工（本地数据库格式）
+ */
+export interface AgentEmployee {
+  id: string
+  name: string
+  systemPrompt: string
+  description: string
+  capabilities: string | null
+  skills: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 导入员工结果
+ */
+export interface ImportEmployeeResult {
+  employee: AgentEmployee
+  skills: string[]
+  skillsSynced: boolean
+}
+
+/**
+ * 数字员工（管理端格式，旧）
  */
 export interface Employee {
   id: number

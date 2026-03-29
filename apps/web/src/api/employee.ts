@@ -1,43 +1,36 @@
-import { request } from "@/lib/request"
-import type { ApiResponse, Employee } from "./types"
+import { ofetch } from "ofetch"
+import type { AgentEmployee, ImportEmployeeResult } from "./types"
 
-/** 当前固定工作空间 ID */
-const WORKSPACE_ID = 2
+const SIMPLE_AGENTS_BASE = "/simple-agents/api"
 
-/**
- * 导入员工列表并解析
- * GET /workspaces/{workspace_id}/employees/sync
- */
-export async function syncEmployees() {
-  return request<ApiResponse<null>>(
-    `/workspaces/${WORKSPACE_ID}/employees/sync`
-  )
+const agentRequest = ofetch.create({
+  baseURL: SIMPLE_AGENTS_BASE,
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
+})
+
+export async function fetchEmployees(): Promise<AgentEmployee[]> {
+  return agentRequest<AgentEmployee[]>("/employees")
 }
 
-/**
- * 查询员工列表
- * GET /workspaces/{workspace_id}/employees
- */
-export async function fetchEmployees() {
-  return request<ApiResponse<Employee[]>>(
-    `/workspaces/${WORKSPACE_ID}/employees`
-  )
+export async function fetchEmployeeById(
+  employeeId: string
+): Promise<AgentEmployee> {
+  return agentRequest<AgentEmployee>(`/employees/${employeeId}`)
 }
 
-/**
- * 查询员工详情
- * GET /employees/{employee_id}
- */
-export async function fetchEmployeeById(employeeId: number | string) {
-  return request<ApiResponse<Employee>>(`/employees/${employeeId}`)
-}
-
-/**
- * 删除员工
- * DELETE /employees/{employee_id}
- */
-export async function deleteEmployee(employeeId: number | string) {
-  return request<ApiResponse<null>>(`/employees/${employeeId}`, {
+export async function deleteEmployee(employeeId: string) {
+  return agentRequest<{ success: boolean }>(`/employees/${employeeId}`, {
     method: "DELETE",
+  })
+}
+
+export async function importEmployee(
+  userId: string
+): Promise<ImportEmployeeResult> {
+  return agentRequest<ImportEmployeeResult>(`/employees/import/${userId}`, {
+    method: "POST",
   })
 }

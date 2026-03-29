@@ -1,4 +1,9 @@
-import type { ChatTargetType, Employee, Group as ApiGroup } from "@/api/types"
+import type {
+  Capability,
+  ChatTargetType,
+  Group as ApiGroup,
+  MetadataSkill,
+} from "@/api/types"
 import { createDiceBearAvatar } from "@/lib/avatar"
 import { fetchEmployees } from "@/api/employee"
 import { createGroup as createGroupApi, fetchGroups } from "@/api/group"
@@ -11,20 +16,32 @@ import { type AIEmployee, type Contact } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
 import type { Message } from "@/lib/mock-data/messages"
 
-function mapStatus(status: number): AIEmployee["status"] {
-  if (status === 1) return "online"
-  return "offline"
+function parseJSON<T>(str: string | null, fallback: T): T {
+  if (!str) return fallback
+  try {
+    return JSON.parse(str) as T
+  } catch {
+    return fallback
+  }
 }
 
-function mapEmployeeToAIEmployee(emp: Employee): AIEmployee {
+function mapEmployeeToAIEmployee(emp: {
+  id: string
+  name: string
+  description: string
+  capabilities: string | null
+  skills: string | null
+}): AIEmployee {
+  const capabilities = parseJSON<Capability[]>(emp.capabilities, [])
+  const firstCap = capabilities[0]
   return {
-    id: String(emp.id),
+    id: emp.id,
     name: emp.name,
-    role: emp.metadata?.capability_desc ?? emp.employee_code,
-    avatar: createDiceBearAvatar(String(emp.id)),
-    status: mapStatus(emp.metadata?.status ?? 0),
-    specialty: emp.metadata?.capability_desc ?? "",
-    skills: emp.metadata?.skills ?? [],
+    role: firstCap?.capability_desc ?? emp.description ?? "",
+    avatar: createDiceBearAvatar(emp.id),
+    status: "online",
+    specialty: firstCap?.capability_desc ?? "",
+    skills: parseJSON<MetadataSkill[]>(emp.skills, []),
   }
 }
 
@@ -45,19 +62,17 @@ function mapContactToTarget(contact: Contact): {
 }
 
 export async function fetchContacts(): Promise<Contact[]> {
-  const [employeesRes, groupsRes] = await Promise.all([
+  const [employees, groupsRes] = await Promise.all([
     fetchEmployees(),
     fetchGroups(),
   ])
 
-  const employees: Contact[] = (employeesRes?.data ?? []).map((emp) => ({
+  const employeeList: Contact[] = employees.map((emp) => ({
     type: "employee" as const,
     employee: mapEmployeeToAIEmployee(emp),
   }))
 
-  const allEmployees: AIEmployee[] = (employeesRes?.data ?? []).map(
-    mapEmployeeToAIEmployee
-  )
+  const allEmployees: AIEmployee[] = employees.map(mapEmployeeToAIEmployee)
 
   const groups: Contact[] = (groupsRes?.data ?? []).map((group: ApiGroup) => ({
     type: "group" as const,
@@ -70,7 +85,7 @@ export async function fetchContacts(): Promise<Contact[]> {
     },
   }))
 
-  return [...employees, ...groups]
+  return [...employeeList, ...groups]
 }
 
 export async function createContactGroup(params: {
