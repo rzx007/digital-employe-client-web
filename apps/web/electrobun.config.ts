@@ -1,5 +1,4 @@
 import type { ElectrobunConfig } from "electrobun"
-console.log (process.env.NODE_ENV)
 
 export default {
   app: {
@@ -18,12 +17,15 @@ export default {
       dist: "views/main",
     },
     win: {
+      icon: "build/icon.ico",
       bundleCEF: false,
     },
+    buildFolder: "build",
+    artifactFolder: "artifacts",
   },
-  scripts: {
-    preBuild: "./scripts/pre-build.ts",
-  },
+  // scripts: {
+  //   preBuild: "./scripts/pre-build.ts",
+  // },
   release: {
     baseUrl: process.env.RELEASE_BASE_URL || "",
   },

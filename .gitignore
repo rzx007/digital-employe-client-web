@@ -23,6 +23,9 @@ coverage
 
 # Build Outputs
 dist
+build/stable-*
+build/dev-*
+artifacts
 
 # Debug
 npm-debug.log*
