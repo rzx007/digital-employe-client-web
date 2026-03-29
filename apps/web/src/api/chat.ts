@@ -7,11 +7,7 @@ import {
   fetchConversations as fetchConversationsApi,
   createConversation as createConversationApi,
 } from "@/api/conversation"
-import {
-  PRIMARY_CURATOR,
-  type AIEmployee,
-  type Contact,
-} from "@/lib/mock-data/ai-employees"
+import { type AIEmployee, type Contact } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
 import type { Message } from "@/lib/mock-data/messages"
 
@@ -74,11 +70,7 @@ export async function fetchContacts(): Promise<Contact[]> {
     },
   }))
 
-  return [
-    { type: "curator" as const, curator: PRIMARY_CURATOR },
-    ...employees,
-    ...groups,
-  ]
+  return [...employees, ...groups]
 }
 
 export async function createContactGroup(params: {
