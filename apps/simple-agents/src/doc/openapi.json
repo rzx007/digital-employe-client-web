@@ -2,12 +2,12 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Simple Agents API",
-    "description": "AI agent session management API with chat, streaming, and artifact support.",
-    "version": "2.0.0"
+    "description": "AI agent session management API with chat, streaming, and artifact support.\n\n## Streaming Endpoints\n\nTwo streaming modes are available:\n\n- **`/chat/stream`** (AI SDK): Uses `@ai-sdk/langchain` `toUIMessageStream()` to output standard AI SDK `UIMessageChunk` events. Recommended for frontend `useChat` integration.\n- **`/chat/raw-stream`** (Raw): Manually iterates `streamEvents()` outputting custom `StreamEvent` objects. Preserves full LangChain event granularity. Supports disconnect recovery via `/stream/{streamId}`.",
+    "version": "2.1.0"
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
+      "url": "http://localhost:3005",
       "description": "Local development server"
     }
   ],
@@ -211,6 +211,7 @@
       "post": {
         "operationId": "chat",
         "summary": "Send a message (non-streaming)",
+        "description": "Synchronous chat. Sends a user message and waits for the full agent response. Returns content and message ID. Persists both user and assistant messages (including `parts` for assistant).",
         "tags": ["Chat"],
         "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
         "requestBody": {
@@ -270,7 +271,8 @@
     "/api/sessions/{id}/chat/stream": {
       "post": {
         "operationId": "chatStream",
-        "summary": "Send a message with SSE streaming",
+        "summary": "Send a message with AI SDK standard streaming",
+        "description": "Uses `@ai-sdk/langchain` `toUIMessageStream()` to output standard AI SDK `UIMessageChunk` events via SSE. Compatible with AI SDK `useChat` hook and `ChatTransport`. Automatically persists user message (with `parts`) and assistant response (with full `UIMessage.parts`) to the database when the stream finishes.\n\nEach SSE `data` line is a JSON-encoded `UIMessageChunk` object. The stream ends with `data: [DONE]`.",
         "tags": ["Chat"],
         "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
         "requestBody": {
@@ -283,11 +285,65 @@
         },
         "responses": {
           "200": {
-            "description": "SSE stream of agent events",
+            "description": "SSE stream of AI SDK UIMessageChunk events",
             "content": {
               "text/event-stream": {
                 "schema": {
-                  "type": "object",
+                  "oneOf": [{ "$ref": "#/components/schemas/UIMessageChunk" }],
+                  "description": "Each SSE `data` line is a JSON-encoded UIMessageChunk. The stream ends with `data: [DONE]`."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "500": {
+            "description": "AI SDK stream failed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/chat/raw-stream": {
+      "post": {
+        "operationId": "chatRawStream",
+        "summary": "Send a message with raw LangChain event streaming",
+        "description": "Manually iterates `agent.streamEvents()` outputting custom `StreamEvent` objects via SSE. Preserves full LangChain event granularity including `on_chat_model_stream`, `on_tool_start`, `on_tool_end`, `on_chain_start`, and `on_chain_end`.\n\nSupports disconnect recovery via the `/stream/{streamId}` endpoints. Runs as a background task (fire-and-forget) so the agent continues even if the SSE connection drops.",
+        "tags": ["Chat"],
+        "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SendMessageInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of raw LangChain events",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamEvent",
                   "description": "Each SSE event contains a JSON-encoded StreamEvent in the `data` field."
                 }
               }
@@ -326,6 +382,7 @@
       "get": {
         "operationId": "getStreamStatus",
         "summary": "Get the current stream status for a session",
+        "description": "Only applicable to raw-stream sessions. Checks the in-memory stream registry first, then falls back to the database.",
         "tags": ["Streaming"],
         "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
         "responses": {
@@ -343,7 +400,8 @@
     "/api/sessions/{id}/stream/{streamId}": {
       "get": {
         "operationId": "resumeStream",
-        "summary": "Resume or retrieve a stream by ID",
+        "summary": "Resume or retrieve a raw stream by ID",
+        "description": "Only applicable to raw-stream sessions. If the stream is still running, returns an SSE continuation. If completed, returns JSON with the result. Falls back to the database for page-reload recovery.",
         "tags": ["Streaming"],
         "parameters": [
           { "$ref": "#/components/parameters/SessionId" },
@@ -358,7 +416,6 @@
               },
               "text/event-stream": {
                 "schema": {
-                  "type": "object",
                   "description": "SSE stream resuming from cached content or live events."
                 }
               }
@@ -378,7 +435,8 @@
     "/api/sessions/{id}/stream/{streamId}/cancel": {
       "post": {
         "operationId": "cancelStream",
-        "summary": "Cancel an active stream",
+        "summary": "Cancel an active raw stream",
+        "description": "Only applicable to raw-stream sessions. Aborts the background agent task and stops the SSE connection.",
         "tags": ["Streaming"],
         "parameters": [
           { "$ref": "#/components/parameters/SessionId" },
@@ -560,6 +618,7 @@
       },
       "Message": {
         "type": "object",
+        "description": "A stored message. The `parts` field contains the full AI SDK UIMessage parts as a JSON array (for assistant messages created via the AI SDK stream endpoint). The `content` field is a plain-text fallback.",
         "properties": {
           "id": { "type": "integer" },
           "sessionId": { "type": "string" },
@@ -567,9 +626,22 @@
             "type": "string",
             "enum": ["user", "assistant", "system", "tool"]
           },
-          "content": { "type": ["string", "null"] },
-          "toolCalls": { "type": ["string", "null"] },
-          "toolResults": { "type": ["string", "null"] },
+          "content": {
+            "type": ["string", "null"],
+            "description": "Plain text content (fallback)"
+          },
+          "parts": {
+            "type": ["string", "null"],
+            "description": "JSON-encoded UIMessage parts array. Present for messages created via the AI SDK stream endpoint. Contains text, tool-invocation, tool-result parts etc."
+          },
+          "toolCalls": {
+            "type": ["string", "null"],
+            "description": "JSON-encoded tool calls (legacy)"
+          },
+          "toolResults": {
+            "type": ["string", "null"],
+            "description": "JSON-encoded tool results (legacy)"
+          },
           "tokenCount": { "type": ["integer", "null"] },
           "createdAt": { "type": "string", "format": "date-time" }
         },
@@ -589,29 +661,108 @@
           "messageId": { "type": "integer" }
         }
       },
-      "Artifact": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "sessionId": { "type": "string" },
-          "filePath": { "type": "string" },
-          "fileName": { "type": "string" },
-          "fileSize": { "type": "integer" },
-          "mimeType": { "type": "string" },
-          "description": { "type": ["string", "null"] },
-          "createdAt": { "type": "string", "format": "date-time" }
-        },
-        "required": [
-          "id",
-          "sessionId",
-          "filePath",
-          "fileName",
-          "fileSize",
-          "mimeType",
-          "createdAt"
-        ]
+      "UIMessageChunk": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "start" },
+              "messageId": { "type": "string" }
+            },
+            "required": ["type"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "text-start" },
+              "id": { "type": "string" }
+            },
+            "required": ["type", "id"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "text-delta" },
+              "id": { "type": "string" },
+              "delta": { "type": "string" }
+            },
+            "required": ["type", "id", "delta"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "text-end" },
+              "id": { "type": "string" }
+            },
+            "required": ["type", "id"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool-input-start" },
+              "toolCallId": { "type": "string" },
+              "toolName": { "type": "string" }
+            },
+            "required": ["type", "toolCallId", "toolName"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool-input-delta" },
+              "toolCallId": { "type": "string" },
+              "inputTextDelta": { "type": "string" }
+            },
+            "required": ["type", "toolCallId", "inputTextDelta"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool-input-available" },
+              "toolCallId": { "type": "string" },
+              "toolName": { "type": "string" },
+              "input": {}
+            },
+            "required": ["type", "toolCallId", "toolName", "input"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool-output-available" },
+              "toolCallId": { "type": "string" },
+              "output": {}
+            },
+            "required": ["type", "toolCallId", "output"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool-output-error" },
+              "toolCallId": { "type": "string" },
+              "errorText": { "type": "string" }
+            },
+            "required": ["type", "toolCallId", "errorText"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "finish" },
+              "finishReason": { "type": "string" }
+            },
+            "required": ["type", "finishReason"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "error" },
+              "errorText": { "type": "string" }
+            },
+            "required": ["type", "errorText"]
+          }
+        ],
+        "discriminator": { "propertyName": "type" }
       },
       "StreamEvent": {
+        "description": "Custom event types emitted by the raw-stream endpoint (manual streamEvents iteration).",
         "oneOf": [
           {
             "type": "object",
@@ -646,6 +797,25 @@
               "content": { "type": "string" }
             },
             "required": ["type", "content"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool_call_start" },
+              "name": { "type": "string" },
+              "index": { "type": "integer" },
+              "id": { "type": "string" }
+            },
+            "required": ["type", "name"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "const": "tool_call_delta" },
+              "args": { "type": "string" },
+              "index": { "type": "integer" }
+            },
+            "required": ["type", "args"]
           },
           {
             "type": "object",
@@ -745,6 +915,28 @@
           "activeStreamId": { "type": "string" }
         }
       },
+      "Artifact": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "sessionId": { "type": "string" },
+          "filePath": { "type": "string" },
+          "fileName": { "type": "string" },
+          "fileSize": { "type": "integer" },
+          "mimeType": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "filePath",
+          "fileName",
+          "fileSize",
+          "mimeType",
+          "createdAt"
+        ]
+      },
       "Error": {
         "type": "object",
         "properties": {
@@ -783,8 +975,14 @@
   "tags": [
     { "name": "Service", "description": "Service metadata" },
     { "name": "Sessions", "description": "Session CRUD operations" },
-    { "name": "Chat", "description": "Chat and messaging" },
-    { "name": "Streaming", "description": "Stream lifecycle management" },
+    {
+      "name": "Chat",
+      "description": "Chat and messaging (sync, AI SDK stream, raw stream)"
+    },
+    {
+      "name": "Streaming",
+      "description": "Raw stream lifecycle management (resume, cancel, status)"
+    },
     { "name": "Artifacts", "description": "Artifact file management" }
   ]
 }

@@ -50,6 +50,7 @@ export type Message = {
   sessionId: string
   role: "user" | "assistant" | "system" | "tool"
   content: string | null
+  parts: string | null
   toolCalls: string | null
   toolResults: string | null
   tokenCount: number | null
@@ -188,8 +189,10 @@ export type StreamTask = {
  * - chain_start: Agent 推理轮次开始
  * - chain_end: Agent 推理轮次结束
  * - token: 模型逐 token 输出
- * - tool_start: 工具调用开始
- * - tool_end: 工具调用结束
+ * - tool_call_start: 模型开始生成工具调用（含工具名）
+ * - tool_call_delta: 工具调用参数的流式片段
+ * - tool_start: 工具执行开始
+ * - tool_end: 工具执行结束
  * - done: 流完成
  * - error: 流出错
  * - cancelled: 流取消
@@ -199,6 +202,8 @@ export type StreamEvent =
   | { type: "chain_start"; name: string; input?: unknown }
   | { type: "chain_end"; name: string; output?: unknown }
   | { type: "token"; content: string }
+  | { type: "tool_call_start"; name: string; index?: number; id?: string }
+  | { type: "tool_call_delta"; args: string; index?: number }
   | { type: "tool_start"; name: string; input?: unknown }
   | { type: "tool_end"; name: string; output?: unknown }
   | { type: "done"; messageId: number; streamId: string }

@@ -94,6 +94,7 @@ export const sessions = sqliteTable("sessions", {
  * - session_id: 外键，关联到 sessions 表
  * - role: 消息角色（user/assistant/system/tool）
  * - content: 消息内容
+ * - parts: AI SDK UIMessage parts（JSON 字符串，包含文本、工具调用等完整结构）
  * - tool_calls: 工具调用信息（JSON 字符串）
  * - tool_results: 工具返回结果（JSON 字符串）
  * - token_count: token 计数
@@ -108,6 +109,7 @@ export const messages = sqliteTable("messages", {
     enum: ["user", "assistant", "system", "tool"],
   }).notNull(),
   content: text("content"),
+  parts: text("parts"),
   toolCalls: text("tool_calls"),
   toolResults: text("tool_results"),
   tokenCount: integer("token_count"),

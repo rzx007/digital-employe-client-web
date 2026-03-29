@@ -1,10 +1,10 @@
 import type { UIMessage } from "ai"
 
 import { findContactInList } from "@/lib/mock-data/ai-employees"
-import { LangChainChatTransport } from "@/lib/chat/langchain-chat-transport"
+import { SimpleAgentsChatTransport } from "@/lib/chat/langchain-chat-transport"
 import type { Artifact } from "@/types/artifact"
 
-export const chatTransport = new LangChainChatTransport<UIMessage>()
+export const chatTransport = new SimpleAgentsChatTransport<UIMessage>()
 
 export type ChatViewContact = NonNullable<ReturnType<typeof findContactInList>>
 

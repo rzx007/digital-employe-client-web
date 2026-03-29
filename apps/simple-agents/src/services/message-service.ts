@@ -35,6 +35,7 @@ export async function createMessage(
   role: Message["role"],
   content: string | null,
   options?: {
+    parts?: unknown
     toolCalls?: unknown
     toolResults?: unknown
     tokenCount?: number
@@ -46,6 +47,7 @@ export async function createMessage(
       sessionId,
       role,
       content,
+      parts: options?.parts ? JSON.stringify(options.parts) : null,
       toolCalls: options?.toolCalls ? JSON.stringify(options.toolCalls) : null,
       toolResults: options?.toolResults
         ? JSON.stringify(options.toolResults)
