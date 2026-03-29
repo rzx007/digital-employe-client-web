@@ -106,7 +106,7 @@ export function DraftChatView({
         }
 
         setInputValue("")
-
+        
         await sendMessage(
           {
             text: messageText,

@@ -65,14 +65,12 @@ function getConversationIdFromBody(body: object | undefined) {
   return typeof conversationId === "string" ? conversationId : null
 }
 
-function getSkillFromBody(body: object | undefined) {
+function getSkillFromBody(body: any): string {
   if (!body || typeof body !== "object") {
     return ''
   }
 
-  const { skill } = body as { skill?: unknown }
-
-  return typeof skill === "string" ? skill : ''
+  return body?.skill || '' 
 }
 function getAttachmentsFromBody(body: object | undefined) {
   if (!body || typeof body !== "object") {
