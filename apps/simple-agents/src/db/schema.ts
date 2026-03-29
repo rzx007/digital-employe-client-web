@@ -28,6 +28,8 @@ import { sql } from "drizzle-orm"
  * - name: 员工名称（如 "代码专家"、"数据分析师"）
  * - system_prompt: 员工专属系统提示词（定义 AI 行为和能力）
  * - description: 员工描述信息
+ * - capabilities: 能力列表（JSON 字符串，从管理端同步，前端展示用）
+ * - skills: 技能列表（JSON 字符串，从管理端同步，前端展示用）
  * - created_at: 创建时间
  * - updated_at: 更新时间
  *
@@ -40,6 +42,8 @@ export const employees = sqliteTable("employees", {
   name: text("name").notNull(),
   systemPrompt: text("system_prompt").notNull().default(""),
   description: text("description").notNull().default(""),
+  capabilities: text("capabilities"),
+  skills: text("skills"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

@@ -199,6 +199,8 @@ function getManagementBaseUrl(): string | null {
  *   employee_name    → name
  *   system_prompt    → systemPrompt
  *   description      → description
+ *   capabilities     → capabilities（JSON 字符串）
+ *   skills           → skills（JSON 字符串，前端展示用）
  *
  * @param data 管理端返回的员工 JSON 数据
  * @returns 映射后的字段对象
@@ -208,12 +210,19 @@ function mapManagementEmployee(data: Record<string, unknown>): {
   name: string
   systemPrompt: string
   description: string
+  capabilities: string | null
+  skills: string | null
 } {
+  const capabilities = data.capabilities
+  const skills = data.skills
+
   return {
     id: String(data.user_id || ""),
     name: String(data.employee_name || "未命名员工"),
     systemPrompt: String(data.system_prompt || ""),
     description: String(data.description || ""),
+    capabilities: capabilities ? JSON.stringify(capabilities) : null,
+    skills: skills ? JSON.stringify(skills) : null,
   }
 }
 
@@ -272,6 +281,8 @@ export async function importEmployee(
         name: mapped.name,
         systemPrompt: mapped.systemPrompt,
         description: mapped.description,
+        capabilities: mapped.capabilities,
+        skills: mapped.skills,
       })
       .where(eq(employees.id, mapped.id))
       .returning()
@@ -284,6 +295,8 @@ export async function importEmployee(
         name: mapped.name,
         systemPrompt: mapped.systemPrompt,
         description: mapped.description,
+        capabilities: mapped.capabilities,
+        skills: mapped.skills,
       })
       .returning()
     employee = created
@@ -349,6 +362,8 @@ export async function syncEmployee(id: string): Promise<ImportEmployeeResult> {
       name: mapped.name,
       systemPrompt: mapped.systemPrompt,
       description: mapped.description,
+      capabilities: mapped.capabilities,
+      skills: mapped.skills,
     })
     .where(eq(employees.id, id))
     .returning()

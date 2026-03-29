@@ -18,6 +18,8 @@ export type Employee = {
   name: string
   systemPrompt: string
   description: string
+  capabilities: string | null
+  skills: string | null
   createdAt: string
   updatedAt: string
 }
