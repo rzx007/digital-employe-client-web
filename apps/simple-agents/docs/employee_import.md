@@ -78,3 +78,18 @@ POST /api/employees/:id/sync         → 重新同步（数据+技能）
 - 不处理 skills 数组（前端展示用）
 
 有什么需要调整的吗？
+
+
+
+
+----------------
+
+### 技能下载技能同步
+
+skill-service.ts
+linkIfSourceExists：不再简单跳过已存在的 target。现在会通过 fs.realpathSync 校验指向是否正确，dangling symlink 或指向错误路径时自动重建
+新增 unlinkSessionEmployeeSkills：删除会话中 employee-skills/ 的 symlink/junction
+employee-service.ts
+importEmployee：技能下载成功后，遍历该员工所有已有 session 调用 linkSessionSkills 补建 symlink
+syncEmployee：同上，技能重新下载后刷新所有关联 session 的 symlink
+deleteEmployee：删除员工目录前，先清理所有关联 session 的 employee-skills/ symlink

@@ -1,12 +1,13 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
 import { mapStoredMessagesToUIMessages } from "@/lib/chat/message-utils"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
 import { useMessagesQuery } from "@/hooks/use-chat-queries"
 
 import { ChatPanel } from "./chat-panel"
-import { chatTransport, type ChatViewContact } from "./chat-view-shared"
+import { type ChatViewContact } from "./chat-view-shared"
 import { toast } from "sonner"
 
 export function ConversationChatView({
@@ -25,7 +26,10 @@ export function ConversationChatView({
   onOpenConversations?: () => void
 }) {
   const [inputValue, setInputValue] = React.useState("")
-  const [command, setCommand] = React.useState<{ id: string; title: string } | null>(null)
+  const [command, setCommand] = React.useState<{
+    id: string
+    title: string
+  } | null>(null)
   const previousSessionIdRef = React.useRef<string | null>(null)
 
   const { data: storedMessages = [] } = useMessagesQuery(conversationId)
@@ -35,16 +39,23 @@ export function ConversationChatView({
     [storedMessages]
   )
 
+  const transport = React.useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: `/simple-agents/api/sessions/${conversationId}/chat/stream`,
+      }),
+    [conversationId]
+  )
+
   const { messages, setMessages, sendMessage, status, error } = useChat({
     id: String(conversationId),
     messages: initialMessages,
-    transport: chatTransport,
-    // resume: false,
+    transport,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
       })
-    }
+    },
   })
 
   React.useEffect(() => {
@@ -117,7 +128,7 @@ export function ConversationChatView({
             body: {
               attachments: message.files,
               conversationId,
-              skill: command?.title ?? ''
+              skill: command?.title ?? "",
             },
           }
         )

@@ -7,6 +7,7 @@ import {
   type ComponentProps,
 } from "react"
 import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
@@ -14,7 +15,7 @@ import { useCreateConversationMutation } from "@/hooks/use-chat-queries"
 import { useChatStore } from "@/stores/chat-store"
 
 import { ChatPanel } from "./chat-panel"
-import { chatTransport, type ChatViewContact } from "./chat-view-shared"
+import { type ChatViewContact } from "./chat-view-shared"
 import { toast } from "sonner"
 
 export function DraftChatView({
@@ -36,7 +37,9 @@ export function DraftChatView({
   )
   const selectedContact = useChatStore((s) => s.getSelectedContact())
   const [inputValue, setInputValue] = useState("")
-  const [command, setCommand] = useState<{ id: string; title: string } | null>(null)
+  const [command, setCommand] = useState<{ id: string; title: string } | null>(
+    null
+  )
   const createdConversationIdRef = useRef<string | number | null>(null)
   const createConversationMutation = useCreateConversationMutation()
 
@@ -49,11 +52,31 @@ export function DraftChatView({
     setInputValue("")
   }, [draftSessionKey, selectedContactId])
 
+  const SIMPLE_AGENTS_BASE = "/simple-agents/api/sessions"
+
+  const draftTransport = useMemo(
+    () =>
+      new DefaultChatTransport<any>({
+        prepareSendMessagesRequest({ body }) {
+          const conversationId =
+            body?.conversationId ?? createdConversationIdRef.current
+          if (!conversationId) {
+            throw new Error("缺少会话 ID")
+          }
+          return {
+            body: { messages: body?.messages },
+            api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
+          }
+        },
+      }),
+    []
+  )
+
   const { messages, sendMessage, status, error } = useChat({
     id: selectedContactId
       ? `draft:${selectedContactId}:${draftSessionKey}`
       : `draft:chat-view:${draftSessionKey}`,
-    transport: chatTransport,
+    transport: draftTransport,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -106,7 +129,7 @@ export function DraftChatView({
         }
 
         setInputValue("")
-        
+
         await sendMessage(
           {
             text: messageText,
@@ -115,7 +138,7 @@ export function DraftChatView({
             body: {
               attachments: message.files,
               conversationId,
-              skill: command?.title ?? ''
+              skill: command?.title ?? "",
             },
           }
         )

@@ -79,10 +79,23 @@ app.post("/:id/chat", async (c) => {
 
 app.post("/:id/chat/stream", async (c) => {
   const id = c.req.param("id")
-  const body = await c.req.json<SendMessageInput>()
+  const body = await c.req.json<{
+    messages?: Array<{ parts?: Array<{ type: string; text?: string }> }>
+  }>()
 
-  if (!body.message || typeof body.message !== "string") {
-    return c.json({ error: "message is required (string)" }, 400)
+  if (!Array.isArray(body.messages) || body.messages.length === 0) {
+    return c.json({ error: "messages array is required" }, 400)
+  }
+
+  const lastMessage = body.messages[body.messages.length - 1]
+  const userText = lastMessage?.parts
+    ?.filter((p) => p.type === "text" && p.text)
+    .map((p) => p.text)
+    .join("\n")
+    .trim()
+
+  if (!userText) {
+    return c.json({ error: "message text is required" }, 400)
   }
 
   const session = await getSession(id)
@@ -91,7 +104,7 @@ app.post("/:id/chat/stream", async (c) => {
   const employeeId = session.employeeId || undefined
 
   try {
-    return await chatStreamResponse(id, body.message, employeeId)
+    return await chatStreamResponse(id, userText, employeeId)
   } catch (error: any) {
     return c.json({ error: error.message || "AI SDK stream failed" }, 500)
   }

@@ -4,12 +4,39 @@ import { createMessage, getSessionMessages } from "./message-service"
 import { updateSession } from "./session-service"
 import { getSessionFiles, syncArtifacts } from "./artifact-service"
 import { getEmployee } from "./employee-service"
-import { toUIMessageStream } from "@ai-sdk/langchain"
+import { toBaseMessages, toUIMessageStream } from "@ai-sdk/langchain"
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   type UIMessage,
 } from "ai"
+
+function parseMessagePartsToUIMessages(messages: Message[]): UIMessage[] {
+  return messages.map((msg) => {
+    if (msg.parts) {
+      try {
+        const parts = JSON.parse(msg.parts)
+        if (Array.isArray(parts) && parts.length > 0) {
+          return {
+            id: String(msg.id),
+            role: msg.role as UIMessage["role"],
+            parts,
+            createdAt: msg.createdAt,
+          }
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    return {
+      id: String(msg.id),
+      role: msg.role as UIMessage["role"],
+      parts: [{ type: "text" as const, text: msg.content || "" }],
+      createdAt: msg.createdAt,
+    }
+  })
+}
 
 export function toLangchainMessages(messages: Message[]) {
   return messages.map((msg) => {
@@ -102,13 +129,15 @@ export async function chatStreamResponse(
 
   const config = { configurable: { thread_id: sessionId } }
   const history = await getSessionMessages(sessionId)
+  // const uiMessages = parseMessagePartsToUIMessages(history)
+  // const langchainMessages = await toBaseMessages(uiMessages)
   const langchainMessages = toLangchainMessages(history)
-  const eventStream = agent.streamEvents(
-    { messages: langchainMessages as any },
-    config
+  const graphStream = await agent.stream(
+    { messages: langchainMessages },
+    { ...config, streamMode: ["messages", "values"] }
   )
 
-  const uiStream = toUIMessageStream(eventStream)
+  const uiStream = toUIMessageStream(graphStream)
 
   const managedStream = createUIMessageStream({
     execute({ writer }) {
