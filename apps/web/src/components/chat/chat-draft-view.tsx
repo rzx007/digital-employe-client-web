@@ -57,14 +57,14 @@ export function DraftChatView({
   const draftTransport = useMemo(
     () =>
       new DefaultChatTransport<any>({
-        prepareSendMessagesRequest({ body }) {
+        prepareSendMessagesRequest({ messages, body }) {
           const conversationId =
             body?.conversationId ?? createdConversationIdRef.current
           if (!conversationId) {
             throw new Error("缺少会话 ID")
           }
           return {
-            body: { messages: body?.messages },
+            body: { messages },
             api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
           }
         },

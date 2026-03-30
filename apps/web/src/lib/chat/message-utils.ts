@@ -14,7 +14,7 @@ import { getArtifactFromToolPart } from "./artifact-utils"
 type ToolRenderPart = Extract<
   UIMessage["parts"][number],
   {
-    type: `tool-${string}`
+    type: `tool-${string}` | "dynamic-tool"
     toolCallId: string
   }
 >
@@ -39,7 +39,10 @@ export type MessageRenderBlock =
 function isToolRenderPart(
   part: UIMessage["parts"][number]
 ): part is ToolRenderPart {
-  return part.type.startsWith("tool-") && "toolCallId" in part
+  return (
+    "toolCallId" in part &&
+    (part.type.startsWith("tool-") || part.type === "dynamic-tool")
+  )
 }
 
 export function getTextFromUIMessage(message: UIMessage) {

@@ -20,6 +20,7 @@
 
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
+import type { UIMessage } from "ai"
 import { getMessages } from "../services/message-service"
 import { chat, chatStreamResponse } from "../services/agent-service"
 import {
@@ -79,24 +80,12 @@ app.post("/:id/chat", async (c) => {
 
 app.post("/:id/chat/stream", async (c) => {
   const id = c.req.param("id")
-  const body = await c.req.json<{
-    messages?: Array<{ parts?: Array<{ type: string; text?: string }> }>
-  }>()
+  const body = await c.req.json<{ messages: UIMessage[] }>()
 
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return c.json({ error: "messages array is required" }, 400)
   }
 
-  const lastMessage = body.messages[body.messages.length - 1]
-  const userText = lastMessage?.parts
-    ?.filter((p) => p.type === "text" && p.text)
-    .map((p) => p.text)
-    .join("\n")
-    .trim()
-
-  if (!userText) {
-    return c.json({ error: "message text is required" }, 400)
-  }
 
   const session = await getSession(id)
   if (!session) return c.json({ error: "Session not found" }, 404)
@@ -104,7 +93,7 @@ app.post("/:id/chat/stream", async (c) => {
   const employeeId = session.employeeId || undefined
 
   try {
-    return await chatStreamResponse(id, userText, employeeId)
+    return await chatStreamResponse(id, body.messages, employeeId)
   } catch (error: any) {
     return c.json({ error: error.message || "AI SDK stream failed" }, 500)
   }

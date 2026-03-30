@@ -52,7 +52,7 @@ const EMPTY_MESSAGES: UIMessage[] = []
 type ToolUIPart = Extract<
   UIMessage["parts"][number],
   {
-    type: `tool-${string}`
+    type: `tool-${string}` | "dynamic-tool"
     toolCallId: string
   }
 >
@@ -176,11 +176,7 @@ export function ChatPanel({
               {isDraftMode ? (
                 <ConversationEmptyState className="py-16">
                   <div className="flex flex-col items-center gap-6">
-                    <img
-                      src={logo}
-                      alt="Logo"
-                      className="size-12 opacity-80"
-                    />
+                    <img src={logo} alt="Logo" className="size-12 opacity-80" />
                     <div className="space-y-3 text-center">
                       <h2 className="text-md font-semibold tracking-tight">
                         数字员工智能助手
@@ -290,6 +286,15 @@ export function ChatPanel({
 
                               if (block.kind === "tool") {
                                 const part = block.part as ToolUIPart
+                                const headerProps =
+                                  part.type === "dynamic-tool" &&
+                                  "toolName" in part
+                                    ? {
+                                        type: part.type,
+                                        state: part.state,
+                                        toolName: part.toolName as string,
+                                      }
+                                    : { type: part.type, state: part.state }
 
                                 return (
                                   <Tool
@@ -297,10 +302,7 @@ export function ChatPanel({
                                     className="max-w-2xl"
                                     defaultOpen={false}
                                   >
-                                    <ToolHeader
-                                      state={part.state as ToolUIPart["state"]}
-                                      type={part.type as ToolUIPart["type"]}
-                                    />
+                                    <ToolHeader {...headerProps} />
                                     <ToolContent>
                                       <ToolInput input={part.input} />
                                       <ToolOutput

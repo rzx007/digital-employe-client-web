@@ -2,7 +2,10 @@ import type { UIMessage } from "ai"
 
 import type { Artifact, ArtifactType } from "@/types/artifact"
 
-type ToolPart = Extract<UIMessage["parts"][number], { type: `tool-${string}` }>
+type ToolPart = Extract<
+  UIMessage["parts"][number],
+  { type: `tool-${string}` } | { type: "dynamic-tool" }
+>
 
 interface ToolOutputPayload {
   input?: Record<string, unknown>
@@ -116,7 +119,7 @@ function inferLanguage(filePath: string) {
  */
 function isToolOutputPart(part: UIMessage["parts"][number]): part is ToolPart {
   return (
-    part.type.startsWith("tool-") &&
+    (part.type.startsWith("tool-") || part.type === "dynamic-tool") &&
     "state" in part &&
     part.state === "output-available"
   )
@@ -129,8 +132,15 @@ function isToolOutputPart(part: UIMessage["parts"][number]): part is ToolPart {
  * @returns 如果存在有效的输出对象则返回 ToolOutputPayload 类型的数据，否则返回 null
  */
 function getToolOutput(part: ToolPart): ToolOutputPayload | null {
-  // 验证输入参数是否包含 output 属性且该属性为有效对象
-  if (!("output" in part) || !part.output || typeof part.output !== "object") {
+  if (!("output" in part) || part.output == null) {
+    return null
+  }
+
+  if (typeof part.output === "string") {
+    return { text: part.output }
+  }
+
+  if (typeof part.output !== "object") {
     return null
   }
 

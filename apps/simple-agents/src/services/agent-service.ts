@@ -9,34 +9,10 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   type UIMessage,
+  type UIMessageChunk,
 } from "ai"
-
-function parseMessagePartsToUIMessages(messages: Message[]): UIMessage[] {
-  return messages.map((msg) => {
-    if (msg.parts) {
-      try {
-        const parts = JSON.parse(msg.parts)
-        if (Array.isArray(parts) && parts.length > 0) {
-          return {
-            id: String(msg.id),
-            role: msg.role as UIMessage["role"],
-            parts,
-            createdAt: msg.createdAt,
-          }
-        }
-      } catch {
-        // fall through
-      }
-    }
-
-    return {
-      id: String(msg.id),
-      role: msg.role as UIMessage["role"],
-      parts: [{ type: "text" as const, text: msg.content || "" }],
-      createdAt: msg.createdAt,
-    }
-  })
-}
+import * as fs from "node:fs"
+import * as path from "node:path"
 
 export function toLangchainMessages(messages: Message[]) {
   return messages.map((msg) => {
@@ -54,6 +30,25 @@ export function toLangchainMessages(messages: Message[]) {
 export function detectNewArtifacts(sessionId: string) {
   const afterSnapshot = getSessionFiles(sessionId)
   return syncArtifacts(sessionId, afterSnapshot)
+}
+
+const FILE_OPERATION_TOOLS = new Set(["write_file", "edit_file", "read_file"])
+
+function isFileOperationTool(toolName: string): boolean {
+  return FILE_OPERATION_TOOLS.has(toolName)
+}
+
+function inferArtifactType(filePath: string): string {
+  const match = /\.([a-z0-9]+)$/i.exec(filePath)
+  const ext = match?.[1]?.toLowerCase()
+  if (!ext) return "text"
+  if (
+    ["ts", "tsx", "js", "jsx", "json", "py", "sql", "css", "html"].includes(ext)
+  )
+    return "code"
+  if (ext === "csv") return "sheet"
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) return "image"
+  return "text"
 }
 
 async function resolveAgent(employeeId?: string) {
@@ -116,22 +111,43 @@ async function persistAssistantMessage(
   await updateSession(sessionId, {})
 }
 
+
+/**
+uiStream (ReadableStream<UIMessageChunk>)
+     ↓ pipeThrough
+TransformStream
+  transform(chunk, controller):
+    1. 检测到文件工具 input → 缓存到 Map
+    2. 检测到文件工具 output → readFileSync → controller.enqueue(data-artifact)
+    3. controller.enqueue(chunk)  ← 透传原始 chunk
+     ↓ pipeThrough 输出
+增强后的 ReadableStream<UIMessageChunk>（原始 chunk + 注入的 data-artifact 交替）
+     ↓ writer.merge()
+writer → SSE 响应 → 前端
+ */
+
 export async function chatStreamResponse(
   sessionId: string,
-  userMessage: string,
+  messages: UIMessage[],
   employeeId?: string
 ): Promise<Response> {
-  await createMessage(sessionId, "user", userMessage, {
-    parts: [{ type: "text", text: userMessage }],
-  })
-
+  // 保存用户消息到 DB
+  const lastMessage = messages[messages.length - 1]
+  if (lastMessage?.role === "user") {
+    const userText = lastMessage.parts
+      ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("\n")
+      .trim()
+    await createMessage(sessionId, "user", userText || "", {
+      parts: lastMessage.parts,
+    })
+  }
   const agent = await resolveAgent(employeeId)
 
   const config = { configurable: { thread_id: sessionId } }
-  const history = await getSessionMessages(sessionId)
-  // const uiMessages = parseMessagePartsToUIMessages(history)
-  // const langchainMessages = await toBaseMessages(uiMessages)
-  const langchainMessages = toLangchainMessages(history)
+  const langchainMessages = await toBaseMessages(messages)
+
   const graphStream = await agent.stream(
     { messages: langchainMessages },
     { ...config, streamMode: ["messages", "values"] }
@@ -141,7 +157,67 @@ export async function chatStreamResponse(
 
   const managedStream = createUIMessageStream({
     execute({ writer }) {
-      writer.merge(uiStream)
+      const sessionDir = getSessionDir(sessionId)
+      const pendingFileTools = new Map<
+        string,
+        { toolName: string; input: any }
+      >()
+
+      const enhancedStream = new TransformStream<
+        UIMessageChunk,
+        UIMessageChunk
+      >({
+        transform(chunk, controller) {
+          if (
+            chunk.type === "tool-input-available" &&
+            "dynamic" in chunk &&
+            chunk.dynamic === true &&
+            "toolName" in chunk
+          ) {
+            const { toolName, input } = chunk as any
+            if (isFileOperationTool(toolName)) {
+              pendingFileTools.set(chunk.toolCallId, {
+                toolName,
+                input,
+              })
+            }
+          }
+
+          if (chunk.type === "tool-output-available") {
+            const pending = pendingFileTools.get(chunk.toolCallId)
+            if (pending) {
+              const filePath = pending.input?.file_path
+              if (typeof filePath === "string") {
+                try {
+                  const content = fs.readFileSync(
+                    path.join(sessionDir, filePath),
+                    "utf-8"
+                  )
+                  controller.enqueue({
+                    type: "data-artifact",
+                    id: `artifact:${chunk.toolCallId}`,
+                    data: {
+                      id: `artifact:${chunk.toolCallId}`,
+                      type: inferArtifactType(filePath),
+                      title: path.basename(filePath),
+                      content,
+                      filePath,
+                      toolName: pending.toolName,
+                    },
+                  } as any)
+                } catch {
+                  // file write may have failed, ignore
+                }
+              }
+              pendingFileTools.delete(chunk.toolCallId)
+            }
+          }
+
+          controller.enqueue(chunk)
+        },
+      })
+
+      writer.merge(uiStream.pipeThrough(enhancedStream))
     },
     onFinish: async ({ responseMessage }) => {
       await persistAssistantMessage(sessionId, responseMessage)
