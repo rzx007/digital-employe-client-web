@@ -85,7 +85,7 @@ app.post("/:id/chat/stream", async (c) => {
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return c.json({ error: "messages array is required" }, 400)
   }
-
+ 
   const session = await getSession(id)
   if (!session) return c.json({ error: "Session not found" }, 404)
 
