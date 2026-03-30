@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { deleteSession as deleteSessionApi } from "@/api/conversation"
-import { fetchEmployeeById } from "@/api/employee"
+import { fetchEmployeeById, fetchEmployeeSkills } from "@/api/employee"
 import { fetchGroupById } from "@/api/group"
 import {
   createConversation,
@@ -70,6 +70,14 @@ export function useEmployeeDetailQuery(id: string | null) {
   return useQuery({
     queryKey: chatKeys.employee(id ?? ""),
     queryFn: () => fetchEmployeeById(id!),
+    enabled: Boolean(id),
+  })
+}
+
+export function useEmployeeSkillsQuery(id: string | null) {
+  return useQuery({
+    queryKey: chatKeys.employeeSkills(id ?? ""),
+    queryFn: () => fetchEmployeeSkills(id!),
     enabled: Boolean(id),
   })
 }

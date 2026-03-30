@@ -1,5 +1,5 @@
 import { agentRequest } from "@/lib/agent-request"
-import type { AgentEmployee, ImportEmployeeResult } from "./types"
+import type { AgentEmployee, AgentSkill, ImportEmployeeResult } from "./types"
 
 export async function fetchEmployees(): Promise<AgentEmployee[]> {
   return agentRequest<AgentEmployee[]>("/api/employees")
@@ -23,4 +23,10 @@ export async function importEmployee(
   return agentRequest<ImportEmployeeResult>(`/api/employees/import/${userId}`, {
     method: "POST",
   })
+}
+
+export async function fetchEmployeeSkills(
+  employeeId: string
+): Promise<AgentSkill[]> {
+  return agentRequest<AgentSkill[]>(`/api/employees/${employeeId}/skills`)
 }

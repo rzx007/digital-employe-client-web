@@ -61,11 +61,12 @@ export function DraftChatView({
         prepareSendMessagesRequest({ messages, body }) {
           const conversationId =
             body?.conversationId ?? createdConversationIdRef.current
+          const skill = body?.skill ?? ""
           if (!conversationId) {
             throw new Error("缺少会话 ID")
           }
           return {
-            body: { messages },
+            body: { messages, skill },
             api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
           }
         },
@@ -164,6 +165,7 @@ export function DraftChatView({
       selectedContact,
       sendMessage,
       setSelectedConversationId,
+      command,
     ]
   )
 

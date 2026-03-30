@@ -89,6 +89,11 @@ export interface ImportEmployeeResult {
   skillsSynced: boolean
 }
 
+export interface AgentSkill {
+  name: string
+  description: string
+}
+
 /**
  * 数字员工（管理端格式，旧）
  */

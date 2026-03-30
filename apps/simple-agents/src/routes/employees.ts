@@ -29,6 +29,7 @@ import {
   importEmployee,
   syncEmployee,
 } from "../services/employee-service"
+import { listSkillMetadata } from "../services/skill-service"
 import type { CreateEmployeeInput, UpdateEmployeeInput } from "../types"
 
 const app = new Hono()
@@ -172,6 +173,22 @@ app.post("/:id/sync", async (c) => {
     }
     return c.json({ error: msg }, 500)
   }
+})
+// GET /:id/skills - 列出员工技能
+// 前端: useEmployeeSkillsQuery(employeeId)
+// ↓ GET /api/employees/:id/skills
+// 后端: listSkillMetadata(employeeId)
+// ↓ 扫描 data/skills/ + data/employees/{id}/skills/
+// ↓ 解析每个 */SKILL.md 的 YAML frontmatter
+// ↓ 返回 [{name: "agent-browser", description: "Browser automation..."}, ...]
+// 前端: 映射为 SlashCommandItem[] → 用户输入 "/" 时展示
+app.get("/:id/skills", async (c) => {
+  const id = c.req.param("id")
+  const employee = await getEmployee(id)
+  if (!employee) return c.json({ error: "Employee not found" }, 404)
+
+  const skills = listSkillMetadata(id)
+  return c.json(skills)
 })
 
 export default app

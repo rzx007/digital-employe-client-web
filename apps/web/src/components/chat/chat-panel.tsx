@@ -33,6 +33,7 @@ import {
 import type { Message as StoredMessage } from "@/lib/mock-data/messages"
 import { Spinner } from "@/components/spinner"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useEmployeeSkillsQuery } from "@/hooks/use-chat-queries"
 import { useArtifactStore } from "@/stores/artifact-store"
 
 import { ArtifactPreview } from "../artifact"
@@ -131,11 +132,28 @@ export function ChatPanel({
     return format(date, "HH:mm", { locale: zhCN })
   }, [])
 
+  const employeeId =
+    contact?.type === "employee" ? (contact.employee?.id ?? null) : null
+  const { data: agentSkills } = useEmployeeSkillsQuery(employeeId)
+
   const slashCommands = React.useMemo<SlashCommandItem[]>(() => {
-    const skills =
+    if (agentSkills?.length) {
+      return agentSkills.map((skill) => ({
+        id: skill.name,
+        title: skill.name,
+        icon: <IconSparkles className="h-4 w-4" />,
+        description: skill.description,
+        keywords: [
+          skill.name.toLowerCase(),
+          ...skill.description.toLowerCase().split(/\s+/).slice(0, 3),
+        ],
+      }))
+    }
+
+    const metadataSkills =
       contact?.type === "employee" ? contact.employee?.skills : undefined
-    if (!skills?.length) return []
-    return skills.map((skill) => ({
+    if (!metadataSkills?.length) return []
+    return metadataSkills.map((skill) => ({
       id: String(skill.id),
       title: skill.skillName,
       icon: <IconSparkles className="h-4 w-4" />,
@@ -145,16 +163,7 @@ export function ChatPanel({
         ...skill.description.toLowerCase().split(/\s+/).slice(0, 3),
       ],
     }))
-    // return [
-    //   {
-    //     id: "skill-1",
-    //     title: "技能 1",
-    //     icon: <IconSparkles className="h-4 w-4" />,
-    //     description: 'Answer questions about the AI SDK and help build AI-powered features. ',
-    //     keywords: ["技能", "技能 1", "描述 1"],
-    //   }
-    // ]
-  }, [contact])
+  }, [contact, agentSkills])
 
   return (
     <div

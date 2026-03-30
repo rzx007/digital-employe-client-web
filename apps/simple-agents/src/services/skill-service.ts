@@ -126,6 +126,66 @@ export function listAvailableSkills(employeeId?: string): string[] {
   return Array.from(skillNames)
 }
 
+export type SkillMetadata = {
+  name: string
+  description: string
+}
+
+/**
+ * 获取员工可用的技能元信息列表
+ *
+ * 扫描全局和员工专属技能目录，解析 SKILL.md 的 YAML frontmatter
+ * 提取 name 和 description 字段
+ *
+ * @param employeeId 员工 ID（可选，不传则只返回全局技能）
+ * @returns 技能元信息列表
+ */
+export function listSkillMetadata(employeeId?: string): SkillMetadata[] {
+  const skills: SkillMetadata[] = []
+
+  scanSkillMetadata(GLOBAL_SKILLS_DIR, skills)
+
+  if (employeeId) {
+    const empSkillsDir = path.join(EMPLOYEES_DIR, employeeId, "skills")
+    scanSkillMetadata(empSkillsDir, skills)
+  }
+
+  return skills
+}
+
+function scanSkillMetadata(dir: string, skills: SkillMetadata[]): void {
+  if (!fs.existsSync(dir)) return
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+
+    const skillMd = path.join(dir, entry.name, "SKILL.md")
+    if (!fs.existsSync(skillMd)) continue
+
+    const content = fs.readFileSync(skillMd, "utf-8")
+    const metadata = parseSkillFrontmatter(content)
+    if (metadata) {
+      skills.push(metadata)
+    } else {
+      skills.push({ name: entry.name, description: "" })
+    }
+  }
+}
+
+function parseSkillFrontmatter(content: string): SkillMetadata | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
+  if (!match) return null
+
+  const body = match[1]
+  const name = /^name:\s*(.+)$/m.exec(body)?.[1]?.trim()
+  const description = /^description:\s*(.+)$/m.exec(body)?.[1]?.trim()
+
+  if (!name) return null
+
+  return { name, description: description || "" }
+}
+
 /**
  * 获取员工专属技能目录路径
  *

@@ -40,10 +40,20 @@ export function ConversationChatView({
     [storedMessages]
   )
 
+  const SIMPLE_AGENTS_BASE = "/simple-agents/api/sessions"
   const transport = React.useMemo(
     () =>
-      new DefaultChatTransport({
-        api: `/simple-agents/api/sessions/${conversationId}/chat/stream`,
+      new DefaultChatTransport<any>({
+        prepareSendMessagesRequest({ messages, body }) {
+          const skill = body?.skill ?? ""
+          if (!conversationId) {
+            throw new Error("缺少会话 ID")
+          }
+          return {
+            body: { messages, skill },
+            api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
+          }
+        },
       }),
     [conversationId]
   )
@@ -76,6 +86,7 @@ export function ConversationChatView({
   }, [conversationId, initialMessages, setMessages])
 
   const handleTextChange = React.useCallback((event: PromptChangeEvent) => {
+    console.log("handleTextChange", event)
     setCommand(event.command)
     setInputValue(event.value)
   }, [])
@@ -147,7 +158,7 @@ export function ConversationChatView({
         })
       }
     },
-    [conversationId, sendMessage]
+    [conversationId, sendMessage, command]
   )
 
   const displayMessages = React.useMemo(() => {

@@ -6,5 +6,7 @@ export const chatKeys = {
   messages: (conversationId: string) =>
     [...chatKeys.all, "messages", conversationId] as const,
   employee: (id: string) => [...chatKeys.all, "employee", id] as const,
+  employeeSkills: (id: string) =>
+    [...chatKeys.all, "employee-skills", id] as const,
   group: (id: string) => [...chatKeys.all, "group", id] as const,
 }
