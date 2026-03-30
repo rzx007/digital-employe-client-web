@@ -113,6 +113,25 @@ export type UpdateSessionInput = {
   isArchived?: boolean
 }
 
+export type Group = {
+  id: string
+  name: string
+  employeeIds: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type CreateGroupInput = {
+  id?: string
+  name: string
+  employeeIds: string[]
+}
+
+export type UpdateGroupInput = {
+  name?: string
+  employeeIds?: string[]
+}
+
 /**
  * 发送消息的输入参数
  */

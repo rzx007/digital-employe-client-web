@@ -1,52 +1,45 @@
-import { request } from "@/lib/request"
-import type { ApiResponse, Group } from "./types"
+import { agentRequest } from "@/lib/agent-request"
+import type { AgentGroup } from "./types"
 
-/** 当前固定工作空间 ID */
-const WORKSPACE_ID = 2
-
-/**
- * 创建群聊参数
- */
 export interface CreateGroupParams {
-  /** 群聊名称 */
   name: string
-  /** 参与员工 ID 列表 */
-  employee_ids: number[]
+  employeeIds: string[]
 }
 
-/**
- * 创建群聊
- * POST /workspaces/{workspace_id}/groups
- */
-export async function createGroup(params: CreateGroupParams) {
-  return request<ApiResponse<Group>>(`/workspaces/${WORKSPACE_ID}/groups`, {
+export interface UpdateGroupParams {
+  name?: string
+  employeeIds?: string[]
+}
+
+export async function fetchGroups(): Promise<AgentGroup[]> {
+  return agentRequest<AgentGroup[]>("/api/groups")
+}
+
+export async function fetchGroupById(groupId: string): Promise<AgentGroup> {
+  return agentRequest<AgentGroup>(`/api/groups/${groupId}`)
+}
+
+export async function createGroup(
+  params: CreateGroupParams
+): Promise<AgentGroup> {
+  return agentRequest<AgentGroup>("/api/groups", {
     method: "POST",
     body: params,
   })
 }
 
-/**
- * 查询群聊列表
- * GET /workspaces/{workspace_id}/groups
- */
-export async function fetchGroups() {
-  return request<ApiResponse<Group[]>>(`/workspaces/${WORKSPACE_ID}/groups`)
+export async function updateGroup(
+  groupId: string,
+  params: UpdateGroupParams
+): Promise<AgentGroup> {
+  return agentRequest<AgentGroup>(`/api/groups/${groupId}`, {
+    method: "PATCH",
+    body: params,
+  })
 }
 
-/**
- * 查询群聊详情
- * GET /groups/{group_id}
- */
-export async function fetchGroupById(groupId: number | string) {
-  return request<ApiResponse<Group>>(`/groups/${groupId}`)
-}
-
-/**
- * 删除群聊
- * DELETE /groups/{group_id}
- */
-export async function deleteGroup(groupId: number | string) {
-  return request<ApiResponse<null>>(`/groups/${groupId}`, {
+export async function deleteGroup(groupId: string) {
+  return agentRequest<{ success: boolean }>(`/api/groups/${groupId}`, {
     method: "DELETE",
   })
 }

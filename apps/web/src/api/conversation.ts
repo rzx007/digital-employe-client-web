@@ -1,70 +1,34 @@
-import { request } from "@/lib/request"
-import type {
-  ApiResponse,
-  ChatMessage,
-  ConversationItem,
-  ConversationQuery,
-  CreateConversationParams,
-} from "./types"
+import { agentRequest } from "@/lib/agent-request"
+import type { AgentSession, AgentMessage } from "./types"
 
-/** 当前固定工作空间 ID */
-const WORKSPACE_ID = 2
-
-/**
- * 创建聊天会话
- * POST /chat/conversations
- */
-export async function createConversation(params: CreateConversationParams) {
-  return request<ApiResponse<ConversationItem>>(`/chat/conversations`, {
+export async function createSession(
+  title?: string,
+  employeeId?: string
+): Promise<AgentSession> {
+  return agentRequest<AgentSession>("/api/sessions", {
     method: "POST",
-    body: {
-      workspace_id: WORKSPACE_ID,
-      ...params,
-    },
+    body: { title, employeeId },
   })
 }
 
-/**
- * 查询聊天会话列表
- * GET /chat/conversations
- */
-export async function fetchConversations(query?: ConversationQuery) {
-  return request<ApiResponse<ConversationItem[]>>(`/chat/conversations`, {
-    params: {
-      workspace_id: WORKSPACE_ID,
-      ...query,
-    },
+export async function fetchSessions(
+  employeeId?: string
+): Promise<AgentSession[]> {
+  return agentRequest<AgentSession[]>("/api/sessions", {
+    params: employeeId ? { employeeId } : undefined,
   })
 }
 
-/**
- * 查询会话消息记录
- * GET /chat/conversations/{conversation_id}/messages
- */
-export async function fetchConversationMessages(
-  conversationId: number | string
-) {
-  return request<ApiResponse<ChatMessage[]>>(
-    `/chat/conversations/${conversationId}/messages`
-  )
+export async function fetchSessionMessages(
+  sessionId: string
+): Promise<AgentMessage[]> {
+  return agentRequest<AgentMessage[]>(`/api/sessions/${sessionId}/messages`)
 }
 
-export async function deleteConversation(conversationId: number | string) {
-  return request<ApiResponse<null>>(`/chat/conversations/${conversationId}`, {
+export async function deleteSession(
+  sessionId: string
+): Promise<{ success: boolean }> {
+  return agentRequest<{ success: boolean }>(`/api/sessions/${sessionId}`, {
     method: "DELETE",
-  })
-}
-
-/**
- * 流式对话（SSE）
- * GET /chat/conversations/{conversation_id}/stream
- * 返回原始 Response 对象，用于读取 Server-Sent Events 流
- */
-export async function streamConversation(
-  conversationId: number | string,
-  question: string
-) {
-  return request.raw(`/chat/conversations/${conversationId}/stream`, {
-    params: { question },
   })
 }

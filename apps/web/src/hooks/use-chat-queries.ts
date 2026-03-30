@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { deleteConversation as deleteConversationApi } from "@/api/conversation"
+import { deleteSession as deleteSessionApi } from "@/api/conversation"
 import { fetchEmployeeById } from "@/api/employee"
 import { fetchGroupById } from "@/api/group"
 import {
@@ -77,9 +77,8 @@ export function useEmployeeDetailQuery(id: string | null) {
 export function useGroupDetailQuery(id: string | null) {
   return useQuery({
     queryKey: chatKeys.group(id ?? ""),
-    queryFn: () => fetchGroupById(Number(id!)),
+    queryFn: () => fetchGroupById(id!),
     enabled: Boolean(id),
-    select: (res) => res.data,
   })
 }
 
@@ -92,7 +91,7 @@ export function useDeleteConversationMutation() {
     }: {
       conversationId: string
       contactId: string
-    }) => deleteConversationApi(conversationId),
+    }) => deleteSessionApi(conversationId),
     onMutate: async ({ conversationId, contactId }) => {
       await queryClient.cancelQueries({
         queryKey: chatKeys.conversations(contactId),

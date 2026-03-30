@@ -1,4 +1,5 @@
 import * as React from "react"
+import { toast } from "sonner"
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -21,6 +22,7 @@ import {
   type Contact,
 } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
+import { createContactGroup } from "@/api/chat"
 
 import { ContactItem } from "./contact-item"
 import { CreateGroupDialog } from "./create-group-dialog"
@@ -83,9 +85,37 @@ export function ContactsSidebar({
     [contacts]
   )
 
-  const handleCreateGroup = (selectedEmployees: AIEmployee[]) => {
-    console.log("创建群聊，选择员工:", selectedEmployees)
-    setIsDialogOpen(false)
+  const handleCreateGroup = async (selectedEmployees: AIEmployee[]) => {
+    try {
+      const group = await createContactGroup({
+        name: `${selectedEmployees.length}人群聊`,
+        employeeIds: selectedEmployees.map((e) => e.id),
+      })
+
+      const allEmployees = contacts.filter((c) => c.type === "employee")
+      const ids = JSON.parse(group.employeeIds) as string[]
+      const participants = ids
+        .map(
+          (eid) => allEmployees.find((c) => c.employee?.id === eid)?.employee
+        )
+        .filter(Boolean) as AIEmployee[]
+
+      const newContact: Contact = {
+        type: "group",
+        group: {
+          id: group.id,
+          name: group.name,
+          participants,
+        },
+      }
+
+      setContacts([...contacts, newContact])
+      toast.success("群聊创建成功")
+    } catch {
+      toast.error("创建群聊失败")
+    } finally {
+      setIsDialogOpen(false)
+    }
   }
 
   const groupContacts = React.useMemo(

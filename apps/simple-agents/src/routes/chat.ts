@@ -40,7 +40,7 @@ app.get("/:id/messages", async (c) => {
   const pageSize = Number(c.req.query("pageSize")) || 50
 
   const result = await getMessages(id, page, pageSize)
-  return c.json(result)
+  return c.json(result.data)
 })
 
 app.post("/:id/chat", async (c) => {

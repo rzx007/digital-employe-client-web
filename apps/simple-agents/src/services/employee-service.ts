@@ -41,8 +41,11 @@ import {
   removeEmployeeSkillsDir,
   fetchEmployeeFromManagement,
   downloadAndExtractSkills,
+  linkSessionSkills,
+  unlinkSessionEmployeeSkills,
 } from "./skill-service"
 import { invalidateAgentCache } from "../agent"
+import { listSessions } from "./session-service"
 import fs from "node:fs"
 
 /**
@@ -172,6 +175,11 @@ export async function deleteEmployee(id: string): Promise<boolean> {
     .returning()
 
   if (result.length > 0) {
+    // 清理关联会话的员工技能 symlink
+    const { data: sessions } = await listSessions(1, 99999, false, id)
+    for (const session of sessions) {
+      unlinkSessionEmployeeSkills(session.id)
+    }
     // 删除员工目录
     removeEmployeeSkillsDir(id)
     // 清除 Agent 缓存
@@ -321,6 +329,14 @@ export async function importEmployee(
   // 5. 失效 Agent 缓存（systemPrompt 可能变了）
   invalidateAgentCache(employee.id)
 
+  // 6. 刷新关联会话的员工技能 symlink
+  if (skillsSynced) {
+    const { data: sessions } = await listSessions(1, 99999, false, employee.id)
+    for (const session of sessions) {
+      linkSessionSkills(session.id, employee.id)
+    }
+  }
+
   return { employee, skills, skillsSynced }
 }
 
@@ -384,6 +400,14 @@ export async function syncEmployee(id: string): Promise<ImportEmployeeResult> {
 
   // 3. 失效 Agent 缓存
   invalidateAgentCache(id)
+
+  // 4. 刷新关联会话的员工技能 symlink
+  if (skillsSynced) {
+    const { data: sessions } = await listSessions(1, 99999, false, id)
+    for (const session of sessions) {
+      linkSessionSkills(session.id, id)
+    }
+  }
 
   return { employee: updated, skills, skillsSynced }
 }

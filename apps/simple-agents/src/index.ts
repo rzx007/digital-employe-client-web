@@ -8,10 +8,12 @@ import sessionRoutes from "./routes/sessions"
 import employeeRoutes from "./routes/employees"
 import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
+import groupRoutes from "./routes/groups"
 import { DATA_DIR } from "./db"
 import openApiDoc from "./doc/openapi.json"
 import { ensureSkillDirs } from "./services/skill-service"
 import mockManagementRoutes from "./routes/mock-management"
+import { unifiedResponse, SKIP_RESPONSE_WRAP } from "./middleware/response"
 
 const STATIC_DIR = join(process.cwd(), "static")
 
@@ -21,6 +23,8 @@ ensureSkillDirs()
 const app = new Hono()
 
 app.use("/*", cors())
+
+app.use("/*", unifiedResponse)
 
 app.use(async (c, next) => {
   if (c.req.path.startsWith("/static/")) {
@@ -48,8 +52,9 @@ app.use(async (c, next) => {
   await next()
 })
 
-app.get("/", (c) =>
-  c.json({
+app.get("/", (c) => {
+  c.set(SKIP_RESPONSE_WRAP, true)
+  return c.json({
     name: "simple-agents",
     version: "2.0.0",
     dataDir: DATA_DIR,
@@ -62,14 +67,18 @@ app.get("/", (c) =>
       artifacts: "GET /api/sessions/:id/artifacts",
     },
   })
-)
+})
 
-app.get("/doc", (c) => c.json(openApiDoc))
+app.get("/doc", (c) => {
+  c.set(SKIP_RESPONSE_WRAP, true)
+  return c.json(openApiDoc)
+})
 
 app.route("/api/employees", employeeRoutes)
 app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
 app.route("/api/sessions", artifactRoutes)
+app.route("/api/groups", groupRoutes)
 // 模拟员工数据管理
 app.route("/management", mockManagementRoutes)
 

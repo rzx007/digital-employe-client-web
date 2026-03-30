@@ -1,16 +1,16 @@
 import type {
+  AgentGroup,
+  AgentMessage,
   Capability,
-  ChatTargetType,
-  Group as ApiGroup,
   MetadataSkill,
 } from "@/api/types"
 import { createDiceBearAvatar } from "@/lib/avatar"
 import { fetchEmployees } from "@/api/employee"
 import { createGroup as createGroupApi, fetchGroups } from "@/api/group"
 import {
-  fetchConversationMessages as fetchConversationMessagesApi,
-  fetchConversations as fetchConversationsApi,
-  createConversation as createConversationApi,
+  fetchSessionMessages as fetchSessionMessagesApi,
+  fetchSessions as fetchSessionsApi,
+  createSession as createSessionApi,
 } from "@/api/conversation"
 import { type AIEmployee, type Contact } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
@@ -45,24 +45,15 @@ function mapEmployeeToAIEmployee(emp: {
   }
 }
 
-function mapContactToTarget(contact: Contact): {
-  target_type: ChatTargetType
-  target_id: number
-} | null {
-  if (contact.type === "curator") return null
+function getEmployeeIdFromContact(contact: Contact): string | null {
   if (contact.type === "employee") {
-    const eid = Number(contact.employee?.id)
-    return isNaN(eid) ? null : { target_type: "employee", target_id: eid }
-  }
-  if (contact.type === "group") {
-    const gid = Number(contact.group?.id)
-    return isNaN(gid) ? null : { target_type: "group", target_id: gid }
+    return contact.employee?.id ?? null
   }
   return null
 }
 
 export async function fetchContacts(): Promise<Contact[]> {
-  const [employees, groupsRes] = await Promise.all([
+  const [employees, groupsData] = await Promise.all([
     fetchEmployees(),
     fetchGroups(),
   ])
@@ -74,29 +65,31 @@ export async function fetchContacts(): Promise<Contact[]> {
 
   const allEmployees: AIEmployee[] = employees.map(mapEmployeeToAIEmployee)
 
-  const groups: Contact[] = (groupsRes?.data ?? []).map((group: ApiGroup) => ({
-    type: "group" as const,
-    group: {
-      id: String(group.id),
-      name: group.name,
-      participants: (group.employee_ids ?? [])
-        .map((eid) => allEmployees.find((e) => e.id === String(eid)))
-        .filter(Boolean) as AIEmployee[],
-    },
-  }))
+  const groupContacts: Contact[] = groupsData.map((group) => {
+    const ids = parseJSON<string[]>(group.employeeIds, [])
+    return {
+      type: "group" as const,
+      group: {
+        id: group.id,
+        name: group.name,
+        participants: ids
+          .map((eid) => allEmployees.find((e) => e.id === eid))
+          .filter(Boolean) as AIEmployee[],
+      },
+    }
+  })
 
-  return [...employeeList, ...groups]
+  return [...employeeList, ...groupContacts]
 }
 
 export async function createContactGroup(params: {
   name: string
-  employeeIds: number[]
-}): Promise<ApiGroup> {
-  const res = await createGroupApi({
+  employeeIds: string[]
+}): Promise<AgentGroup> {
+  return createGroupApi({
     name: params.name,
-    employee_ids: params.employeeIds,
+    employeeIds: params.employeeIds,
   })
-  return res.data ?? ({} as ApiGroup)
 }
 
 export async function fetchConversationsByContactId(
@@ -107,54 +100,38 @@ export async function fetchConversationsByContactId(
     return []
   }
 
-  const target = mapContactToTarget(contact)
-  if (!target) return []
+  const employeeId = getEmployeeIdFromContact(contact)
+  if (!employeeId) return []
 
-  const res = await fetchConversationsApi({
-    target_type: target.target_type,
-    target_id: target.target_id,
-  })
+  const items = await fetchSessionsApi(employeeId)
 
-  const items = res?.data ?? []
-
-  return items.map((item) => ({
-    id: String(item.id),
-    title: item.title,
+  return items.map((session) => ({
+    id: session.id,
+    title: session.title,
     contactId,
-    status: (item.status as Conversation["status"]) ?? undefined,
-    lastMessage: item.lastMessage,
-    lastMessageTime: item.lastMessageTime
-      ? new Date(item.lastMessageTime)
-      : undefined,
-    lastMessageType: undefined,
-    unreadCount: item.unreadCount ?? 0,
-    updatedAt: new Date(item.updated_at),
+    unreadCount: 0,
+    updatedAt: new Date(session.updatedAt),
   }))
 }
 
 export async function fetchMessagesByConversationId(
   conversationId: string | number
 ): Promise<Message[]> {
-  const res = await fetchConversationMessagesApi(conversationId)
-  const items = res?.data ?? []
+  const items = await fetchSessionMessagesApi(String(conversationId))
 
-  return items.map((msg) => ({
-    id: msg.id,
-    conversationId:
-      msg.conversationId != null
-        ? String(msg.conversationId)
-        : String(conversationId),
-    senderId: msg.senderId ?? (msg.role === "user" ? "user" : ""),
-    senderName: msg.senderName ?? (msg.role === "user" ? "我" : ""),
-    role: msg.role === "system" ? "assistant" : msg.role,
-    content: msg.content,
-    chunkJson: msg.chunk_json,
-    timestamp: msg.timestamp
-      ? new Date(msg.timestamp)
-      : msg.created_at
-        ? new Date(msg.created_at)
-        : new Date(),
-  }))
+  return items
+    .filter(
+      (msg: AgentMessage) => msg.role === "user" || msg.role === "assistant"
+    )
+    .map((msg: AgentMessage) => ({
+      id: String(msg.id),
+      conversationId: msg.sessionId,
+      senderId: msg.role === "user" ? "user" : "",
+      senderName: msg.role === "user" ? "我" : "",
+      role: msg.role as Message["role"],
+      content: msg.content ?? "",
+      timestamp: new Date(msg.createdAt),
+    }))
 }
 
 export async function createConversation(params: {
@@ -172,28 +149,17 @@ export async function createConversation(params: {
     }
   }
 
-  const target = mapContactToTarget(params.contact)
-  if (!target) {
-    throw new Error("无法确定聊天目标类型")
-  }
-
-  const res = await createConversationApi({
-    target_type: target.target_type,
-    target_id: target.target_id,
-    title: params.title ?? "新对话",
-  })
-
-  const item = res?.data
-  if (!item) {
-    throw new Error("创建会话失败")
-  }
+  const employeeId = getEmployeeIdFromContact(params.contact)
+  const session = await createSessionApi(
+    params.title ?? "新对话",
+    employeeId ?? undefined
+  )
 
   return {
-    id: String(item.id),
-    title: item.title,
+    id: session.id,
+    title: session.title,
     contactId: params.contactId,
-    status: (item.status as Conversation["status"]) ?? undefined,
-    unreadCount: item.unreadCount ?? 0,
-    updatedAt: new Date(item.updated_at),
+    unreadCount: 0,
+    updatedAt: new Date(session.updatedAt),
   }
 }

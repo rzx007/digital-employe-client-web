@@ -1,10 +1,20 @@
 /**
- * 统一 API 响应结构
+ * 统一 API 响应结构（actus 后端）
  */
 export interface ApiResponse<T> {
   code: number
   msg: string
   data: T
+}
+
+/**
+ * 统一 API 响应结构（simple-agents 后端）
+ */
+export interface AgentApiResponse<T> {
+  code: number
+  data: T
+  status: number
+  message: string
 }
 
 /**
@@ -96,7 +106,18 @@ export interface Employee {
 }
 
 /**
- * 群聊（员工组）
+ * simple-agents 群聊
+ */
+export interface AgentGroup {
+  id: string
+  name: string
+  employeeIds: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 群聊（员工组，管理端旧格式）
  */
 export interface Group {
   id: number
@@ -108,57 +129,29 @@ export interface Group {
 }
 
 /**
- * 聊天目标类型：单聊（员工）或群聊
+ * simple-agents 会话
  */
-export type ChatTargetType = "employee" | "group"
-
-/**
- * 创建会话参数
- */
-export interface CreateConversationParams {
-  workspace_id?: number
-  target_type: ChatTargetType
-  target_id: number
-  title: string
-}
-
-/**
- * 会话列表查询参数（可选过滤条件）
- */
-export interface ConversationQuery {
-  workspace_id?: number
-  target_type?: ChatTargetType
-  target_id?: number
-}
-
-/**
- * 会话列表项
- */
-export interface ConversationItem {
-  id: number
-  workspace_id: number
-  target_type: ChatTargetType
-  target_id: number
-  title: string
-  created_at: string
-  updated_at: string
-  status?: string
-  lastMessage?: string
-  lastMessageTime?: string
-  unreadCount?: number
-}
-
-/**
- * 聊天消息
- */
-export interface ChatMessage {
+export interface AgentSession {
   id: string
-  conversationId?: number
-  senderId?: string
-  senderName?: string
-  role: "user" | "assistant" | "system"
-  content: string
-  chunk_json?: string
-  timestamp?: string
-  created_at?: string
+  title: string
+  employeeId: string | null
+  createdAt: string
+  updatedAt: string
+  metadata: string | null
+  isArchived: boolean
+}
+
+/**
+ * simple-agents 消息
+ */
+export interface AgentMessage {
+  id: number
+  sessionId: string
+  role: "user" | "assistant" | "system" | "tool"
+  content: string | null
+  parts: string | null
+  toolCalls: string | null
+  toolResults: string | null
+  tokenCount: number | null
+  createdAt: string
 }

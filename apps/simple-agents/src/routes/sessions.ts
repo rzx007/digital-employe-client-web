@@ -61,7 +61,7 @@ app.get("/", async (c) => {
   const employeeId = c.req.query("employeeId") || undefined
 
   const result = await listSessions(page, pageSize, includeArchived, employeeId)
-  return c.json(result)
+  return c.json(result.data)
 })
 
 /**

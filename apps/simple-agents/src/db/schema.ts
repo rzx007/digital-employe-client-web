@@ -2,16 +2,18 @@
  * Database Schema - 数据库表结构定义
  *
  * 使用 Drizzle ORM 定义 SQLite 数据库的表结构
- * 包含 5 个核心表：employees、sessions、messages、artifacts、stream_tasks
+ * 包含 6 个核心表：employees、groups、sessions、messages、artifacts、stream_tasks
  *
  * 关系说明：
  * - employees 是员工表（顶层实体）
+ * - groups 是群聊表，通过 employeeIds 关联多个员工
  * - sessions 关联 employees（可选，onDelete: set null）
  * - messages、artifacts、stream_tasks 都有外键关联到 sessions
  * - 使用 CASCADE 删除，删除会话时自动删除关联记录
  *
  * 分层架构：
  * - employees → sessions（一对多，员工下有多个对话）
+ * - employees, groups → 群聊包含多个员工
  * - sessions → messages/artifacts/stream_tasks（一对多）
  */
 
@@ -44,6 +46,18 @@ export const employees = sqliteTable("employees", {
   description: text("description").notNull().default(""),
   capabilities: text("capabilities"),
   skills: text("skills"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
+export const groups = sqliteTable("groups", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  employeeIds: text("employee_ids").notNull().default("[]"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

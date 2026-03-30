@@ -153,8 +153,10 @@ export function removeEmployeeSkillsDir(employeeId: string): void {
 /**
  * 如果源目录存在，创建符号链接到目标路径
  *
- * - 目标已存在时跳过
  * - 源目录不存在时静默跳过
+ * - 目标不存在时创建链接
+ * - 目标存在但指向错误路径或为 dangling symlink 时重建
+ * - 目标存在且正确时跳过
  * - Windows 使用 junction（不需要管理员权限）
  * - 其他平台使用 symlink
  *
@@ -163,16 +165,39 @@ export function removeEmployeeSkillsDir(employeeId: string): void {
  */
 function linkIfSourceExists(src: string, dest: string): void {
   if (!fs.existsSync(src)) return
-  if (fs.existsSync(dest)) return
 
   const srcResolved = path.resolve(src)
   const destResolved = path.resolve(dest)
 
-  // Windows: 使用 junction；其他平台: 使用 symlink
+  if (fs.existsSync(dest)) {
+    try {
+      const currentTarget = fs.realpathSync(destResolved)
+      if (currentTarget === srcResolved) return
+    } catch {
+      // dangling symlink or broken junction
+    }
+    fs.rmSync(destResolved, { recursive: false, force: true })
+  }
+
   if (process.platform === "win32") {
     fs.symlinkSync(srcResolved, destResolved, "junction")
   } else {
     fs.symlinkSync(srcResolved, destResolved, "dir")
+  }
+}
+
+/**
+ * 删除会话中员工技能的符号链接
+ *
+ * @param sessionId 会话 ID
+ */
+export function unlinkSessionEmployeeSkills(sessionId: string): void {
+  const target = path.join(DATA_DIR, "workspace", sessionId, "employee-skills")
+  try {
+    fs.realpathSync(target)
+    fs.rmSync(target, { recursive: false, force: true })
+  } catch {
+    // 不存在或不是 symlink，忽略
   }
 }
 
