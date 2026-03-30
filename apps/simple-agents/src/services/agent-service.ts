@@ -194,7 +194,7 @@ export async function chatStreamResponse(
                     "utf-8"
                   )
                   controller.enqueue({
-                    type: "data-artifact",
+                    type: "data-artifact", // Custom Data Stream，添加 data-artifact 标记, 前端使用根据useChat的onData监听
                     id: `artifact:${chunk.toolCallId}`,
                     data: {
                       id: `artifact:${chunk.toolCallId}`,

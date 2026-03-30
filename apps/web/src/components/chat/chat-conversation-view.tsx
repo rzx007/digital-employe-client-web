@@ -8,6 +8,7 @@ import { useMessagesQuery } from "@/hooks/use-chat-queries"
 
 import { ChatPanel } from "./chat-panel"
 import { type ChatViewContact } from "./chat-view-shared"
+import { useArtifactStore } from "@/stores/artifact-store"
 import { toast } from "sonner"
 
 export function ConversationChatView({
@@ -47,6 +48,8 @@ export function ConversationChatView({
     [conversationId]
   )
 
+  const addArtifact = useArtifactStore((s) => s.addArtifact)
+
   const { messages, setMessages, sendMessage, status, error } = useChat({
     id: String(conversationId),
     messages: initialMessages,
@@ -55,6 +58,11 @@ export function ConversationChatView({
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
       })
+    },
+    onData: (dataPart) => {
+      if (dataPart.type === "data-artifact" && dataPart.data) {
+        addArtifact(dataPart.data as any)
+      }
     },
   })
 

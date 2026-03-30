@@ -10,12 +10,12 @@ import {
 interface ChatStore {
   contacts: Contact[]
   selectedContactId: string | null
-  selectedConversationId: string | number | null
+  selectedConversationId: string | null
   isDraftConversation: boolean
   draftSessionKey: number
   setContacts: (contacts: Contact[]) => void
   setSelectedContactId: (id: string | null) => void
-  setSelectedConversationId: (id: string | number | null) => void
+  setSelectedConversationId: (id: string | null) => void
   setDraftConversation: (isDraft: boolean) => void
   getSelectedContact: () => Contact | undefined
 }
@@ -38,7 +38,7 @@ export const useChatStore = create<ChatStore>()(
         }),
       setSelectedConversationId: (id) =>
         set({
-          selectedConversationId: id,
+          selectedConversationId: id != null ? String(id) : null,
         }),
       setDraftConversation: (isDraft) =>
         set((state) => ({
@@ -59,6 +59,8 @@ export const useChatStore = create<ChatStore>()(
       partialize: (state) => ({
         selectedContactId: state.selectedContactId,
         selectedConversationId: state.selectedConversationId,
+        isDraftConversation: state.isDraftConversation,
+        draftSessionKey: state.draftSessionKey,
       }),
     }
   )

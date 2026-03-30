@@ -131,6 +131,7 @@ export async function fetchMessagesByConversationId(
       role: msg.role as Message["role"],
       content: msg.content ?? "",
       timestamp: new Date(msg.createdAt),
+      parts: msg.parts ?? undefined,
     }))
 }
 

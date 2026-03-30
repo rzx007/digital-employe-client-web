@@ -149,7 +149,12 @@ function getToolOutput(part: ToolPart): ToolOutputPayload | null {
 
 function getToolInput(part: ToolPart, output: ToolOutputPayload | null) {
   if ("input" in part && part.input && typeof part.input === "object") {
-    return part.input as ToolInputPayload
+    const raw = part.input as Record<string, unknown>
+    return {
+      file_path: raw.file_path ?? raw.path ?? undefined,
+      content: raw.content,
+      new_string: raw.new_string,
+    }
   }
 
   if (output?.input && typeof output.input === "object") {
@@ -169,22 +174,23 @@ function buildArtifactFromToolPart(part: ToolPart): Artifact | null {
   const output = getToolOutput(part)
   const input = getToolInput(part, output)
 
-  if (!input) {
+  const filePath =
+    typeof (input as any)?.file_path === "string"
+      ? (input as any).file_path
+      : null
+
+  if (!filePath) {
     return null
   }
 
-  const filePath = typeof input.file_path === "string" ? input.file_path : null
-  const content =
-    typeof input.content === "string"
-      ? input.content
-      : typeof input.new_string === "string"
-        ? input.new_string
+  const inputContent =
+    typeof (input as any)?.content === "string"
+      ? (input as any).content
+      : typeof (input as any)?.new_string === "string"
+        ? (input as any).new_string
         : null
 
-  // 检查必需字段是否存在
-  if (!filePath || content === null) {
-    return null
-  }
+  const content = inputContent ?? output?.text ?? ""
 
   const type = inferArtifactType(filePath)
 
@@ -197,7 +203,10 @@ function buildArtifactFromToolPart(part: ToolPart): Artifact | null {
     metadata: {
       filePath,
       sourceToolCallId: part.toolCallId,
-      sourceToolName: output?.toolName ?? part.type.replace(/^tool-/, ""),
+      sourceToolName:
+        ("toolName" in part ? part.toolName : null) ??
+        output?.toolName ??
+        part.type.replace(/^tool-/, ""),
       status: output?.status ?? null,
       outputText: output?.text ?? "",
     },

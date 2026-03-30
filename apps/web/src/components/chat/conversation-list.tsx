@@ -59,12 +59,12 @@ export function ConversationList({
     }
 
     const hasSelected = conversations.some(
-      (conversation) => conversation.id === selectedConversationId
+      (conversation) =>
+        String(conversation.id) === String(selectedConversationId)
     )
     if (!hasSelected) {
       setSelectedConversationId(conversations[0].id)
     }
-
   }, [
     conversations,
     conversationsQuerySuccess,
@@ -152,7 +152,9 @@ export function ConversationList({
             <ConversationItem
               key={conversation.id}
               conversation={conversation}
-              isSelected={selectedConversationId === conversation.id}
+              isSelected={
+                String(selectedConversationId) === String(conversation.id)
+              }
               onClick={() => {
                 setDraftConversation(false)
                 setSelectedConversationId(conversation.id)

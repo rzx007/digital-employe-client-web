@@ -107,7 +107,7 @@ export function ConversationItem({
         onSuccess: () => {
           toast.success(`已删除「${conversation.title}」`)
 
-          if (selectedConversationId === conversation.id) {
+          if (String(selectedConversationId) === String(conversation.id)) {
             setSelectedConversationId(null)
             setDraftConversation(true)
           }
@@ -136,7 +136,7 @@ export function ConversationItem({
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="relative flex items-center justify-between">
-            <span className="truncate text-sm font-medium max-w-56">
+            <span className="max-w-56 truncate text-sm font-medium">
               {conversation.title}
             </span>
             <span

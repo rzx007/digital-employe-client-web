@@ -3,14 +3,6 @@ import type { UIMessage } from "ai"
 import type { Artifact } from "@/types/artifact"
 import type { Message } from "@/lib/mock-data/messages"
 
-export {
-  getArtifactFromToolPart,
-  getArtifactsFromUIMessage,
-  getLatestArtifactFromUIMessage,
-} from "./artifact-utils"
-
-import { getArtifactFromToolPart } from "./artifact-utils"
-
 type ToolRenderPart = Extract<
   UIMessage["parts"][number],
   {
@@ -45,6 +37,12 @@ function isToolRenderPart(
   )
 }
 
+function isDataArtifactPart(
+  part: UIMessage["parts"][number]
+): part is { type: `data-artifact`; id: string; data: Artifact } {
+  return part.type === "data-artifact" && "data" in part && part.data != null
+}
+
 export function getTextFromUIMessage(message: UIMessage) {
   return message.parts
     .filter((part) => part.type === "text")
@@ -68,6 +66,16 @@ export function getRenderBlocksFromUIMessage(
       return blocks
     }
 
+    if (isDataArtifactPart(part)) {
+      blocks.push({
+        kind: "artifact",
+        key: `${message.id}:artifact:${part.data.id}:${index}`,
+        artifact: part.data,
+      })
+
+      return blocks
+    }
+
     if (isToolRenderPart(part)) {
       blocks.push({
         kind: "tool",
@@ -76,18 +84,20 @@ export function getRenderBlocksFromUIMessage(
       })
     }
 
-    const artifact = getArtifactFromToolPart(part)
-
-    if (artifact) {
-      blocks.push({
-        kind: "artifact",
-        key: `${message.id}:artifact:${artifact.id}:${index}`,
-        artifact,
-      })
-    }
-
     return blocks
   }, [])
+}
+
+export function getLatestArtifactFromUIMessage(
+  message: UIMessage
+): Artifact | null {
+  for (let i = message.parts.length - 1; i >= 0; i--) {
+    const part = message.parts[i]
+    if (isDataArtifactPart(part)) {
+      return part.data
+    }
+  }
+  return null
 }
 
 export function mapStoredMessagesToUIMessages(

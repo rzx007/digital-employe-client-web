@@ -66,6 +66,7 @@ export function ContactsSidebar({
   }, [contacts, setContacts])
 
   React.useEffect(() => {
+    if (!apiContacts) return
     if (
       contacts.length > 0 &&
       selectedContactId &&
@@ -73,7 +74,7 @@ export function ContactsSidebar({
     ) {
       setSelectedContactId(DEFAULT_SELECTED_CONTACT_ID)
     }
-  }, [contacts, selectedContactId, setSelectedContactId])
+  }, [contacts, selectedContactId, setSelectedContactId, apiContacts])
 
   const curatorContacts = React.useMemo(
     () => contacts.filter((contact) => contact.type === "curator"),

@@ -17,6 +17,7 @@ import { useChatStore } from "@/stores/chat-store"
 import { ChatPanel } from "./chat-panel"
 import { type ChatViewContact } from "./chat-view-shared"
 import { toast } from "sonner"
+import { useArtifactStore } from "@/stores/artifact-store"
 
 export function DraftChatView({
   contact,
@@ -72,6 +73,8 @@ export function DraftChatView({
     []
   )
 
+  const addArtifact = useArtifactStore((s) => s.addArtifact)
+
   const { messages, sendMessage, status, error } = useChat({
     id: selectedContactId
       ? `draft:${selectedContactId}:${draftSessionKey}`
@@ -81,6 +84,11 @@ export function DraftChatView({
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
       })
+    },
+    onData: (dataPart) => {
+      if (dataPart.type === "data-artifact" && dataPart.data) {
+        addArtifact(dataPart.data as any)
+      }
     },
   })
 
