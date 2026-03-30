@@ -68,7 +68,7 @@ app.post("/:id/chat", async (c) => {
 
   try {
     const employeeId = session.employeeId || undefined
-    const result = await chat(id, body.message, employeeId)
+    const result = await chat(id, body.message, employeeId, body.skill)
     return c.json({
       content: result.content,
       messageId: result.message.id,
@@ -80,12 +80,11 @@ app.post("/:id/chat", async (c) => {
 
 app.post("/:id/chat/stream", async (c) => {
   const id = c.req.param("id")
-  const body = await c.req.json<{ messages: UIMessage[] }>()
+  const body = await c.req.json<{ messages: UIMessage[]; skill?: string }>()
 
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return c.json({ error: "messages array is required" }, 400)
   }
-
 
   const session = await getSession(id)
   if (!session) return c.json({ error: "Session not found" }, 404)
@@ -93,7 +92,7 @@ app.post("/:id/chat/stream", async (c) => {
   const employeeId = session.employeeId || undefined
 
   try {
-    return await chatStreamResponse(id, body.messages, employeeId)
+    return await chatStreamResponse(id, body.messages, employeeId, body.skill)
   } catch (error: any) {
     return c.json({ error: error.message || "AI SDK stream failed" }, 500)
   }
@@ -112,7 +111,7 @@ app.post("/:id/chat/raw-stream", async (c) => {
 
   const employeeId = session.employeeId || undefined
 
-  const result = startStream(id, body.message, employeeId)
+  const result = startStream(id, body.message, employeeId, body.skill)
 
   if (!result.ok) {
     return c.json(

@@ -14,6 +14,11 @@ import {
 import * as fs from "node:fs"
 import * as path from "node:path"
 
+export function applySkillHint(message: string, skill?: string): string {
+  if (!skill) return message
+  return `[当前指定技能: ${skill}] ${message}`
+}
+
 export function toLangchainMessages(messages: Message[]) {
   return messages.map((msg) => {
     const content = msg.content || ""
@@ -66,12 +71,24 @@ async function resolveAgent(employeeId?: string) {
 export async function chat(
   sessionId: string,
   userMessage: string,
-  employeeId?: string
+  employeeId?: string,
+  skill?: string
 ): Promise<{ content: string; message: Message }> {
   await createMessage(sessionId, "user", userMessage)
 
   const history = await getSessionMessages(sessionId)
   const langchainMessages = toLangchainMessages(history)
+
+  // 指定技能时，将技能提示注入到最后一条用户消息
+  if (skill) {
+    const lastMsg = langchainMessages[langchainMessages.length - 1]
+    if (lastMsg && lastMsg.role === "user") {
+      lastMsg.content = applySkillHint(
+        typeof lastMsg.content === "string" ? lastMsg.content : "",
+        skill
+      )
+    }
+  }
 
   const agent = await resolveAgent(employeeId)
 
@@ -111,7 +128,6 @@ async function persistAssistantMessage(
   await updateSession(sessionId, {})
 }
 
-
 /**
 uiStream (ReadableStream<UIMessageChunk>)
      ↓ pipeThrough
@@ -129,7 +145,8 @@ writer → SSE 响应 → 前端
 export async function chatStreamResponse(
   sessionId: string,
   messages: UIMessage[],
-  employeeId?: string
+  employeeId?: string,
+  skill?: string
 ): Promise<Response> {
   // 保存用户消息到 DB
   const lastMessage = messages[messages.length - 1]
@@ -147,6 +164,18 @@ export async function chatStreamResponse(
 
   const config = { configurable: { thread_id: sessionId } }
   const langchainMessages = await toBaseMessages(messages)
+
+  // 指定技能时，将技能提示注入到最后一条用户消息
+  if (skill) {
+    const lastMsg = langchainMessages[langchainMessages.length - 1]
+    if (lastMsg && lastMsg._getType() === "human") {
+      const content = lastMsg.content
+      lastMsg.content = applySkillHint(
+        typeof content === "string" ? content : "",
+        skill
+      )
+    }
+  }
 
   const graphStream = await agent.stream(
     { messages: langchainMessages },

@@ -137,6 +137,7 @@ export type UpdateGroupInput = {
  */
 export type SendMessageInput = {
   message: string
+  skill?: string
 }
 
 /**

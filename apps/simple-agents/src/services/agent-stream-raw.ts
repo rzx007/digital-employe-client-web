@@ -40,7 +40,11 @@ import {
 } from "./stream-registry"
 import { nanoid } from "nanoid"
 import { getEmployee } from "./employee-service"
-import { toLangchainMessages, detectNewArtifacts } from "./agent-service"
+import {
+  toLangchainMessages,
+  detectNewArtifacts,
+  applySkillHint,
+} from "./agent-service"
 
 /**
  * 将内部 Message 转换为 LangChain 消息格式
@@ -85,7 +89,8 @@ export type StartStreamResult =
 export function startStream(
   sessionId: string,
   userMessage: string,
-  employeeId?: string
+  employeeId?: string,
+  skill?: string
 ): StartStreamResult {
   const activeTask = getActiveTaskForSession(sessionId)
   if (activeTask) {
@@ -108,7 +113,7 @@ export function startStream(
   }
 
   setTimeout(() => {
-    runAgentInBackground(sessionId, userMessage, task, employeeId).catch(
+    runAgentInBackground(sessionId, userMessage, task, employeeId, skill).catch(
       (err) => {
         console.error(`[stream:${streamId}] unhandled error:`, err)
       }
@@ -142,7 +147,8 @@ async function runAgentInBackground(
   sessionId: string,
   userMessage: string,
   task: ActiveTask,
-  employeeId?: string
+  employeeId?: string,
+  skill?: string
 ) {
   try {
     await createMessage(sessionId, "user", userMessage)
@@ -160,6 +166,17 @@ async function runAgentInBackground(
 
     const history = await getSessionMessages(sessionId)
     const langchainMessages = toLangchainMessages(history)
+
+    // 指定技能时，将技能提示注入到最后一条用户消息
+    if (skill) {
+      const lastMsg = langchainMessages[langchainMessages.length - 1]
+      if (lastMsg && lastMsg.role === "user") {
+        lastMsg.content = applySkillHint(
+          typeof lastMsg.content === "string" ? lastMsg.content : "",
+          skill
+        )
+      }
+    }
 
     const config = { configurable: { thread_id: sessionId } }
     const eventStream = agent.streamEvents(
