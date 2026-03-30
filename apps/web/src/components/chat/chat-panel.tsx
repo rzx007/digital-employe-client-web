@@ -22,7 +22,7 @@ import {
   ToolOutput,
 } from "@workspace/ui/components/ai-elements/tool"
 import { cn } from "@workspace/ui/lib/utils"
-import { IconSparkles } from "@tabler/icons-react"
+import { IconSparkles, IconSquareRoundedX } from "@tabler/icons-react"
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import logo from "@/assets/logo.svg"
@@ -84,6 +84,7 @@ export function ChatPanel({
   isSubmitDisabled,
   onInputChange,
   onSend,
+  onStopStream,
   onOpenContacts,
   onOpenConversations,
   className,
@@ -101,6 +102,7 @@ export function ChatPanel({
   isSubmitDisabled: boolean
   onInputChange: (event: PromptChangeEvent) => void
   onSend: (message: PromptInputMessage) => Promise<void>
+  onStopStream?: () => void
   onOpenContacts?: () => void
   onOpenConversations?: () => void
 }) {
@@ -370,6 +372,15 @@ export function ChatPanel({
                         style={{ color: "#8B5CF6" }}
                       />
                       <Shimmer className="text-xs">正在生成回复...</Shimmer>
+                      {onStopStream && (
+                        <button
+                          type="button"
+                          onClick={onStopStream}
+                          className="ml-auto flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground"
+                        >
+                          <IconSquareRoundedX className="size-4" />
+                        </button>
+                      )}
                     </div>
                   </MessageContent>
                 </Message>

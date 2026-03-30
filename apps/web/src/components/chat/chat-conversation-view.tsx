@@ -54,16 +54,22 @@ export function ConversationChatView({
             api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
           }
         },
+        prepareReconnectToStreamRequest({ id }) {
+          return {
+            api: `/simple-agents/api/sessions/${id}/chat/stream`,
+          }
+        },
       }),
     [conversationId]
   )
 
   const addArtifact = useArtifactStore((s) => s.addArtifact)
 
-  const { messages, setMessages, sendMessage, status, error } = useChat({
+  const { messages, setMessages, sendMessage, status, error, stop } = useChat({
     id: String(conversationId),
     messages: initialMessages,
     transport,
+    resume: true,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -95,7 +101,7 @@ export function ConversationChatView({
   const chatStatus = status === "ready" && isBusy ? "submitted" : status
 
   const isSubmitDisabled = React.useMemo(() => {
-    return !(inputValue.trim() || status) || status === "streaming" || isBusy
+    return !(inputValue.trim() || status)  || isBusy
   }, [inputValue, isBusy, status])
 
   const handleSendMessage = React.useCallback(
@@ -183,6 +189,7 @@ export function ConversationChatView({
       isSubmitDisabled={isSubmitDisabled}
       onInputChange={handleTextChange}
       onSend={handleSendMessage}
+      onStopStream={stop}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
       className={className}

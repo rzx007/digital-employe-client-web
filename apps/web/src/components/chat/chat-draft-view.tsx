@@ -76,7 +76,7 @@ export function DraftChatView({
 
   const addArtifact = useArtifactStore((s) => s.addArtifact)
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error, stop } = useChat({
     id: selectedContactId
       ? `draft:${selectedContactId}:${draftSessionKey}`
       : `draft:chat-view:${draftSessionKey}`,
@@ -181,6 +181,7 @@ export function DraftChatView({
       isSubmitDisabled={isSubmitDisabled}
       onInputChange={handleTextChange}
       onSend={handleSendMessage}
+      onStopStream={stop}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
       className={className}

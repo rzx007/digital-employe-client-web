@@ -1,18 +1,9 @@
 import type { Message } from "../types"
-import { getAgent, getSessionDir } from "../agent"
+import { getSessionDir } from "../agent"
 import { createMessage, getSessionMessages } from "./message-service"
 import { updateSession } from "./session-service"
 import { getSessionFiles, syncArtifacts } from "./artifact-service"
 import { getEmployee } from "./employee-service"
-import { toBaseMessages, toUIMessageStream } from "@ai-sdk/langchain"
-import {
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  type UIMessage,
-  type UIMessageChunk,
-} from "ai"
-import * as fs from "node:fs"
-import * as path from "node:path"
 
 export function applySkillHint(message: string, skill?: string): string {
   if (!skill) return message
@@ -37,25 +28,6 @@ export function detectNewArtifacts(sessionId: string) {
   return syncArtifacts(sessionId, afterSnapshot)
 }
 
-const FILE_OPERATION_TOOLS = new Set(["write_file", "edit_file", "read_file"])
-
-function isFileOperationTool(toolName: string): boolean {
-  return FILE_OPERATION_TOOLS.has(toolName)
-}
-
-function inferArtifactType(filePath: string): string {
-  const match = /\.([a-z0-9]+)$/i.exec(filePath)
-  const ext = match?.[1]?.toLowerCase()
-  if (!ext) return "text"
-  if (
-    ["ts", "tsx", "js", "jsx", "json", "py", "sql", "css", "html"].includes(ext)
-  )
-    return "code"
-  if (ext === "csv") return "sheet"
-  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) return "image"
-  return "text"
-}
-
 async function resolveAgent(employeeId?: string) {
   const cacheKey = employeeId || "__default__"
   let systemPrompt: string | undefined
@@ -65,6 +37,7 @@ async function resolveAgent(employeeId?: string) {
     systemPrompt = emp?.systemPrompt || undefined
   }
 
+  const { getAgent } = await import("../agent")
   return getAgent(cacheKey, systemPrompt)
 }
 
@@ -79,7 +52,6 @@ export async function chat(
   const history = await getSessionMessages(sessionId)
   const langchainMessages = toLangchainMessages(history)
 
-  // 指定技能时，将技能提示注入到最后一条用户消息
   if (skill) {
     const lastMsg = langchainMessages[langchainMessages.length - 1]
     if (lastMsg && lastMsg.role === "user") {
@@ -109,151 +81,6 @@ export async function chat(
   await updateSession(sessionId, {})
 
   return { content, message: savedMessage }
-}
-
-async function persistAssistantMessage(
-  sessionId: string,
-  responseMessage: UIMessage
-) {
-  const fullContent = responseMessage.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("")
-
-  await createMessage(sessionId, "assistant", fullContent, {
-    parts: responseMessage.parts,
-  })
-
-  await detectNewArtifacts(sessionId)
-  await updateSession(sessionId, {})
-}
-
-/**
-uiStream (ReadableStream<UIMessageChunk>)
-     ↓ pipeThrough
-TransformStream
-  transform(chunk, controller):
-    1. 检测到文件工具 input → 缓存到 Map
-    2. 检测到文件工具 output → readFileSync → controller.enqueue(data-artifact)
-    3. controller.enqueue(chunk)  ← 透传原始 chunk
-     ↓ pipeThrough 输出
-增强后的 ReadableStream<UIMessageChunk>（原始 chunk + 注入的 data-artifact 交替）
-     ↓ writer.merge()
-writer → SSE 响应 → 前端
- */
-
-export async function chatStreamResponse(
-  sessionId: string,
-  messages: UIMessage[],
-  employeeId?: string,
-  skill?: string
-): Promise<Response> {
-  // 保存用户消息到 DB
-  const lastMessage = messages[messages.length - 1]
-  if (lastMessage?.role === "user") {
-    const userText = lastMessage.parts
-      ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-      .map((p) => p.text)
-      .join("\n")
-      .trim()
-    await createMessage(sessionId, "user", userText || "", {
-      parts: lastMessage.parts,
-    })
-  }
-  const agent = await resolveAgent(employeeId)
-
-  const config = { configurable: { thread_id: sessionId } }
-  const langchainMessages = await toBaseMessages(messages)
-
-  // 指定技能时，将技能提示注入到最后一条用户消息
-  if (skill) {
-    const lastMsg = langchainMessages[langchainMessages.length - 1]
-    if (lastMsg && lastMsg._getType() === "human") {
-      const content = lastMsg.content
-      lastMsg.content = applySkillHint(
-        typeof content === "string" ? content : "",
-        skill
-      )
-    }
-  }
-
-  const graphStream = await agent.stream(
-    { messages: langchainMessages },
-    { ...config, streamMode: ["messages", "values"] }
-  )
-
-  const uiStream = toUIMessageStream(graphStream)
-
-  const managedStream = createUIMessageStream({
-    execute({ writer }) {
-      const sessionDir = getSessionDir(sessionId)
-      const pendingFileTools = new Map<
-        string,
-        { toolName: string; input: any }
-      >()
-
-      const enhancedStream = new TransformStream<
-        UIMessageChunk,
-        UIMessageChunk
-      >({
-        transform(chunk, controller) {
-          if (
-            chunk.type === "tool-input-available" &&
-            "dynamic" in chunk &&
-            chunk.dynamic === true &&
-            "toolName" in chunk
-          ) {
-            const { toolName, input } = chunk as any
-            if (isFileOperationTool(toolName)) {
-              pendingFileTools.set(chunk.toolCallId, {
-                toolName,
-                input,
-              })
-            }
-          }
-
-          if (chunk.type === "tool-output-available") {
-            const pending = pendingFileTools.get(chunk.toolCallId)
-            if (pending) {
-              const filePath = pending.input?.file_path
-              if (typeof filePath === "string") {
-                try {
-                  const content = fs.readFileSync(
-                    path.join(sessionDir, filePath),
-                    "utf-8"
-                  )
-                  controller.enqueue({
-                    type: "data-artifact", // Custom Data Stream，添加 data-artifact 标记, 前端使用根据useChat的onData监听
-                    id: `artifact:${chunk.toolCallId}`,
-                    data: {
-                      id: `artifact:${chunk.toolCallId}`,
-                      type: inferArtifactType(filePath),
-                      title: path.basename(filePath),
-                      content,
-                      filePath,
-                      toolName: pending.toolName,
-                    },
-                  } as any)
-                } catch {
-                  // file write may have failed, ignore
-                }
-              }
-              pendingFileTools.delete(chunk.toolCallId)
-            }
-          }
-
-          controller.enqueue(chunk)
-        },
-      })
-
-      writer.merge(uiStream.pipeThrough(enhancedStream))
-    },
-    onFinish: async ({ responseMessage }) => {
-      await persistAssistantMessage(sessionId, responseMessage)
-    },
-  })
-
-  return createUIMessageStreamResponse({ stream: managedStream })
 }
 
 export { getSessionDir }
