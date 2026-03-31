@@ -2,8 +2,12 @@ import * as React from "react"
 
 import { cn } from "@workspace/ui/lib/utils"
 
-import { useConversationsQuery } from "@/hooks/use-chat-queries"
+import {
+  useConversationsQuery,
+  useMessagesQuery,
+} from "@/hooks/use-chat-queries"
 import { useChatStore } from "@/stores/chat-store"
+import { mapStoredMessagesToUIMessages } from "@/lib/chat/message-utils"
 
 import { ConversationChatView } from "./chat-conversation-view"
 import { DraftChatView } from "./chat-draft-view"
@@ -30,9 +34,14 @@ export function ChatView({
     (conversation) => String(conversation.id) === String(selectedConversationId)
   )
 
-  // React.useEffect(() => {
-  //   console.log("selectedContactId", isDraftConversation, selectedConversationId)
-  // }, [selectedConversationId])
+  const { data: messagesData, isLoading: isMessagesLoading } = useMessagesQuery(
+    isDraftConversation ? null : selectedConversationId
+  )
+
+  const initialMessages = React.useMemo(
+    () => mapStoredMessagesToUIMessages(messagesData ?? []),
+    [messagesData]
+  )
 
   return isDraftConversation || !selectedConversationId ? (
     <DraftChatView
@@ -42,15 +51,33 @@ export function ChatView({
       className={cn(className)}
       {...props}
     />
+  ) : isMessagesLoading ? (
+    <ChatLoadingSkeleton className={cn(className)} />
   ) : (
     <ConversationChatView
+      key={selectedConversationId}
       contact={contact}
       title={selectedConversation?.title ?? "新对话"}
       conversationId={selectedConversationId}
+      initialMessages={initialMessages}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
       className={cn(className)}
       {...props}
     />
+  )
+}
+
+function ChatLoadingSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex flex-1 flex-col items-center justify-center gap-3 bg-background",
+        className
+      )}
+    >
+      <div className="size-5 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground" />
+      <span className="text-sm text-muted-foreground">加载中...</span>
+    </div>
   )
 }

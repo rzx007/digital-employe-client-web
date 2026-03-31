@@ -11,7 +11,7 @@ import {
 } from "@/api/chat"
 import type { Contact } from "@/lib/mock-data/ai-employees"
 import type { Conversation } from "@/lib/mock-data/conversations"
-import type { Message } from "@/lib/mock-data/messages"
+
 import { chatKeys } from "@/lib/query-keys/chat"
 
 export function useContactsQuery() {
@@ -57,10 +57,6 @@ export function useCreateConversationMutation() {
           const filtered = current.filter((item) => item.id !== conversation.id)
           return [conversation, ...filtered]
         }
-      )
-      queryClient.setQueryData<Message[]>(
-        chatKeys.messages(conversation.id),
-        []
       )
     },
   })

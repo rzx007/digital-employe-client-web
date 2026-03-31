@@ -23,14 +23,11 @@ import {
 } from "@workspace/ui/components/ai-elements/tool"
 import { cn } from "@workspace/ui/lib/utils"
 import { IconSparkles, IconSquareRoundedX } from "@tabler/icons-react"
-import { format } from "date-fns"
-import { zhCN } from "date-fns/locale"
 import logo from "@/assets/logo.svg"
 import {
   getLatestArtifactFromUIMessage,
   getRenderBlocksFromUIMessage,
 } from "@/lib/chat/message-utils"
-import type { Message as StoredMessage } from "@/lib/mock-data/messages"
 import { Spinner } from "@/components/spinner"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useEmployeeSkillsQuery } from "@/hooks/use-chat-queries"
@@ -42,11 +39,7 @@ import type { PromptChangeEvent } from "../lexical-editor/prompt-input-textarea"
 import type { SlashCommandItem } from "../lexical-editor/slash-command-plugin"
 import { ChatPanelHeader } from "./chat-panel-header"
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
-import {
-  getContactDisplayName,
-  isMessageMetadata,
-  type ChatViewContact,
-} from "./chat-view-shared"
+import { getContactDisplayName, type ChatViewContact } from "./chat-view-shared"
 
 const EMPTY_MESSAGES: UIMessage[] = []
 
@@ -76,7 +69,6 @@ export function ChatPanel({
   title,
   conversationId,
   messages,
-  storedMessages = [],
   inputValue,
   status,
   error,
@@ -94,7 +86,6 @@ export function ChatPanel({
   title: string
   conversationId?: string | number
   messages: UIMessage[]
-  storedMessages?: StoredMessage[]
   inputValue: string
   status: "submitted" | "streaming" | "ready" | "error"
   error?: Error
@@ -129,10 +120,6 @@ export function ChatPanel({
       }
     })
   }, [addArtifact, displayMessages])
-
-  const formatTime = React.useCallback((date: Date) => {
-    return format(date, "HH:mm", { locale: zhCN })
-  }, [])
 
   const employeeId =
     contact?.type === "employee" ? (contact.employee?.id ?? null) : null
@@ -228,16 +215,8 @@ export function ChatPanel({
                 </ConversationEmptyState>
               ) : (
                 displayMessages.map((message) => {
-                  const liveArtifact = getLatestArtifactFromUIMessage(message)
+                  const artifact = getLatestArtifactFromUIMessage(message)
                   const renderBlocks = getRenderBlocksFromUIMessage(message)
-                  const storedMessage = storedMessages.find(
-                    (item) => item.id === message.id
-                  )
-                  const timestamp = storedMessage?.timestamp
-                  const metadata = isMessageMetadata(storedMessage?.metadata)
-                    ? storedMessage.metadata
-                    : null
-                  const artifact = liveArtifact ?? metadata?.artifact ?? null
 
                   const handleOpenArtifact = () => {
                     if (!artifact) {
@@ -337,21 +316,11 @@ export function ChatPanel({
                                 />
                               )
                             })
-                          ) : metadata?.artifact ? null : (
+                          ) : renderBlocks.length === 0 ? null : (
                             <MessageResponse />
                           )}
                         </div>
                       </MessageContent>
-                      {timestamp && (
-                        <div
-                          className={cn(
-                            "mt-1 text-[10px] text-muted-foreground",
-                            message.role === "user" && "text-right"
-                          )}
-                        >
-                          {formatTime(timestamp)}
-                        </div>
-                      )}
                       {artifact && renderBlocks.length === 0 && (
                         <ArtifactPreview
                           artifact={artifact}

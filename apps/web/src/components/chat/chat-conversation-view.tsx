@@ -1,10 +1,9 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
+import type { UIMessage } from "ai"
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
-import { mapStoredMessagesToUIMessages } from "@/lib/chat/message-utils"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
-import { useMessagesQuery } from "@/hooks/use-chat-queries"
 
 import { ChatPanel } from "./chat-panel"
 import { type ChatViewContact } from "./chat-view-shared"
@@ -15,6 +14,7 @@ export function ConversationChatView({
   contact,
   title,
   conversationId,
+  initialMessages,
   onOpenContacts,
   onOpenConversations,
   className,
@@ -22,7 +22,8 @@ export function ConversationChatView({
 }: React.ComponentProps<"div"> & {
   contact?: ChatViewContact
   title: string
-  conversationId: string | number
+  conversationId: string
+  initialMessages: UIMessage[]
   onOpenContacts?: () => void
   onOpenConversations?: () => void
 }) {
@@ -31,14 +32,6 @@ export function ConversationChatView({
     id: string
     title: string
   } | null>(null)
-  const previousSessionIdRef = React.useRef<string | null>(null)
-
-  const { data: storedMessages = [] } = useMessagesQuery(conversationId)
-
-  const initialMessages = React.useMemo(
-    () => mapStoredMessagesToUIMessages(storedMessages),
-    [storedMessages]
-  )
 
   const SIMPLE_AGENTS_BASE = "/simple-agents/api/sessions"
   const transport = React.useMemo(
@@ -65,8 +58,8 @@ export function ConversationChatView({
 
   const addArtifact = useArtifactStore((s) => s.addArtifact)
 
-  const { messages, setMessages, sendMessage, status, error, stop } = useChat({
-    id: String(conversationId),
+  const { messages, sendMessage, status, error, stop } = useChat({
+    id: conversationId,
     messages: initialMessages,
     transport,
     resume: true,
@@ -82,27 +75,16 @@ export function ConversationChatView({
     },
   })
 
-  React.useEffect(() => {
-    if (previousSessionIdRef.current === String(conversationId)) {
-      return
-    }
-
-    previousSessionIdRef.current = String(conversationId)
-    setMessages(initialMessages)
-  }, [conversationId, initialMessages, setMessages])
-
   const handleTextChange = React.useCallback((event: PromptChangeEvent) => {
-    console.log("handleTextChange", event)
     setCommand(event.command)
     setInputValue(event.value)
   }, [])
 
   const isBusy = status === "submitted" || status === "streaming"
-  const chatStatus = status === "ready" && isBusy ? "submitted" : status
 
   const isSubmitDisabled = React.useMemo(() => {
-    return !(inputValue.trim() || status)  || isBusy
-  }, [inputValue, isBusy, status])
+    return !inputValue.trim() || isBusy
+  }, [inputValue, isBusy])
 
   const handleSendMessage = React.useCallback(
     async (message: PromptInputMessage) => {
@@ -167,23 +149,15 @@ export function ConversationChatView({
     [conversationId, sendMessage, command]
   )
 
-  const displayMessages = React.useMemo(() => {
-    if (messages.length > 0) {
-      return messages
-    }
-
-    return initialMessages
-  }, [initialMessages, messages])
-
   return (
+    <>
     <ChatPanel
       contact={contact}
       title={title}
       conversationId={conversationId}
-      messages={displayMessages}
-      storedMessages={storedMessages}
+      messages={messages}
       inputValue={inputValue}
-      status={chatStatus}
+      status={status}
       error={error}
       isDraftMode={false}
       isSubmitDisabled={isSubmitDisabled}
@@ -195,5 +169,6 @@ export function ConversationChatView({
       className={className}
       {...props}
     />
+    </>
   )
 }
