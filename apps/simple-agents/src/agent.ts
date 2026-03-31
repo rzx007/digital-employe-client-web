@@ -52,7 +52,7 @@ const model = new ChatOpenAI({
  * - 可以使用哪些工具
  * - 使用中文回复
  */
-const DEFAULT_SYSTEM_PROMPT = `你是一个专业的 AI 助手。你可以读取、创建和编辑文件，也可以使用 ls、glob、grep 等工具浏览和搜索文件。
+const DEFAULT_SYSTEM_PROMPT = `现在是北京时间：${new Date()},你是一个专业的 AI 助手。你可以读取、创建和编辑文件，也可以使用 ls、glob、grep 等工具浏览和搜索文件。
 
 可用工具说明：
 - ls: 列出目录内容

@@ -1,11 +1,12 @@
 import { Hono } from "hono"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
+import { ROOT_DIR } from "../db"
 
 const app = new Hono()
 
-const DATA_PATH = join(__dirname, "..", "employees", "data.json")
-const SKILLS_ZIP_PATH = join(process.cwd(), "static", "skills.zip")
+const DATA_PATH = join(ROOT_DIR, "src", "employees", "data.json")
+const SKILLS_ZIP_PATH = join(ROOT_DIR, "static", "skills.zip")
 
 app.get("/employees/:userId", async (c) => {
   const userId = c.req.param("userId")

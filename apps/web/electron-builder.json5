@@ -15,8 +15,19 @@
   "files": [
     "dist",
     "dist-electron",
-    "build",
     "build"
+  ],
+  "extraResources": [
+    {
+      "from": "../../apps/simple-agents/static",
+      "to": "simple-agents/static",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "../../apps/simple-agents/data",
+      "to": "simple-agents/data",
+      "filter": ["**/*", "!**/*.db", "!**/*.db-wal", "!**/*.db-shm"]
+    }
   ],
   "mac": {
     "target": [

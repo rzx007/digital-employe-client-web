@@ -1,5 +1,6 @@
 import path from "path"
 import pkg from "./package.json"
+import simpleAgentsPkg from "simple-agents/package.json" with { type: "json" }
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
@@ -11,6 +12,15 @@ export default defineConfig(({ command, mode }: ConfigEnv) => {
   const isServe = command === "serve"
   const isBuild = command === "build"
   const sourcemap = isServe || !!process.env.VSCODE_DEBUG
+
+  // Collect all dependencies that should be externalized in Electron main process
+  // This includes web dependencies + simple-agents dependencies
+  const externalDeps = [
+    ...Object.keys("dependencies" in pkg ? pkg.dependencies : {}),
+    ...Object.keys(
+      "dependencies" in simpleAgentsPkg ? simpleAgentsPkg.dependencies : {}
+    ),
+  ]
 
   return {
     plugins: [
@@ -45,9 +55,7 @@ export default defineConfig(({ command, mode }: ConfigEnv) => {
                       // we can use `external` to exclude them to ensure they work correctly.
                       // Others need to put them in `dependencies` to ensure they are collected into `app.asar` after the app is built.
                       // Of course, this is not absolute, just this way is relatively simple. :)
-                      external: Object.keys(
-                        "dependencies" in pkg ? pkg.dependencies : {}
-                      ),
+                      external: [...externalDeps, /^simple-agents(\/|$)/],
                     },
                   },
                 },
