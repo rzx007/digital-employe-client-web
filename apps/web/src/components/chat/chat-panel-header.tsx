@@ -3,6 +3,8 @@ import { toast } from "sonner"
 import { useShallow } from "zustand/react/shallow"
 
 import {
+  IconActivity,
+  IconCalendar,
   IconArchive,
   IconDots,
   IconMessages,
@@ -32,10 +34,13 @@ import {
 import { useDeleteConversationMutation } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useChatStore } from "@/stores/chat-store"
+import { useMonitorStore } from "@/stores/monitor-store"
+import type { ChatViewContact } from "./chat-view-shared"
 
 interface ChatPanelHeaderProps {
   title: string
   conversationId?: string | number
+  contact?: ChatViewContact
   onOpenContacts?: () => void
   onOpenConversations?: () => void
 }
@@ -43,6 +48,7 @@ interface ChatPanelHeaderProps {
 export function ChatPanelHeader({
   title,
   conversationId,
+  contact,
   onOpenContacts,
   onOpenConversations,
 }: ChatPanelHeaderProps) {
@@ -58,6 +64,7 @@ export function ChatPanelHeader({
       }))
     )
   const deleteMutation = useDeleteConversationMutation()
+  const openMonitor = useMonitorStore((s) => s.openMonitor)
 
   const handleDeleteClick = () => {
     setMenuOpen(false)
@@ -114,31 +121,42 @@ export function ChatPanelHeader({
           </h3>
         </div>
         {conversationId && (
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                <IconDots className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem>
-                <IconPencil className="text-muted-foreground" />
-                <span>重命名</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconArchive className="text-muted-foreground" />
-                <span>归档</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={handleDeleteClick}
+          <div className="flex items-center gap-1">
+            {contact?.type === "employee" && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => openMonitor(contact.employee?.id ?? "")}
               >
-                <IconTrash />
-                <span>删除</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <IconCalendar className="size-4" />
+              </Button>
+            )}
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm">
+                  <IconDots className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem>
+                  <IconPencil className="text-muted-foreground" />
+                  <span>重命名</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <IconArchive className="text-muted-foreground" />
+                  <span>归档</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={handleDeleteClick}
+                >
+                  <IconTrash />
+                  <span>删除</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
 

@@ -79,7 +79,7 @@ export function ConversationList({
     <div
       className={cn(
         "flex flex-col border-r bg-muted/50 transition-all duration-300",
-        isMobile ? "h-full w-full" : "w-[275px] lg:w-[295px]",
+        isMobile ? "h-full w-full" : "w-[245px] xl:w-[295px]",
         className
       )}
       {...props}

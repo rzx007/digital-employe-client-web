@@ -165,6 +165,7 @@ export function ChatPanel({
             <ChatPanelHeader
               title={title}
               conversationId={conversationId}
+              contact={contact}
               onOpenContacts={onOpenContacts}
               onOpenConversations={onOpenConversations}
             />
