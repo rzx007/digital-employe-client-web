@@ -184,6 +184,54 @@ export const artifacts = sqliteTable("artifacts", {
  * - 失败：status = "failed"，记录错误信息
  * - 取消：status = "cancelled"
  */
+export const cronTasks = sqliteTable("cron_tasks", {
+  id: text("id").primaryKey(),
+  employeeId: text("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  taskName: text("task_name").notNull(),
+  dispatchType: text("dispatch_type").notNull().default("skill"),
+  skillId: integer("skill_id"),
+  skillName: text("skill_name"),
+  priority: integer("priority").default(0),
+  cronExpression: text("cron_expression").notNull(),
+  taskType: text("task_type").notNull().default("2"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  config: text("config"),
+  state: text("state").notNull().default("{}"),
+  managementTaskId: text("management_task_id"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
+export const taskRuns = sqliteTable("task_runs", {
+  id: text("id").primaryKey(),
+  cronTaskId: text("cron_task_id")
+    .notNull()
+    .references(() => cronTasks.id, { onDelete: "cascade" }),
+  employeeId: text("employee_id").notNull(),
+  sessionId: text("session_id"),
+  status: text("status", {
+    enum: ["success", "failed", "pending", "running", "timeout"],
+  })
+    .notNull()
+    .default("pending"),
+  triggeredAt: text("triggered_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  completedAt: text("completed_at"),
+  duration: integer("duration"),
+  result: text("result"),
+  errorMessage: text("error_message"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
 export const streamTasks = sqliteTable("stream_tasks", {
   id: text("id").primaryKey(),
   sessionId: text("session_id")

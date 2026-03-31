@@ -133,14 +133,15 @@ onJob: async (cronTask) => {
 **2.1 新增 `routes/cron.ts`**
 
 ```
-POST   /api/employees/:id/cron/sync     → 从管理端同步定时任务
-GET    /api/employees/:id/cron/tasks     → 列出员工的所有定时任务
-PATCH  /api/cron/tasks/:id/toggle        → 启用/禁用
-POST   /api/cron/tasks/:id/trigger       → 手动触发
-GET    /api/employees/:id/cron/runs      → 查询执行历史
-GET    /api/employees/:id/cron/summary   → 汇总统计
-GET    /api/employees/:id/cron/calendar  → 月度日历数据
-GET    /api/employees/:id/cron/anomalies → 异常记录
+POST   /api/cron/:employeeId/sync        → 从管理端同步定时任务
+GET    /api/cron/:employeeId/tasks        → 列出员工的定时任务
+PATCH  /api/cron/tasks/:id/toggle         → 启用/禁用任务
+DELETE /api/cron/tasks/:id                → 删除任务
+POST   /api/cron/tasks/:id/trigger        → 手动触发执行
+GET    /api/cron/:employeeId/runs         → 执行历史
+GET    /api/cron/:employeeId/summary      → 统计汇总
+GET    /api/cron/:employeeId/calendar     → 月度日历数据
+GET    /api/cron/:employeeId/anomalies    → 异常记录
 ```
 
 **2.2 接入 App 生命周期**
@@ -196,3 +197,16 @@ cronService.stop()
 3. Phase 3 中可以逐步替换 mock，不必一次性全换
 
 ---
+## 执行流程
+```
+CronScheduler.start()
+  → 查询所有 isActive=true 的任务，计算 nextRunAtMs
+  → armTimer() 设置 setTimeout 到最近的 nextRunAtMs
+  → 到期 → onTimer() → triggerTask(taskId)
+    → 创建 task_run (status: running)
+    → 创建/复用 session (cron_{hash}_{date})
+    → chat(sessionId, prompt, employeeId, skillName)
+    → 更新 task_run (status/ result/ duration)
+    → 更新 cron_task.state (lastStatus/ nextRunAtMs)
+    → armTimer() 继续等待下一次
+```

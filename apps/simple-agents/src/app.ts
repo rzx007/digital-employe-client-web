@@ -7,16 +7,24 @@ import employeeRoutes from "./routes/employees"
 import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import groupRoutes from "./routes/groups"
+import cronRoutes from "./routes/cron"
 import { DATA_DIR, ROOT_DIR } from "./db"
 import openApiDoc from "./doc/openapi.json"
 import { ensureSkillDirs } from "./services/skill-service"
 import mockManagementRoutes from "./routes/mock-management"
 import { unifiedResponse, SKIP_RESPONSE_WRAP } from "./middleware/response"
+import { CronScheduler } from "./cron"
 
 const STATIC_DIR = join(ROOT_DIR, "static")
 
-// 确保技能和员工目录结构存在
 ensureSkillDirs()
+
+export const cronScheduler = new CronScheduler({
+  timezone: "Asia/Shanghai",
+  onTick: (taskId) => {
+    console.log(`[Cron] Task triggered: ${taskId}`)
+  },
+})
 
 const app = new Hono()
 
@@ -63,6 +71,7 @@ app.get("/", (c) => {
       chatStream: "POST /api/sessions/:id/chat/stream",
       messages: "GET /api/sessions/:id/messages",
       artifacts: "GET /api/sessions/:id/artifacts",
+      cron: "RESTful /api/cron",
     },
   })
 })
@@ -77,7 +86,7 @@ app.route("/api/sessions", sessionRoutes)
 app.route("/api/sessions", chatRoutes)
 app.route("/api/sessions", artifactRoutes)
 app.route("/api/groups", groupRoutes)
-// 模拟员工数据管理
+app.route("/api/cron", cronRoutes)
 app.route("/management", mockManagementRoutes)
 
 export { app, DATA_DIR, SKIP_RESPONSE_WRAP }

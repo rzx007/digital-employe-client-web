@@ -34,6 +34,7 @@
     "@scalar/hono-api-reference": "^0.10.5",
     "ai": "^6.0.141",
     "better-sqlite3": "^12.8.0",
+    "croner": "^10.0.1",
     "deepagents": "^1.8.6",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.2",
