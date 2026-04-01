@@ -1,12 +1,12 @@
 import "dotenv/config"
 import { serve } from "@hono/node-server"
-import { setup, DATA_DIR, cronScheduler } from "./app"
+import { setup, getDataDir, cronScheduler } from "./app"
 
 export const DEFAULT_PORT = 3005
 
 const port = Number(process.env.PORT) || DEFAULT_PORT
 console.log(`Agent server running on http://localhost:${port}`)
-console.log(`Data directory: ${DATA_DIR}`)
+console.log(`Data directory: ${getDataDir()}`)
 
 const server = serve({ fetch: setup().fetch, port })
 

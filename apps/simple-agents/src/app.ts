@@ -118,4 +118,4 @@ export const cronScheduler = new CronScheduler({
   },
 })
 
-export { app, getDataDir as DATA_DIR, SKIP_RESPONSE_WRAP }
+export { app, getDataDir, getDataDir as DATA_DIR, SKIP_RESPONSE_WRAP }
