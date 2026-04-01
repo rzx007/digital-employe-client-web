@@ -44,15 +44,10 @@ import extractZip from "extract-zip"
  * 存放所有员工共享的基础技能
  * 结构：data/skills/{skill-name}/SKILL.md
  */
-const GLOBAL_SKILLS_DIR = path.join(getDataDir(), "skills")
+const getGlobalSkillsDir = () => path.join(getDataDir(), "skills")
 
-/**
- * 员工根目录路径
- *
- * 存放所有员工的专属技能
- * 结构：data/employees/{employeeId}/skills/{skill-name}/SKILL.md
- */
-const EMPLOYEES_DIR = path.join(getDataDir(), "employees")
+const getEmployeesDir = () => path.join(getDataDir(), "employees")
+
 
 /**
  * 确保必要的目录结构存在
@@ -60,11 +55,13 @@ const EMPLOYEES_DIR = path.join(getDataDir(), "employees")
  * 在服务启动时调用，创建全局技能目录和员工根目录
  */
 export function ensureSkillDirs(): void {
-  if (!fs.existsSync(GLOBAL_SKILLS_DIR)) {
-    fs.mkdirSync(GLOBAL_SKILLS_DIR, { recursive: true })
+  console.log("[Simple Agents] Global skills dir:", getGlobalSkillsDir())
+  if (!fs.existsSync(getGlobalSkillsDir())) {
+    fs.mkdirSync(getGlobalSkillsDir(), { recursive: true })
   }
-  if (!fs.existsSync(EMPLOYEES_DIR)) {
-    fs.mkdirSync(EMPLOYEES_DIR, { recursive: true })
+  console.log("[Simple Agents] Employees dir:", getEmployeesDir())
+  if (!fs.existsSync(getEmployeesDir())) {
+    fs.mkdirSync(getEmployeesDir(), { recursive: true })
   }
 }
 
@@ -93,11 +90,11 @@ export function linkSessionSkills(
 
   // 链接全局技能
   const globalTarget = path.join(sessionDir, "skills")
-  linkIfSourceExists(GLOBAL_SKILLS_DIR, globalTarget)
+  linkIfSourceExists(getGlobalSkillsDir(), globalTarget)
 
   // 链接员工专属技能
   if (employeeId) {
-    const empSkillsDir = path.join(EMPLOYEES_DIR, employeeId, "skills")
+    const empSkillsDir = path.join(getEmployeesDir(), employeeId, "skills")
     const empTarget = path.join(sessionDir, "employee-skills")
     linkIfSourceExists(empSkillsDir, empTarget)
   }
@@ -115,11 +112,11 @@ export function listAvailableSkills(employeeId?: string): string[] {
   const skillNames = new Set<string>()
 
   // 扫描全局技能
-  scanSkillDir(GLOBAL_SKILLS_DIR, skillNames)
+  scanSkillDir(getGlobalSkillsDir(), skillNames)
 
   // 扫描员工专属技能
   if (employeeId) {
-    const empSkillsDir = path.join(EMPLOYEES_DIR, employeeId, "skills")
+    const empSkillsDir = path.join(getEmployeesDir(), employeeId, "skills")
     scanSkillDir(empSkillsDir, skillNames)
   }
 
@@ -143,10 +140,10 @@ export type SkillMetadata = {
 export function listSkillMetadata(employeeId?: string): SkillMetadata[] {
   const skills: SkillMetadata[] = []
 
-  scanSkillMetadata(GLOBAL_SKILLS_DIR, skills)
+  scanSkillMetadata(getGlobalSkillsDir(), skills)
 
   if (employeeId) {
-    const empSkillsDir = path.join(EMPLOYEES_DIR, employeeId, "skills")
+    const empSkillsDir = path.join(getEmployeesDir(), employeeId, "skills")
     scanSkillMetadata(empSkillsDir, skills)
   }
 
@@ -193,7 +190,7 @@ function parseSkillFrontmatter(content: string): SkillMetadata | null {
  * @returns 技能目录路径
  */
 export function getEmployeeSkillsDir(employeeId: string): string {
-  return path.join(EMPLOYEES_DIR, employeeId, "skills")
+  return path.join(getEmployeesDir(), employeeId, "skills")
 }
 
 /**
@@ -204,7 +201,7 @@ export function getEmployeeSkillsDir(employeeId: string): string {
  * @param employeeId 员工 ID
  */
 export function removeEmployeeSkillsDir(employeeId: string): void {
-  const empDir = path.join(EMPLOYEES_DIR, employeeId)
+  const empDir = path.join(getEmployeesDir(), employeeId)
   if (fs.existsSync(empDir)) {
     fs.rmSync(empDir, { recursive: true, force: true })
   }
@@ -347,7 +344,7 @@ export async function downloadAndExtractSkills(
   userId: string
 ): Promise<string[]> {
   const zipUrl = `${baseUrl}${EMPLOYEE_API_PATH}${userId}${SKILLS_ZIP_PATH}`
-  const empSkillsDir = path.join(EMPLOYEES_DIR, userId, "skills")
+  const empSkillsDir = path.join(getEmployeesDir(), userId, "skills")
 
   // 1. 下载 zip 到临时文件
   const response = await fetch(zipUrl)

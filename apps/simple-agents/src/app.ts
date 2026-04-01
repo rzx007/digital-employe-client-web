@@ -8,14 +8,18 @@ import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import groupRoutes from "./routes/groups"
 import cronRoutes from "./routes/cron"
-import { getDataDir, initDb, ROOT_DIR } from "./db"
+import {
+  getDataDir,
+  getStaticDir,
+  initDb,
+  setStaticDir,
+  setRootDir,
+} from "./db"
 import openApiDoc from "./doc/openapi.json"
 import { ensureSkillDirs } from "./services/skill-service"
 import mockManagementRoutes from "./routes/mock-management"
 import { unifiedResponse, SKIP_RESPONSE_WRAP } from "./middleware/response"
 import { CronScheduler } from "./cron"
-
-const STATIC_DIR = join(ROOT_DIR, "static")
 
 const app = new Hono()
 
@@ -26,7 +30,7 @@ app.use("/*", unifiedResponse)
 app.use(async (c, next) => {
   if (c.req.path.startsWith("/static/")) {
     const filePath = c.req.path.replace("/static/", "")
-    const fullPath = join(STATIC_DIR, filePath)
+    const fullPath = join(getStaticDir(), filePath)
 
     if (!existsSync(fullPath) || !statSync(fullPath).isFile()) {
       return c.text("Not Found", 404)
@@ -82,17 +86,26 @@ app.route("/management", mockManagementRoutes)
 
 let initialized = false
 
-export function setup(dataDir?: string) {
-  console.log(`[Simple Agents] Data dir: ${dataDir}`)
+export function setup(
+  dataDir?: string,
+  migrationsDir?: string,
+  staticDir?: string,
+  rootDir?: string
+) {
   if (initialized) return app
   initialized = true
 
+  if (rootDir) {
+    setRootDir(rootDir)
+  }
+  if (staticDir) {
+    setStaticDir(staticDir)
+  }
   if (dataDir) {
     process.env.DATA_DIR = dataDir
-    console.log(`[Simple Agents] Using custom data dir: ${process.env.DATA_DIR}`)
   }
 
-  initDb(dataDir)
+  initDb(dataDir, migrationsDir)
   ensureSkillDirs()
 
   return app

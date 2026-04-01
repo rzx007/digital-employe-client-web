@@ -3,10 +3,23 @@ import { serve, type ServerType } from "@hono/node-server"
 import { setup } from "simple-agents/app"
 import path from "node:path"
 import fs from "node:fs"
+import { fileURLToPath } from "node:url"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const AGENT_PORT = Number(process.env.PORT) || 3005
 
+const isDev = !app.isPackaged
+const resourcesBaseDir = isDev
+  ? path.join(__dirname, "../../../simple-agents")
+  : path.join(process.resourcesPath, "simple-agents")
+
+const MIGRATIONS_DIR = path.join(resourcesBaseDir, "migrations")
+const STATIC_DIR = path.join(resourcesBaseDir, "static")
+const ROOT_DIR = resourcesBaseDir
+
 let server: ServerType | null = null
+
 
 export function getAgentServerUrl(): string {
   return `http://localhost:${AGENT_PORT}`
@@ -26,10 +39,12 @@ export async function startAgentServer(): Promise<void> {
     fs.mkdirSync(dataDir, { recursive: true })
   }
 
-  const agentApp = setup(dataDir)
+  const agentApp = setup(dataDir, MIGRATIONS_DIR, STATIC_DIR, ROOT_DIR)
 
   console.log(`[AgentServer] Starting on port ${AGENT_PORT}`)
   console.log(`[AgentServer] Data directory: ${dataDir}`)
+  console.log(`[AgentServer] Migrations: ${MIGRATIONS_DIR}`)
+  console.log(`[AgentServer] Static: ${STATIC_DIR}`)
 
   server = serve({ fetch: agentApp.fetch, port: AGENT_PORT })
 

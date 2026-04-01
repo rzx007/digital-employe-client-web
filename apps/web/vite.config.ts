@@ -1,6 +1,5 @@
 import path from "path"
 import pkg from "./package.json"
-import simpleAgentsPkg from "simple-agents/package.json" with { type: "json" }
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
@@ -13,14 +12,11 @@ export default defineConfig(({ command, mode }: ConfigEnv) => {
   const isBuild = command === "build"
   const sourcemap = isServe || !!process.env.VSCODE_DEBUG
 
-  // Collect all dependencies that should be externalized in Electron main process
-  // This includes web dependencies + simple-agents dependencies
   const externalDeps = [
     ...Object.keys("dependencies" in pkg ? pkg.dependencies : {}),
-    ...Object.keys(
-      "dependencies" in simpleAgentsPkg ? simpleAgentsPkg.dependencies : {}
-    ),
-  ]
+  ].filter((d) => d !== "simple-agents")
+
+  const nativeAddons = ["better-sqlite3", "bindings", "file-uri-to-path"]
 
   return {
     plugins: [
@@ -51,11 +47,7 @@ export default defineConfig(({ command, mode }: ConfigEnv) => {
                     minify: isBuild,
                     outDir: "dist-electron/main",
                     rollupOptions: {
-                      // Some third-party Node.js libraries may not be built correctly by Vite, especially `C/C++` addons,
-                      // we can use `external` to exclude them to ensure they work correctly.
-                      // Others need to put them in `dependencies` to ensure they are collected into `app.asar` after the app is built.
-                      // Of course, this is not absolute, just this way is relatively simple. :)
-                      external: [...externalDeps, /^simple-agents(\/|$)/],
+                      external: [...externalDeps, ...nativeAddons],
                     },
                   },
                 },

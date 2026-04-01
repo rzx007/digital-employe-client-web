@@ -3,47 +3,24 @@ import { drizzle } from "drizzle-orm/better-sqlite3"
 import { migrate } from "drizzle-orm/better-sqlite3/migrator"
 import path from "node:path"
 import fs from "node:fs"
-import { fileURLToPath } from "url"
-import { dirname } from "path"
 import * as schema from "./schema"
-
-function findPackageRoot(startDir: string): string {
-  let dir = startDir
-  while (dir !== path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, "package.json"))) {
-      try {
-        const pkg = JSON.parse(
-          fs.readFileSync(path.join(dir, "package.json"), "utf-8")
-        )
-        if (pkg.name === "simple-agents") return dir
-      } catch (_e) {
-        // continue walking up
-      }
-    }
-    dir = path.dirname(dir)
-  }
-  return startDir
-}
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-const ROOT_DIR = findPackageRoot(__dirname)
 
 let _dataDir: string | undefined
 let _dbPath: string | undefined
 let _db: ReturnType<typeof drizzle> | undefined
+let _migrationsDir: string | undefined
+let _staticDir: string | undefined
+let _rootDir: string | undefined
 
 function ensureInit() {
   if (_db) return
   initDb()
 }
 
-export function initDb(dataDir?: string) {
+export function initDb(dataDir?: string, migrationsDir?: string) {
   if (_db) return
 
-  _dataDir = dataDir || process.env.DATA_DIR || path.join(ROOT_DIR, "data")
-  console.log(`[Simple Agents] Data dir: ${_dataDir}`)
+  _dataDir = dataDir || process.env.DATA_DIR || path.join(process.cwd(), "data")
 
   if (!fs.existsSync(_dataDir)) {
     fs.mkdirSync(_dataDir, { recursive: true })
@@ -57,14 +34,44 @@ export function initDb(dataDir?: string) {
 
   _db = drizzle(sqlite, { schema })
 
-  const MIGRATIONS_DIR = path.join(ROOT_DIR, "migrations")
+  _migrationsDir =
+    migrationsDir ||
+    process.env.MIGRATIONS_DIR ||
+    path.join(getRootDir(), "migrations")
 
-  if (fs.existsSync(MIGRATIONS_DIR)) {
-    migrate(_db, { migrationsFolder: MIGRATIONS_DIR })
+  if (fs.existsSync(_migrationsDir)) {
+    migrate(_db, { migrationsFolder: _migrationsDir })
   }
 }
 
-export { ROOT_DIR }
+export function getRootDir(): string {
+  if (_rootDir) return _rootDir
+  if (process.env.ROOT_DIR) {
+    _rootDir = process.env.ROOT_DIR
+    return _rootDir
+  }
+  return process.cwd()
+}
+
+export function setRootDir(dir: string): void {
+  _rootDir = dir
+}
+
+export function setStaticDir(dir: string): void {
+  _staticDir = dir
+}
+
+export function getStaticDir(): string {
+  if (_staticDir) return _staticDir
+  return path.join(getRootDir(), "static")
+}
+
+export function getMigrationsDir(): string {
+  if (_migrationsDir) return _migrationsDir
+  return path.join(getRootDir(), "migrations")
+}
+
+export { _rootDir as ROOT_DIR }
 
 export function getDb() {
   ensureInit()

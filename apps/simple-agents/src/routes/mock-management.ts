@@ -1,15 +1,16 @@
 import { Hono } from "hono"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
-import { ROOT_DIR } from "../db"
+import { getRootDir } from "../db"
 
 const app = new Hono()
 
-const DATA_PATH = join(ROOT_DIR, "src", "employees", "data.json")
-const SKILLS_ZIP_PATH = join(ROOT_DIR, "static", "skills.zip")
+const getDataPath = () => join(getRootDir(), "src", "employees", "data.json")
+const getSkillsZipPath = () => join(getRootDir(), "static", "skills.zip")
 
 app.get("/employees/:userId", async (c) => {
   const userId = c.req.param("userId")
+  const DATA_PATH = getDataPath()
 
   if (!existsSync(DATA_PATH)) {
     return c.json({ error: "员工数据文件不存在" }, 500)
@@ -29,6 +30,7 @@ app.get("/employees/:userId", async (c) => {
 
 app.get("/employees/:userId/skills.zip", async (c) => {
   const userId = c.req.param("userId")
+  const SKILLS_ZIP_PATH = getSkillsZipPath()
 
   if (!existsSync(SKILLS_ZIP_PATH)) {
     return c.json({ error: "技能 zip 文件不存在" }, 500)
