@@ -83,11 +83,13 @@ app.route("/management", mockManagementRoutes)
 let initialized = false
 
 export function setup(dataDir?: string) {
+  console.log(`[Simple Agents] Data dir: ${dataDir}`)
   if (initialized) return app
   initialized = true
 
   if (dataDir) {
     process.env.DATA_DIR = dataDir
+    console.log(`[Simple Agents] Using custom data dir: ${process.env.DATA_DIR}`)
   }
 
   initDb(dataDir)

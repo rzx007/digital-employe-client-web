@@ -19,6 +19,7 @@ export async function startAgentServer(): Promise<void> {
   }
 
   const userDataDir = app.getPath("userData")
+  console.log("[AgentServer] User data directory:", userDataDir)
   const dataDir = path.join(userDataDir, "agent-data")
 
   if (!fs.existsSync(dataDir)) {
@@ -31,6 +32,8 @@ export async function startAgentServer(): Promise<void> {
   console.log(`[AgentServer] Data directory: ${dataDir}`)
 
   server = serve({ fetch: agentApp.fetch, port: AGENT_PORT })
+
+  console.log(`[AgentServer] URL: ${getAgentServerUrl()}`)
 
   console.log("[AgentServer] Started successfully")
 }

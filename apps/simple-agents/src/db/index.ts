@@ -43,6 +43,7 @@ export function initDb(dataDir?: string) {
   if (_db) return
 
   _dataDir = dataDir || process.env.DATA_DIR || path.join(ROOT_DIR, "data")
+  console.log(`[Simple Agents] Data dir: ${_dataDir}`)
 
   if (!fs.existsSync(_dataDir)) {
     fs.mkdirSync(_dataDir, { recursive: true })
