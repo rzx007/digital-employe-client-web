@@ -23,7 +23,7 @@ import {
   getMessageById,
 } from "./message-service"
 import { updateSession } from "./session-service"
-import { db } from "../db"
+import { getDb } from "../db"
 import { streamTasks } from "../db/schema"
 import { eq, sql, desc } from "drizzle-orm"
 import {
@@ -153,7 +153,7 @@ async function runAgentInBackground(
   try {
     await createMessage(sessionId, "user", userMessage)
 
-    await db.insert(streamTasks).values({
+    await getDb().insert(streamTasks).values({
       id: task.id,
       sessionId,
       status: "streaming",
@@ -190,7 +190,7 @@ async function runAgentInBackground(
     let lastFlush = Date.now()
 
     async function flushToDb() {
-      await db
+      await getDb()
         .update(streamTasks)
         .set({
           content: fullContent,
@@ -288,7 +288,7 @@ async function runAgentInBackground(
     }
 
     if (task.abortController.signal.aborted) {
-      await db
+      await getDb()
         .update(streamTasks)
         .set({ status: "cancelled", updatedAt: sql`datetime('now')` })
         .where(eq(streamTasks.id, task.id))
@@ -303,7 +303,7 @@ async function runAgentInBackground(
     )
 
     await flushToDb()
-    await db
+    await getDb()
       .update(streamTasks)
       .set({
         status: "completed",
@@ -325,7 +325,7 @@ async function runAgentInBackground(
   } catch (error: any) {
     const errMsg = error?.message || "Unknown error"
 
-    await db
+    await getDb()
       .update(streamTasks)
       .set({
         status: "failed",
@@ -461,7 +461,7 @@ export async function resolveStream(
   }
 
   if (latest.status === "streaming") {
-    await db
+    await getDb()
       .update(streamTasks)
       .set({
         status: "failed",
@@ -509,7 +509,7 @@ export async function resolveStream(
  * 获取会话的最新流任务记录
  */
 export async function getLatestStreamTask(sessionId: string) {
-  const [row] = await db
+  const [row] = await getDb()
     .select()
     .from(streamTasks)
     .where(eq(streamTasks.sessionId, sessionId))

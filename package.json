@@ -5,6 +5,8 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "dev:app": "cd ./apps/web && pnpm dev:app",
+    "build:app": "cd ./apps/web && pnpm build:app",
     "lint": "turbo lint",
     "format": "turbo format",
     "typecheck": "turbo typecheck"
@@ -12,7 +14,7 @@
   "devDependencies": {
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "turbo": "^2.8.17",
+    "turbo": "^2.9.3",
     "typescript": "5.9.3"
   },
   "packageManager": "pnpm@10.33.0",

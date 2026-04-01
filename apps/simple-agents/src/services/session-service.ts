@@ -19,7 +19,7 @@
  */
 
 import type { CreateSessionInput, UpdateSessionInput, Session } from "../types"
-import { db, DATA_DIR } from "../db"
+import { getDb, getDataDir } from "../db"
 import { sessions } from "../db/schema"
 import { eq, desc, sql, and } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -58,7 +58,7 @@ export async function createSession(
   }
 
   // 在数据库中创建会话记录
-  const [session] = await db
+  const [session] = await getDb()
     .insert(sessions)
     .values({
       id,
@@ -69,7 +69,7 @@ export async function createSession(
     .returning()
 
   // 创建对应的文件目录
-  const sessionDir = path.join(DATA_DIR, "workspace", id)
+  const sessionDir = path.join(getDataDir(), "workspace", id)
   if (!fs.existsSync(sessionDir)) {
     fs.mkdirSync(sessionDir, { recursive: true })
   }
@@ -87,7 +87,7 @@ export async function createSession(
  * @returns 会话对象，不存在时返回 null
  */
 export async function getSession(id: string): Promise<Session | null> {
-  const [session] = await db
+  const [session] = await getDb()
     .select()
     .from(sessions)
     .where(eq(sessions.id, id))
@@ -127,13 +127,13 @@ export async function listSessions(
     : conditions
 
   // 查询总数
-  const [{ count }] = await db
+  const [{ count }] = await getDb()
     .select({ count: sql<number>`count(*)` })
     .from(sessions)
     .where(finalWhere)
 
   // 查询数据（按更新时间降序，支持分页）
-  const data = await db
+  const data = await getDb()
     .select()
     .from(sessions)
     .where(finalWhere)
@@ -175,7 +175,7 @@ export async function updateSession(
     values.isArchived = input.isArchived ? 1 : 0
 
   // 更新数据库
-  const [updated] = await db
+  const [updated] = await getDb()
     .update(sessions)
     .set(values)
     .where(eq(sessions.id, id))
@@ -196,13 +196,13 @@ export async function updateSession(
  */
 export async function deleteSession(id: string): Promise<boolean> {
   // 删除会话目录
-  const sessionDir = path.join(DATA_DIR, "workspace", id)
+  const sessionDir = path.join(getDataDir(), "workspace", id)
   if (fs.existsSync(sessionDir)) {
     fs.rmSync(sessionDir, { recursive: true, force: true })
   }
 
   // 删除数据库记录（级联删除关联的 messages 和 artifacts）
-  const result = await db
+  const result = await getDb()
     .delete(sessions)
     .where(eq(sessions.id, id))
     .returning()

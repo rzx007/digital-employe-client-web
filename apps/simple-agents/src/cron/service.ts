@@ -5,7 +5,7 @@ import {
   serializeState,
   computeNextRunMs,
 } from "../services/cron-task-service"
-import { db } from "../db"
+import { getDb } from "../db"
 import { cronTasks } from "../db/schema"
 import { eq } from "drizzle-orm"
 
@@ -44,7 +44,7 @@ export class CronScheduler {
           this.timezone
         )
         if (nextRunAtMs != null) {
-          await db
+          await getDb()
             .update(cronTasks)
             .set({
               state: serializeState({ ...state, nextRunAtMs }),

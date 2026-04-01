@@ -14,7 +14,7 @@ import {
   getArtifact,
   deleteArtifact,
 } from "../services/artifact-service"
-import { DATA_DIR } from "../db"
+import { getDataDir } from "../db"
 import path from "node:path"
 import fs from "node:fs"
 
@@ -50,7 +50,7 @@ app.get("/:id/artifacts/:artifactId", async (c) => {
 
   // 构建文件完整路径
   const filePath = path.join(
-    DATA_DIR,
+    getDataDir(),
     "workspace",
     artifact.sessionId,
     artifact.filePath

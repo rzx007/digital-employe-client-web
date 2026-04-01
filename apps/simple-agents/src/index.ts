@@ -1,12 +1,14 @@
 import "dotenv/config"
 import { serve } from "@hono/node-server"
-import { app, DATA_DIR, cronScheduler } from "./app"
+import { setup, DATA_DIR, cronScheduler } from "./app"
 
-const port = Number(process.env.PORT) || 3001
+export const DEFAULT_PORT = 3005
+
+const port = Number(process.env.PORT) || DEFAULT_PORT
 console.log(`Agent server running on http://localhost:${port}`)
 console.log(`Data directory: ${DATA_DIR}`)
 
-const server = serve({ fetch: app.fetch, port })
+const server = serve({ fetch: setup().fetch, port })
 
 cronScheduler.start().catch((err) => {
   console.error("[CronScheduler] Failed to start:", err)

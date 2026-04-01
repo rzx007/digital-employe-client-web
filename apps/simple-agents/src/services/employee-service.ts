@@ -31,7 +31,7 @@ import type {
   UpdateEmployeeInput,
   Employee,
 } from "../types"
-import { db } from "../db"
+import { getDb } from "../db"
 import { employees } from "../db/schema"
 import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -74,7 +74,7 @@ export async function createEmployee(
   const id = input.id || nanoid()
 
   // 创建数据库记录
-  const [employee] = await db
+  const [employee] = await getDb()
     .insert(employees)
     .values({
       id,
@@ -100,7 +100,7 @@ export async function createEmployee(
  * @returns 员工对象，不存在时返回 null
  */
 export async function getEmployee(id: string): Promise<Employee | null> {
-  const [employee] = await db
+  const [employee] = await getDb()
     .select()
     .from(employees)
     .where(eq(employees.id, id))
@@ -116,7 +116,7 @@ export async function getEmployee(id: string): Promise<Employee | null> {
  * @returns 员工列表
  */
 export async function listEmployees(): Promise<Employee[]> {
-  return db.select().from(employees).orderBy(desc(employees.createdAt))
+  return getDb().select().from(employees).orderBy(desc(employees.createdAt))
 }
 
 /**
@@ -142,7 +142,7 @@ export async function updateEmployee(
   if (input.systemPrompt !== undefined) values.systemPrompt = input.systemPrompt
   if (input.description !== undefined) values.description = input.description
 
-  const [updated] = await db
+  const [updated] = await getDb()
     .update(employees)
     .set(values)
     .where(eq(employees.id, id))
@@ -169,7 +169,7 @@ export async function updateEmployee(
  */
 export async function deleteEmployee(id: string): Promise<boolean> {
   // 删除数据库记录
-  const result = await db
+  const result = await getDb()
     .delete(employees)
     .where(eq(employees.id, id))
     .returning()
@@ -283,7 +283,7 @@ export async function importEmployee(
 
   let employee: Employee
   if (existing) {
-    const [updated] = await db
+    const [updated] = await getDb()
       .update(employees)
       .set({
         name: mapped.name,
@@ -296,7 +296,7 @@ export async function importEmployee(
       .returning()
     employee = updated!
   } else {
-    const [created] = await db
+    const [created] = await getDb()
       .insert(employees)
       .values({
         id: mapped.id,
@@ -372,7 +372,7 @@ export async function syncEmployee(id: string): Promise<ImportEmployeeResult> {
   const data = await fetchEmployeeFromManagement(baseUrl, id)
   const mapped = mapManagementEmployee(data)
 
-  const [updated] = await db
+  const [updated] = await getDb()
     .update(employees)
     .set({
       name: mapped.name,

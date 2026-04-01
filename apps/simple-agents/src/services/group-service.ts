@@ -1,5 +1,5 @@
 import type { CreateGroupInput, UpdateGroupInput, Group } from "../types"
-import { db } from "../db"
+import { getDb } from "../db"
 import { groups } from "../db/schema"
 import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -7,7 +7,7 @@ import { nanoid } from "nanoid"
 export async function createGroup(input: CreateGroupInput): Promise<Group> {
   const id = input.id || nanoid()
 
-  const [group] = await db
+  const [group] = await getDb()
     .insert(groups)
     .values({
       id,
@@ -20,7 +20,7 @@ export async function createGroup(input: CreateGroupInput): Promise<Group> {
 }
 
 export async function getGroup(id: string): Promise<Group | null> {
-  const [group] = await db
+  const [group] = await getDb()
     .select()
     .from(groups)
     .where(eq(groups.id, id))
@@ -29,7 +29,7 @@ export async function getGroup(id: string): Promise<Group | null> {
 }
 
 export async function listGroups(): Promise<Group[]> {
-  return db.select().from(groups).orderBy(desc(groups.createdAt))
+  return getDb().select().from(groups).orderBy(desc(groups.createdAt))
 }
 
 export async function updateGroup(
@@ -43,7 +43,7 @@ export async function updateGroup(
   if (input.employeeIds !== undefined)
     values.employeeIds = JSON.stringify(input.employeeIds)
 
-  const [updated] = await db
+  const [updated] = await getDb()
     .update(groups)
     .set(values)
     .where(eq(groups.id, id))
@@ -53,7 +53,10 @@ export async function updateGroup(
 }
 
 export async function deleteGroup(id: string): Promise<boolean> {
-  const result = await db.delete(groups).where(eq(groups.id, id)).returning()
+  const result = await getDb()
+    .delete(groups)
+    .where(eq(groups.id, id))
+    .returning()
 
   return result.length > 0
 }

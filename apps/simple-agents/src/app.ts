@@ -8,7 +8,7 @@ import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import groupRoutes from "./routes/groups"
 import cronRoutes from "./routes/cron"
-import { DATA_DIR, ROOT_DIR } from "./db"
+import { getDataDir, initDb, ROOT_DIR } from "./db"
 import openApiDoc from "./doc/openapi.json"
 import { ensureSkillDirs } from "./services/skill-service"
 import mockManagementRoutes from "./routes/mock-management"
@@ -16,15 +16,6 @@ import { unifiedResponse, SKIP_RESPONSE_WRAP } from "./middleware/response"
 import { CronScheduler } from "./cron"
 
 const STATIC_DIR = join(ROOT_DIR, "static")
-
-ensureSkillDirs()
-
-export const cronScheduler = new CronScheduler({
-  timezone: "Asia/Shanghai",
-  onTick: (taskId) => {
-    console.log(`[Cron] Task triggered: ${taskId}`)
-  },
-})
 
 const app = new Hono()
 
@@ -63,7 +54,7 @@ app.get("/", (c) => {
   return c.json({
     name: "simple-agents",
     version: "2.0.0",
-    dataDir: DATA_DIR,
+    dataDir: getDataDir(),
     endpoints: {
       employees: "RESTful /api/employees",
       sessions: "RESTful /api/sessions",
@@ -89,4 +80,27 @@ app.route("/api/groups", groupRoutes)
 app.route("/api/cron", cronRoutes)
 app.route("/management", mockManagementRoutes)
 
-export { app, DATA_DIR, SKIP_RESPONSE_WRAP }
+let initialized = false
+
+export function setup(dataDir?: string) {
+  if (initialized) return app
+  initialized = true
+
+  if (dataDir) {
+    process.env.DATA_DIR = dataDir
+  }
+
+  initDb(dataDir)
+  ensureSkillDirs()
+
+  return app
+}
+
+export const cronScheduler = new CronScheduler({
+  timezone: "Asia/Shanghai",
+  onTick: (taskId) => {
+    console.log(`[Cron] Task triggered: ${taskId}`)
+  },
+})
+
+export { app, getDataDir as DATA_DIR, SKIP_RESPONSE_WRAP }

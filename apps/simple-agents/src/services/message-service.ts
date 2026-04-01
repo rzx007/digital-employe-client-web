@@ -17,7 +17,7 @@
  */
 
 import type { Message } from "../types"
-import { db } from "../db"
+import { getDb } from "../db"
 import { messages } from "../db/schema"
 import { eq, asc, sql, and, gt } from "drizzle-orm"
 
@@ -41,7 +41,7 @@ export async function createMessage(
     tokenCount?: number
   }
 ): Promise<Message> {
-  const [msg] = await db
+  const [msg] = await getDb()
     .insert(messages)
     .values({
       sessionId,
@@ -83,13 +83,13 @@ export async function getMessages(
   const where = and(...conditions)
 
   // 查询总数
-  const [{ count }] = await db
+  const [{ count }] = await getDb()
     .select({ count: sql<number>`count(*)` })
     .from(messages)
     .where(where)
 
   // 查询数据（按 ID 升序，支持分页）
-  const data = await db
+  const data = await getDb()
     .select()
     .from(messages)
     .where(where)
@@ -117,7 +117,7 @@ export async function getMessages(
 export async function getSessionMessages(
   sessionId: string
 ): Promise<Message[]> {
-  return db
+  return getDb()
     .select()
     .from(messages)
     .where(eq(messages.sessionId, sessionId))
@@ -135,7 +135,7 @@ export async function getLatestMessages(
   sessionId: string,
   limit = 20
 ): Promise<Message[]> {
-  const all = await db
+  const all = await getDb()
     .select()
     .from(messages)
     .where(eq(messages.sessionId, sessionId))
@@ -152,7 +152,7 @@ export async function getLatestMessages(
  * @returns 消息总数
  */
 export async function getMessageCount(sessionId: string): Promise<number> {
-  const [{ count }] = await db
+  const [{ count }] = await getDb()
     .select({ count: sql<number>`count(*)` })
     .from(messages)
     .where(eq(messages.sessionId, sessionId))
@@ -169,7 +169,7 @@ export async function getMessageCount(sessionId: string): Promise<number> {
  * @returns 消息对象，不存在时返回 null
  */
 export async function getMessageById(id: number): Promise<Message | null> {
-  const [msg] = await db
+  const [msg] = await getDb()
     .select()
     .from(messages)
     .where(eq(messages.id, id))
@@ -186,5 +186,5 @@ export async function getMessageById(id: number): Promise<Message | null> {
  * @param sessionId 会话 ID
  */
 export async function deleteSessionMessages(sessionId: string): Promise<void> {
-  await db.delete(messages).where(eq(messages.sessionId, sessionId))
+  await getDb().delete(messages).where(eq(messages.sessionId, sessionId))
 }

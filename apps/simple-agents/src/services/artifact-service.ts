@@ -17,7 +17,7 @@
  */
 
 import type { Artifact } from "../types"
-import { db, DATA_DIR } from "../db"
+import { getDb, getDataDir } from "../db"
 import { artifacts } from "../db/schema"
 import { eq } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -78,10 +78,10 @@ export async function syncArtifacts(
   sessionId: string,
   existingFiles: Set<string>
 ): Promise<{ added: Artifact[]; removed: Artifact[] }> {
-  const sessionDir = path.join(DATA_DIR, "workspace", sessionId)
+  const sessionDir = path.join(getDataDir(), "workspace", sessionId)
 
   // 获取数据库中已记录的文件
-  const existing = await db
+  const existing = await getDb()
     .select()
     .from(artifacts)
     .where(eq(artifacts.sessionId, sessionId))
@@ -103,7 +103,7 @@ export async function syncArtifacts(
       const fileName = path.basename(filePath)
 
       // 插入数据库
-      const [artifact] = await db
+      const [artifact] = await getDb()
         .insert(artifacts)
         .values({
           id: nanoid(),
@@ -122,7 +122,7 @@ export async function syncArtifacts(
   // 检测删除的文件
   for (const [filePath, artifact] of existingMap) {
     if (!existingFiles.has(filePath)) {
-      await db.delete(artifacts).where(eq(artifacts.id, artifact.id))
+      await getDb().delete(artifacts).where(eq(artifacts.id, artifact.id))
       removed.push(artifact)
     }
   }
@@ -139,7 +139,7 @@ export async function syncArtifacts(
  * @returns 文件路径集合
  */
 export function getSessionFiles(sessionId: string): Set<string> {
-  const sessionDir = path.join(DATA_DIR, "workspace", sessionId)
+  const sessionDir = path.join(getDataDir(), "workspace", sessionId)
   const files = new Set<string>()
 
   if (!fs.existsSync(sessionDir)) return files
@@ -168,7 +168,7 @@ export function getSessionFiles(sessionId: string): Set<string> {
  * @returns 产物列表
  */
 export async function listArtifacts(sessionId: string): Promise<Artifact[]> {
-  return db
+  return getDb()
     .select()
     .from(artifacts)
     .where(eq(artifacts.sessionId, sessionId))
@@ -182,7 +182,7 @@ export async function listArtifacts(sessionId: string): Promise<Artifact[]> {
  * @returns 产物对象，不存在时返回 null
  */
 export async function getArtifact(id: string): Promise<Artifact | null> {
-  const [artifact] = await db
+  const [artifact] = await getDb()
     .select()
     .from(artifacts)
     .where(eq(artifacts.id, id))
@@ -208,7 +208,7 @@ export async function deleteArtifact(id: string): Promise<boolean> {
 
   // 删除磁盘文件
   const filePath = path.join(
-    DATA_DIR,
+    getDataDir(),
     "workspace",
     artifact.sessionId,
     artifact.filePath
@@ -218,7 +218,7 @@ export async function deleteArtifact(id: string): Promise<boolean> {
   }
 
   // 删除数据库记录
-  const result = await db
+  const result = await getDb()
     .delete(artifacts)
     .where(eq(artifacts.id, id))
     .returning()
@@ -234,5 +234,5 @@ export async function deleteArtifact(id: string): Promise<boolean> {
  * @param sessionId 会话 ID
  */
 export async function deleteSessionArtifacts(sessionId: string): Promise<void> {
-  await db.delete(artifacts).where(eq(artifacts.sessionId, sessionId))
+  await getDb().delete(artifacts).where(eq(artifacts.sessionId, sessionId))
 }

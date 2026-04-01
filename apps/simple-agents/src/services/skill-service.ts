@@ -35,7 +35,7 @@
 import path from "node:path"
 import fs from "node:fs"
 import os from "node:os"
-import { DATA_DIR } from "../db"
+import { getDataDir } from "../db"
 import extractZip from "extract-zip"
 
 /**
@@ -44,7 +44,7 @@ import extractZip from "extract-zip"
  * 存放所有员工共享的基础技能
  * 结构：data/skills/{skill-name}/SKILL.md
  */
-const GLOBAL_SKILLS_DIR = path.join(DATA_DIR, "skills")
+const GLOBAL_SKILLS_DIR = path.join(getDataDir(), "skills")
 
 /**
  * 员工根目录路径
@@ -52,7 +52,7 @@ const GLOBAL_SKILLS_DIR = path.join(DATA_DIR, "skills")
  * 存放所有员工的专属技能
  * 结构：data/employees/{employeeId}/skills/{skill-name}/SKILL.md
  */
-const EMPLOYEES_DIR = path.join(DATA_DIR, "employees")
+const EMPLOYEES_DIR = path.join(getDataDir(), "employees")
 
 /**
  * 确保必要的目录结构存在
@@ -89,7 +89,7 @@ export function linkSessionSkills(
   sessionId: string,
   employeeId?: string
 ): void {
-  const sessionDir = path.join(DATA_DIR, "workspace", sessionId)
+  const sessionDir = path.join(getDataDir(), "workspace", sessionId)
 
   // 链接全局技能
   const globalTarget = path.join(sessionDir, "skills")
@@ -252,7 +252,12 @@ function linkIfSourceExists(src: string, dest: string): void {
  * @param sessionId 会话 ID
  */
 export function unlinkSessionEmployeeSkills(sessionId: string): void {
-  const target = path.join(DATA_DIR, "workspace", sessionId, "employee-skills")
+  const target = path.join(
+    getDataDir(),
+    "workspace",
+    sessionId,
+    "employee-skills"
+  )
   try {
     fs.realpathSync(target)
     fs.rmSync(target, { recursive: false, force: true })

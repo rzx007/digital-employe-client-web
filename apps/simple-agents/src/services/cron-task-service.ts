@@ -1,4 +1,4 @@
-import { db } from "../db"
+import { getDb } from "../db"
 import { cronTasks, taskRuns } from "../db/schema"
 import { eq, and, sql, desc, gte, lte } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -192,7 +192,7 @@ export async function syncFromManagement(
   const mgmtTasks: ManagementTask[] = data.tasks || []
   const mgmtSkills: ManagementSkill[] = data.skills || []
 
-  const existingTasks = await db
+  const existingTasks = await getDb()
     .select()
     .from(cronTasks)
     .where(eq(cronTasks.employeeId, employeeId))
@@ -237,7 +237,7 @@ export async function syncFromManagement(
         state.nextRunAtMs = await computeNextRunMs(task.cron_expression)
       }
 
-      await db
+      await getDb()
         .update(cronTasks)
         .set({ ...values, state: serializeState(state) })
         .where(eq(cronTasks.id, existing.id))
@@ -246,16 +246,18 @@ export async function syncFromManagement(
       const nextRunAtMs = await computeNextRunMs(task.cron_expression)
       const id = nanoid()
 
-      await db.insert(cronTasks).values({
-        id,
-        ...values,
-        state: serializeState({
-          nextRunAtMs,
-          lastRunAtMs: null,
-          lastStatus: null,
-          lastError: null,
-        }),
-      })
+      await getDb()
+        .insert(cronTasks)
+        .values({
+          id,
+          ...values,
+          state: serializeState({
+            nextRunAtMs,
+            lastRunAtMs: null,
+            lastStatus: null,
+            lastError: null,
+          }),
+        })
       added++
     }
   }
@@ -272,7 +274,7 @@ export async function syncFromManagement(
 export async function listCronTasks(
   employeeId: string
 ): Promise<CronTaskRecord[]> {
-  const rows = await db
+  const rows = await getDb()
     .select()
     .from(cronTasks)
     .where(eq(cronTasks.employeeId, employeeId))
@@ -283,7 +285,7 @@ export async function listCronTasks(
 export async function listActiveCronTasks(): Promise<
   (CronTaskRecord & { state: CronTaskState })[]
 > {
-  const rows = await db
+  const rows = await getDb()
     .select()
     .from(cronTasks)
     .where(eq(cronTasks.isActive, true))
@@ -296,7 +298,7 @@ export async function listActiveCronTasks(): Promise<
 export async function getCronTask(
   taskId: string
 ): Promise<CronTaskRecord | null> {
-  const [row] = await db
+  const [row] = await getDb()
     .select()
     .from(cronTasks)
     .where(eq(cronTasks.id, taskId))
@@ -318,7 +320,7 @@ export async function toggleCronTask(
     state.nextRunAtMs = null
   }
 
-  const [updated] = await db
+  const [updated] = await getDb()
     .update(cronTasks)
     .set({
       isActive: active,
@@ -332,7 +334,7 @@ export async function toggleCronTask(
 }
 
 export async function deleteCronTask(taskId: string): Promise<boolean> {
-  const result = await db
+  const result = await getDb()
     .delete(cronTasks)
     .where(eq(cronTasks.id, taskId))
     .returning()
@@ -350,7 +352,7 @@ export async function triggerTask(taskId: string): Promise<TaskRunRecord> {
   const runId = nanoid()
   const now = new Date().toISOString()
 
-  await db.insert(taskRuns).values({
+  await getDb().insert(taskRuns).values({
     id: runId,
     cronTaskId: taskId,
     employeeId: task.employeeId,
@@ -397,7 +399,7 @@ export async function triggerTask(taskId: string): Promise<TaskRunRecord> {
   const duration = Date.now() - startMs
   const completedAt = new Date().toISOString()
 
-  const [run] = await db
+  const [run] = await getDb()
     .update(taskRuns)
     .set({
       status,
@@ -417,7 +419,7 @@ export async function triggerTask(taskId: string): Promise<TaskRunRecord> {
     lastError: errorMsg,
   }
 
-  await db
+  await getDb()
     .update(cronTasks)
     .set({
       state: serializeState(state),
@@ -443,7 +445,7 @@ export async function listTaskRuns(
     conditions.push(lte(taskRuns.triggeredAt, options.date + "T23:59:59"))
   }
 
-  const rows = await db
+  const rows = await getDb()
     .select({
       run: taskRuns,
       taskName: cronTasks.taskName,
@@ -463,7 +465,7 @@ export async function listTaskRuns(
 // ============ 统计 ============
 
 export async function getTaskSummary(employeeId: string): Promise<TaskSummary> {
-  const [row] = await db
+  const [row] = await getDb()
     .select({
       total: sql<number>`count(*)`,
       completed: sql<number>`sum(case when status = 'success' then 1 else 0 end)`,
@@ -490,7 +492,7 @@ export async function getMonthlyOverview(
   const lastDay = new Date(year, month, 0).getDate()
   const endDate = `${year}-${String(month).padStart(2, "0")}-${lastDay}`
 
-  const rows = await db
+  const rows = await getDb()
     .select({
       date: sql<string>`substr(triggered_at, 1, 10)`,
       status: taskRuns.status,
@@ -545,7 +547,7 @@ export async function getMonthlyOverview(
 export async function getAnomalies(
   employeeId: string
 ): Promise<AnomalyRecord[]> {
-  const rows = await db
+  const rows = await getDb()
     .select({
       run: taskRuns,
       taskName: cronTasks.taskName,

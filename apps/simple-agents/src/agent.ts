@@ -25,7 +25,7 @@ import { createDeepAgent, FilesystemBackend } from "deepagents"
 import { ChatOpenAI } from "@langchain/openai"
 import path from "node:path"
 import fs from "node:fs"
-import { DATA_DIR } from "./db"
+import { getDataDir } from "./db"
 
 /**
  * AI 模型配置
@@ -146,7 +146,7 @@ export function invalidateAgentCache(employeeId?: string): void {
  *   └── (agent 生成的文件)
  */
 export function getSessionDir(threadId: string): string {
-  const sessionDir = path.join(DATA_DIR, "workspace", threadId)
+  const sessionDir = path.join(getDataDir(), "workspace", threadId)
   if (!fs.existsSync(sessionDir)) {
     fs.mkdirSync(sessionDir, { recursive: true })
   }
