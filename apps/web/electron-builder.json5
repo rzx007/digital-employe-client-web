@@ -15,6 +15,10 @@
   files: ["dist", "dist-electron", "build"],
   extraResources: [
     {
+      from: "../../apps/simple-agents/.env",
+      to: ".env",
+    },
+    {
       from: "../../apps/simple-agents/migrations",
       to: "simple-agents/migrations",
       filter: ["**/*"],

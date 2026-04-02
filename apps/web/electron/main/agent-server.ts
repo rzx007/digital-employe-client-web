@@ -20,6 +20,21 @@ const ROOT_DIR = resourcesBaseDir
 
 let server: ServerType | null = null
 
+function loadEnvFile(filePath: string): void {
+  if (!fs.existsSync(filePath)) return
+  const content = fs.readFileSync(filePath, "utf-8")
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith("#")) continue
+    const eqIndex = trimmed.indexOf("=")
+    if (eqIndex === -1) continue
+    const key = trimmed.slice(0, eqIndex).trim()
+    const value = trimmed.slice(eqIndex + 1).trim()
+    if (key && value) {
+      process.env[key] = value
+    }
+  }
+}
 
 export function getAgentServerUrl(): string {
   return `http://localhost:${AGENT_PORT}`
@@ -29,6 +44,12 @@ export async function startAgentServer(): Promise<void> {
   if (server) {
     console.log("[AgentServer] Already running")
     return
+  }
+
+  if (app.isPackaged) {
+    const envPath = path.join(process.resourcesPath, ".env")
+    loadEnvFile(envPath)
+    console.log("[AgentServer] Loaded .env from:", envPath)
   }
 
   const userDataDir = app.getPath("userData")
