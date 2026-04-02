@@ -3,8 +3,10 @@ import * as React from "react"
 import { Sheet, SheetContent } from "@workspace/ui/components/sheet"
 import { cn } from "@workspace/ui/lib/utils"
 import { ArtifactPanel } from "@/components/artifact"
+import { MonitorPanel } from "@/components/schedule-monitor"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useArtifactStore } from "@/stores/artifact-store"
+import { useMonitorStore } from "@/stores/monitor-store"
 import { ContactsSidebar } from "./contacts-sidebar"
 import { ConversationList } from "./conversation-list"
 import { ChatView } from "./chat-view"
@@ -25,6 +27,15 @@ export function ChatLayout({
     setFullscreen,
     toggleFullscreen,
   } = useArtifactStore()
+
+  const {
+    isOpen: isMonitorOpen,
+    isFullscreen: isMonitorFullscreen,
+    closeMonitor,
+    toggleFullscreen: toggleMonitorFullscreen,
+    setFullscreen: setMonitorFullscreen,
+  } = useMonitorStore()
+
   const activeArtifact = activeArtifactId
     ? (artifacts.get(activeArtifactId) ?? null)
     : null
@@ -35,6 +46,11 @@ export function ChatLayout({
     }
   }, [activeArtifact, isMobile, isPanelOpen, setFullscreen])
 
+  React.useEffect(() => {
+    if (isMobile && isMonitorOpen) {
+      setMonitorFullscreen(true)
+    }
+  }, [isMobile, isMonitorOpen, setMonitorFullscreen])
   return (
     <div className={cn("relative flex h-full", className)} {...props}>
       <ContactsSidebar className="hidden md:flex" />
@@ -55,6 +71,17 @@ export function ChatLayout({
               isFullscreen={false}
               onClose={closeArtifact}
               onToggleFullscreen={toggleFullscreen}
+              className="h-full rounded-xl"
+            />
+          </div>
+        )}
+        {isMonitorOpen && !isMonitorFullscreen && !isMobile && (
+          <div className="hidden w-[380px] border-l bg-muted/20 p-2 sm:block 2xl:w-[520px] lg:p-3 transition-all duration-100">
+            <MonitorPanel
+              isOpen={isMonitorOpen}
+              isFullscreen={false}
+              onClose={closeMonitor}
+              onToggleFullscreen={toggleMonitorFullscreen}
               className="h-full rounded-xl"
             />
           </div>
@@ -80,6 +107,14 @@ export function ChatLayout({
           isFullscreen={isFullscreen}
           onClose={closeArtifact}
           onToggleFullscreen={toggleFullscreen}
+        />
+      )}
+      {isMonitorOpen && (isMonitorFullscreen || isMobile) && (
+        <MonitorPanel
+          isOpen={isMonitorOpen}
+          isFullscreen={isMonitorFullscreen}
+          onClose={closeMonitor}
+          onToggleFullscreen={toggleMonitorFullscreen}
         />
       )}
     </div>

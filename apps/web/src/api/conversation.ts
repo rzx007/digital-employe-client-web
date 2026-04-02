@@ -8,7 +8,7 @@ import type {
 } from "./types"
 
 /** 当前固定工作空间 ID */
-const WORKSPACE_ID = 2
+const WORKSPACE_ID = 1
 
 /**
  * 创建聊天会话

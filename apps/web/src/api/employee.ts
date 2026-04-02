@@ -2,7 +2,7 @@ import { request } from "@/lib/request"
 import type { ApiResponse, Employee } from "./types"
 
 /** 当前固定工作空间 ID */
-const WORKSPACE_ID = 2
+const WORKSPACE_ID = 1
 
 /**
  * 导入员工列表并解析

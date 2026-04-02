@@ -2,7 +2,7 @@ import { request } from "@/lib/request"
 import type { ApiResponse, Group } from "./types"
 
 /** 当前固定工作空间 ID */
-const WORKSPACE_ID = 2
+const WORKSPACE_ID = 1
 
 /**
  * 创建群聊参数
