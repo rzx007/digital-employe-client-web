@@ -18,7 +18,6 @@ import { TaskStatsCards } from "./sections/task-stats-cards"
 import { ExecutionDetail } from "./sections/execution-detail"
 import { AnomalyMonitor } from "./sections/anomaly-monitor"
 import {
-  getContactDisplayName,
   type ChatViewContact,
 } from "@/components/chat/chat-view-shared"
 

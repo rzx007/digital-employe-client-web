@@ -5,7 +5,6 @@ import {
   IconCirclePlus,
   IconRefresh,
   IconSearch,
-  IconSettings,
   IconUser,
 } from "@tabler/icons-react"
 import { useLocalStorageState } from "ahooks"

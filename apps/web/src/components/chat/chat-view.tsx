@@ -38,13 +38,7 @@ export function ChatView({
 
   if (isCuratorMonitorView) {
     return (
-      <CuratorView
-        contact={contact}
-        onOpenContacts={onOpenContacts}
-        onOpenConversations={onOpenConversations}
-        className={cn(className)}
-        {...props}
-      />
+      <CuratorView contact={contact} className={cn(className)} {...props} />
     )
   }
 

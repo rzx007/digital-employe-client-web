@@ -117,7 +117,7 @@ export function ScheduleCalendar({
     onMonthChange(y, m)
   }
 
-  const futureLimit = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+  // const futureLimit = new Date(today.getFullYear(), today.getMonth() + 1, 1)
 
   // const canGoNext = new Date(overview.year, overview.month, 1) < futureLimit
 

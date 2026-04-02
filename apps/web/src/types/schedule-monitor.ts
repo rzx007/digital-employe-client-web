@@ -107,6 +107,7 @@ export interface ScheduleEmployee {
 export interface ScheduleDay {
   day: number
   date: string
+  total: number
   employees: ScheduleEmployee[]
 }
 
