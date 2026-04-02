@@ -1,7 +1,9 @@
 import { ofetch } from "ofetch"
 import type { AgentApiResponse } from "@/api/types"
 
-const SIMPLE_AGENTS_BASE = "/simple-agents"
+const SIMPLE_AGENTS_BASE = import.meta.env.DEV
+  ? "/simple-agents"
+  : "http://localhost:3005"
 
 export const agentRequest = ofetch.create({
   baseURL: SIMPLE_AGENTS_BASE,

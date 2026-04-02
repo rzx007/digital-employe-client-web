@@ -14,7 +14,7 @@ export default defineConfig(({ command, mode }: ConfigEnv) => {
 
   const externalDeps = [
     ...Object.keys("dependencies" in pkg ? pkg.dependencies : {}),
-  ].filter((d) => d !== "simple-agents")
+  ].filter((d) => d !== "simple-agents" && d !== "ai")
 
   const nativeAddons = ["better-sqlite3", "bindings", "file-uri-to-path"]
 

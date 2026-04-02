@@ -33,7 +33,9 @@ export function ConversationChatView({
     title: string
   } | null>(null)
 
-  const SIMPLE_AGENTS_BASE = "/simple-agents/api/sessions"
+  const SIMPLE_AGENTS_BASE = import.meta.env.DEV
+    ? "/simple-agents/api/sessions"
+    : "http://localhost:3005/api/sessions"
   const transport = React.useMemo(
     () =>
       new DefaultChatTransport<any>({
@@ -49,7 +51,7 @@ export function ConversationChatView({
         },
         prepareReconnectToStreamRequest({ id }) {
           return {
-            api: `/simple-agents/api/sessions/${id}/chat/stream`,
+            api: `${import.meta.env.DEV ? "/simple-agents" : "http://localhost:3005"}/api/sessions/${id}/chat/stream`,
           }
         },
       }),
@@ -151,24 +153,24 @@ export function ConversationChatView({
 
   return (
     <>
-    <ChatPanel
-      contact={contact}
-      title={title}
-      conversationId={conversationId}
-      messages={messages}
-      inputValue={inputValue}
-      status={status}
-      error={error}
-      isDraftMode={false}
-      isSubmitDisabled={isSubmitDisabled}
-      onInputChange={handleTextChange}
-      onSend={handleSendMessage}
-      onStopStream={stop}
-      onOpenContacts={onOpenContacts}
-      onOpenConversations={onOpenConversations}
-      className={className}
-      {...props}
-    />
+      <ChatPanel
+        contact={contact}
+        title={title}
+        conversationId={conversationId}
+        messages={messages}
+        inputValue={inputValue}
+        status={status}
+        error={error}
+        isDraftMode={false}
+        isSubmitDisabled={isSubmitDisabled}
+        onInputChange={handleTextChange}
+        onSend={handleSendMessage}
+        onStopStream={stop}
+        onOpenContacts={onOpenContacts}
+        onOpenConversations={onOpenConversations}
+        className={className}
+        {...props}
+      />
     </>
   )
 }

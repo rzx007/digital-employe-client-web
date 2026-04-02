@@ -53,7 +53,9 @@ export function DraftChatView({
     setInputValue("")
   }, [draftSessionKey, selectedContactId])
 
-  const SIMPLE_AGENTS_BASE = "/simple-agents/api/sessions"
+  const SIMPLE_AGENTS_BASE = import.meta.env.DEV
+    ? "/simple-agents/api/sessions"
+    : "http://localhost:3005/api/sessions"
 
   const draftTransport = useMemo(
     () =>
