@@ -4,6 +4,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 
 import { useChatStore } from "@/stores/chat-store"
+import { useMonitorStore } from "@/stores/monitor-store"
 import {
   useAnomalies,
   useMonthlyScheduleOverview,
@@ -36,24 +37,32 @@ export function MonitorPanel({
   onToggleFullscreen,
   className,
 }: MonitorPanelProps) {
-  const contact = useChatStore((s) => s.getSelectedContact())
-  const employeeId =
-    contact?.type === "employee" ? (contact.employee?.id ?? null) : null
+  const targetEmployeeId = useMonitorStore((s) => s.targetEmployeeId)
+  const targetEmployeeName = useMonitorStore((s) => s.targetEmployeeName)
+  const contacts = useChatStore((s) => s.contacts)
+
+  const contact = targetEmployeeId
+    ? contacts.find(
+      (c) =>
+        c.type === "employee" &&
+        String(c.employee?.id) === String(targetEmployeeId)
+    )
+    : undefined
+
+  const displayName = targetEmployeeName || "未知员工"
 
   const now = new Date()
   const [viewYear, setViewYear] = useState(now.getFullYear())
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
 
   const { data: overview } = useMonthlyScheduleOverview(
-    employeeId,
+    targetEmployeeId,
     viewYear,
     viewMonth
   )
-  const { data: taskRuns = [] } = useTodayTaskRuns(employeeId)
-  const { data: summary } = useTaskSummary(employeeId)
-  const { data: anomalies = [] } = useAnomalies(employeeId)
-
-  const displayName = contact ? getContactDisplayName(contact) : "未知员工"
+  const { data: taskRuns = [] } = useTodayTaskRuns(targetEmployeeId)
+  const { data: summary } = useTaskSummary(targetEmployeeId)
+  const { data: anomalies = [] } = useAnomalies(targetEmployeeId)
 
   const handleMonthChange = (year: number, month: number) => {
     setViewYear(year)
@@ -67,6 +76,7 @@ export function MonitorPanel({
     <AnimatePresence>
       {isOpen && (
         <motion.div
+
           initial={isFullscreen ? { opacity: 0 } : { x: "100%" }}
           animate={isFullscreen ? { opacity: 1 } : { x: 0 }}
           exit={isFullscreen ? { opacity: 0 } : { x: "100%" }}

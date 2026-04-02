@@ -83,7 +83,7 @@ export function CreateGroupDialog({
                   <span className="truncate text-xs font-medium">
                     {employee.name}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-xs text-muted-foreground max-w-64">
                     {employee.role}
                   </span>
                 </div>

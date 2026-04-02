@@ -10,6 +10,8 @@ import { cn } from "@workspace/ui/lib/utils"
 import type { Artifact } from "./artifact-types"
 import { Button } from "@workspace/ui/components/button"
 import type { ComponentType } from "react"
+import gridImage from "@/assets/doc-grid.png"
+import canvasImage from "@/assets/doc-canvas-card-fallback.png"
 
 export interface ArtifactPreviewProps {
   artifact: Artifact
@@ -49,7 +51,7 @@ export const ArtifactPreview = ({
       {...props}
     >
       <img
-        src="/doc-grid.png"
+        src={gridImage}
         alt={artifact.title}
         width={120}
         height={110}
@@ -68,7 +70,7 @@ export const ArtifactPreview = ({
       </div>
       <div className="absolute top-6 -right-1 h-35 w-34 rounded-xl border border-border/60 bg-background shadow-md transition-transform group-artifact-hover:-rotate-5">
         <img
-          src="/doc-canvas-card-fallback.png"
+          src={canvasImage}
           alt={artifact.title}
           width={100}
           height={100}

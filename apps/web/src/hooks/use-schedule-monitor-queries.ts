@@ -131,6 +131,23 @@ export function useTaskSummary(employeeId: string | null) {
   })
 }
 
+export { CURATOR_PINNED_CONVERSATION_ID } from "@/lib/constants"
+
+export function useAllTaskExecutions() {
+  return useQuery({
+    queryKey: [...chatKeys.all, "all-task-executions"],
+    queryFn: async () => {
+      const res = await request<{
+        code: number
+        data: TaskExecution[]
+      }>(`/workspaces/${WORKSPACE_ID}/tasks/executions`)
+      return res.data
+    },
+    staleTime: 30_000,
+    refetchInterval: 15_000,
+  })
+}
+
 export function useAnomalies(employeeId: string | null) {
   return useQuery({
     queryKey: [...chatKeys.all, "anomalies", employeeId],

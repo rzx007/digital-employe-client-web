@@ -125,7 +125,12 @@ export function ChatPanelHeader({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => openMonitor(contact.employee?.id ?? "")}
+                onClick={() =>
+                  openMonitor(
+                    contact.employee?.id ?? "",
+                    contact.employee?.name ?? ""
+                  )
+                }
               >
                 <IconCalendar className="size-4" />
               </Button>

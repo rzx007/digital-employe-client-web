@@ -37,7 +37,7 @@ export interface Contact {
 /** 常驻默认会话入口，通讯录置顶，独立于群聊与其它联系人 */
 export const PRIMARY_CURATOR: CuratorProfile = {
   id: "curator-primary",
-  name: "主理人(开发中..)",
+  name: "主理人",
   role: "数字员工统筹",
   status: "online",
   avatar: createDiceBearAvatar("Curator"),

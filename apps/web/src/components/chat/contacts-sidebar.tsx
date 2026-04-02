@@ -3,16 +3,20 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCirclePlus,
+  IconRefresh,
   IconSearch,
   IconSettings,
   IconUser,
 } from "@tabler/icons-react"
 import { useLocalStorageState } from "ahooks"
+import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
+import { toast } from "sonner"
 import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { useContactsQuery } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { request } from "@/lib/request"
 import {
   DEFAULT_SELECTED_CONTACT_ID,
   findContactInList,
@@ -21,6 +25,7 @@ import {
   type Contact,
 } from "@/lib/mock-data/ai-employees"
 import { useChatStore } from "@/stores/chat-store"
+import { useMonitorStore } from "@/stores/monitor-store"
 
 import { ContactItem } from "./contact-item"
 import { CreateGroupDialog } from "./create-group-dialog"
@@ -53,6 +58,18 @@ export function ContactsSidebar({
   )
   const { data: apiContacts } = useContactsQuery()
   const isMobile = useIsMobile()
+  const setTargetEmployee = useMonitorStore((s) => s.setTargetEmployee)
+
+  const syncMutation = useMutation({
+    mutationFn: () =>
+      request<{ code: number; msg: string }>(`/workspaces/1/tasks/sync`),
+    onSuccess: (res) => {
+      toast.success(res.msg || "同步成功")
+    },
+    onError: () => {
+      toast.error("同步失败，请稍后重试")
+    },
+  })
 
   const contacts = React.useMemo(
     () => [CURATOR_CONTACT, ...(apiContacts ?? [])],
@@ -72,6 +89,14 @@ export function ContactsSidebar({
       setSelectedContactId(DEFAULT_SELECTED_CONTACT_ID)
     }
   }, [contacts, selectedContactId, setSelectedContactId])
+
+  React.useEffect(() => {
+    if (!selectedContactId) return
+    const contact = findContactInList(contacts, selectedContactId)
+    if (contact?.type === "employee" && contact.employee) {
+      setTargetEmployee(String(contact.employee.id), contact.employee.name)
+    }
+  }, [selectedContactId, contacts, setTargetEmployee])
 
   const curatorContacts = React.useMemo(
     () => contacts.filter((contact) => contact.type === "curator"),
@@ -250,10 +275,22 @@ export function ContactsSidebar({
             variant="ghost"
             size="icon-sm"
             className="h-8 w-8"
+            title="同步任务"
+            disabled={syncMutation.isPending}
+            onClick={() => syncMutation.mutate()}
+          >
+            <IconRefresh
+              className={cn("size-4", syncMutation.isPending && "animate-spin")}
+            />
+          </Button>
+          {/* <Button
+            variant="ghost"
+            size="icon-sm"
+            className="h-8 w-8"
             title="设置"
           >
             <IconSettings className="size-4" />
-          </Button>
+          </Button> */}
           <Button
             variant="ghost"
             size="icon-sm"

@@ -1,14 +1,43 @@
 import { useEffect, type ComponentProps } from "react"
-import { IconCirclePlus } from "@tabler/icons-react"
+import { IconCirclePlus, IconPinFilled } from "@tabler/icons-react"
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@workspace/ui/components/button"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { cn } from "@workspace/ui/lib/utils"
 import { useConversationsQuery } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { CURATOR_PINNED_CONVERSATION_ID } from "@/lib/constants"
 import { useChatStore } from "@/stores/chat-store"
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import { ConversationItem } from "./conversation-item"
+
+function CuratorPinnedItem({
+  isSelected,
+  onClick,
+}: {
+  isSelected: boolean
+  onClick: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        "group flex cursor-pointer items-center gap-2 rounded-md px-3 py-2.5 text-xs transition-colors",
+        isSelected
+          ? "bg-accent text-primary"
+          : "hover:bg-accent/50 hover:text-accent-foreground"
+      )}
+      onClick={onClick}
+    >
+      <IconPinFilled className="size-3.5 shrink-0 text-muted-foreground" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-sm font-medium">任务执行结果</span>
+        <span className="text-[10px] text-muted-foreground">
+          全部员工的实时执行记录
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export function ConversationList({
   className,
@@ -31,6 +60,8 @@ export function ConversationList({
   )
   const selectedContact = useChatStore((s) => s.getSelectedContact())
   const isMobile = useIsMobile()
+  const isCurator = selectedContact?.type === "curator"
+
   const {
     data: conversations = [],
     isSuccess: conversationsQuerySuccess,
@@ -39,6 +70,27 @@ export function ConversationList({
 
   useEffect(() => {
     if (!selectedContactId) return
+
+    if (isCurator) {
+      if (isDraftConversation) {
+        return
+      }
+      if (selectedConversationId !== CURATOR_PINNED_CONVERSATION_ID) {
+        if (conversations.length === 0) {
+          setSelectedConversationId(CURATOR_PINNED_CONVERSATION_ID)
+          setDraftConversation(false)
+          return
+        }
+        const hasSelected = conversations.some(
+          (conversation) => conversation.id === selectedConversationId
+        )
+        if (!hasSelected) {
+          setSelectedConversationId(CURATOR_PINNED_CONVERSATION_ID)
+          setDraftConversation(false)
+        }
+      }
+      return
+    }
 
     if (!conversationsQuerySuccess) return
 
@@ -64,16 +116,19 @@ export function ConversationList({
     if (!hasSelected) {
       setSelectedConversationId(conversations[0].id)
     }
-
   }, [
     conversations,
     conversationsQuerySuccess,
+    isCurator,
     isDraftConversation,
     selectedContactId,
     selectedConversationId,
     setDraftConversation,
     setSelectedConversationId,
   ])
+
+  const isPinnedSelected =
+    isCurator && selectedConversationId === CURATOR_PINNED_CONVERSATION_ID
 
   return (
     <div
@@ -143,6 +198,16 @@ export function ConversationList({
 
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-2">
+          {isCurator && (
+            <CuratorPinnedItem
+              isSelected={isPinnedSelected}
+              onClick={() => {
+                setDraftConversation(false)
+                setSelectedConversationId(CURATOR_PINNED_CONVERSATION_ID)
+              }}
+            />
+          )}
+
           {selectedContactId && conversationsPending && (
             <div className="py-6 text-center text-xs text-muted-foreground">
               加载会话…
@@ -161,7 +226,8 @@ export function ConversationList({
           ))}
           {selectedContactId &&
             !conversationsPending &&
-            conversations.length === 0 && (
+            conversations.length === 0 &&
+            !isCurator && (
               <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                 <p className="text-xs">暂无会话记录</p>
                 <p className="mt-1 text-xs">选择联系人开始聊天</p>

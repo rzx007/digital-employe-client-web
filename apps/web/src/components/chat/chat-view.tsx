@@ -3,8 +3,10 @@ import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { useConversationsQuery } from "@/hooks/use-chat-queries"
+import { CURATOR_PINNED_CONVERSATION_ID } from "@/lib/constants"
 import { useChatStore } from "@/stores/chat-store"
 
+import { CuratorView } from "./curator-view"
 import { ConversationChatView } from "./chat-conversation-view"
 import { DraftChatView } from "./chat-draft-view"
 
@@ -30,9 +32,21 @@ export function ChatView({
     (conversation) => String(conversation.id) === String(selectedConversationId)
   )
 
-  // React.useEffect(() => {
-  //   console.log("selectedContactId", isDraftConversation, selectedConversationId)
-  // }, [selectedConversationId])
+  const isCuratorMonitorView =
+    contact?.type === "curator" &&
+    selectedConversationId === CURATOR_PINNED_CONVERSATION_ID
+
+  if (isCuratorMonitorView) {
+    return (
+      <CuratorView
+        contact={contact}
+        onOpenContacts={onOpenContacts}
+        onOpenConversations={onOpenConversations}
+        className={cn(className)}
+        {...props}
+      />
+    )
+  }
 
   return isDraftConversation || !selectedConversationId ? (
     <DraftChatView

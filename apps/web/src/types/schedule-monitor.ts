@@ -57,9 +57,23 @@ export interface EmployeeScheduleTask {
   updated_at: string
 }
 
+export interface SkillResponse {
+  messages?: string[]
+  [key: string]: unknown
+}
+
+export interface TaskExecutionOutput {
+  scene?: string
+  prompt?: string
+  skill_name?: string
+  response?: SkillResponse
+  [key: string]: unknown
+}
+
 export interface TaskExecution {
   id: number
   task_id: number
+  employee_name: string
   workspace_id: number
   employee_id: number
   skill_id: number
@@ -68,7 +82,7 @@ export interface TaskExecution {
   run_result: string | null
   error_message: string | null
   input: Record<string, unknown>
-  output: Record<string, unknown>
+  output: TaskExecutionOutput
   started_at: string
   ended_at: string | null
   duration_ms: number | null
