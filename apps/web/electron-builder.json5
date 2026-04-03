@@ -1,7 +1,7 @@
 // @see https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.ballstatsv2.app",
+  "appId": "com.digital-employee.app",
   "asar": true,
   "productName": "DigitalEmployee",
   "directories": {
@@ -15,8 +15,14 @@
   "files": [
     "dist",
     "dist-electron",
-    "build",
     "build"
+  ],
+  "extraResources": [
+    {
+      "from": "py-server",
+      "to": "py-server",
+      "filter": ["**/*", "!data/**", "!logs/**", "!tmp/**"]
+    }
   ],
   "mac": {
     "target": [

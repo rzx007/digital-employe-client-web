@@ -8,7 +8,13 @@ const defaultHeaders: HeadersInit = {
   "Content-Type": "application/json",
 }
 
-const baseURL = import.meta.env.DEV ? "/actus" : "http://localhost:58000"
+const isElectron = !!(typeof window !== "undefined" && window.electronApi)
+
+const baseURL = isElectron
+  ? "http://localhost:58000"
+  : import.meta.env.DEV
+    ? "/actus"
+    : "http://localhost:58000"
 
 const headers = { ...defaultHeaders }
 
@@ -50,10 +56,10 @@ export const request = ofetch.create({
   async onRequest(ctx) {
     const token = getAuthToken()
     if (token && ctx.options?.headers) {
-      ; (ctx.options.headers as Headers).set("Authorization", `Bearer ${token}`)
+      ;(ctx.options.headers as Headers).set("Authorization", `Bearer ${token}`)
     }
   },
-  async onRequestError() { },
-  async onResponse() { },
-  async onResponseError() { },
+  async onRequestError() {},
+  async onResponse() {},
+  async onResponseError() {},
 })

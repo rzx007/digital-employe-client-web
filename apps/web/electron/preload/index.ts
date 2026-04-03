@@ -1,7 +1,7 @@
-import { ipcRenderer, contextBridge } from 'electron'
+import { ipcRenderer, contextBridge } from "electron"
 
 // --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
+contextBridge.exposeInMainWorld("ipcRenderer", {
   on(...args: Parameters<typeof ipcRenderer.on>) {
     const [channel, listener] = args
     return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
@@ -18,18 +18,37 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     const [channel, ...omit] = args
     return ipcRenderer.invoke(channel, ...omit)
   },
+})
 
-  // You can expose other APTs you need here.
-  // ...
+contextBridge.exposeInMainWorld("electronApi", {
+  getBackendStatus: () => ipcRenderer.invoke("get-backend-status"),
+  getBackendPort: () => ipcRenderer.invoke("get-backend-port"),
+  onBackendError: (callback: (message: string) => void) => {
+    ipcRenderer.on("backend-error", (_, message) => callback(message))
+    return () => ipcRenderer.removeAllListeners("backend-error")
+  },
+  onBackendPort: (callback: (port: number) => void) => {
+    ipcRenderer.on("backend-port", (_, port) => callback(port))
+    return () => ipcRenderer.removeAllListeners("backend-port")
+  },
+  quitApp: () => ipcRenderer.invoke("quit-app"),
+  minimizeWindow: () => ipcRenderer.invoke("minimize-window"),
+  closeWindow: () => ipcRenderer.invoke("close-window"),
+  maximizeWindow: () => ipcRenderer.invoke("maximize-window"),
+  isMaximized: () => ipcRenderer.invoke("is-maximized"),
+  setForceQuit: (value: boolean) => ipcRenderer.invoke("set-force-quit", value),
+  getPlatform: () => ipcRenderer.invoke("get-platform"),
 })
 
 // --------- Preload scripts loading ---------
-function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
-  return new Promise(resolve => {
+function domReady(
+  condition: DocumentReadyState[] = ["complete", "interactive"]
+) {
+  return new Promise((resolve) => {
     if (condition.includes(document.readyState)) {
       resolve(true)
     } else {
-      document.addEventListener('readystatechange', () => {
+      document.addEventListener("readystatechange", () => {
         if (condition.includes(document.readyState)) {
           resolve(true)
         }
@@ -40,12 +59,12 @@ function domReady(condition: DocumentReadyState[] = ['complete', 'interactive'])
 
 const safeDOM = {
   append(parent: HTMLElement, child: HTMLElement) {
-    if (!Array.from(parent.children).find(e => e === child)) {
+    if (!Array.from(parent.children).find((e) => e === child)) {
       return parent.appendChild(child)
     }
   },
   remove(parent: HTMLElement, child: HTMLElement) {
-    if (Array.from(parent.children).find(e => e === child)) {
+    if (Array.from(parent.children).find((e) => e === child)) {
       return parent.removeChild(child)
     }
   },
@@ -86,12 +105,12 @@ function useLoading() {
   z-index: 9;
 }
     `
-  const oStyle = document.createElement('style')
-  const oDiv = document.createElement('div')
+  const oStyle = document.createElement("style")
+  const oDiv = document.createElement("div")
 
-  oStyle.id = 'app-loading-style'
+  oStyle.id = "app-loading-style"
   oStyle.innerHTML = styleContent
-  oDiv.className = 'app-loading-wrap'
+  oDiv.className = "app-loading-wrap"
   oDiv.innerHTML = `<div class="${className}"><div></div></div>`
 
   return {
@@ -108,11 +127,11 @@ function useLoading() {
 
 // ----------------------------------------------------------------------
 
-const { appendLoading, removeLoading } = useLoading()
-domReady().then(appendLoading)
+// const { appendLoading, removeLoading } = useLoading()
+// domReady().then(appendLoading)
 
-window.onmessage = (ev) => {
-  ev.data.payload === 'removeLoading' && removeLoading()
-}
+// window.onmessage = (ev) => {
+//   ev.data.payload === "removeLoading" && removeLoading()
+// }
 
-setTimeout(removeLoading, 4999)
+// setTimeout(removeLoading, 4999)

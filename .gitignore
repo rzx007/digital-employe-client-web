@@ -11,6 +11,7 @@ node_modules
 .env.production.local
 .history/*
 apps/simple-agents/data/*
+apps/web/py-server/*
 
 # Testing
 coverage

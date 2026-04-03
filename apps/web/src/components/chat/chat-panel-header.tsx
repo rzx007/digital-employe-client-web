@@ -136,14 +136,22 @@ export function ChatPanelHeader({
               <Separator orientation="vertical" className="h-5 self-center" />
             </>
           )}
-          <h3 className="min-w-0 flex-1 truncate text-sm font-medium">
+          <h3
+            className="max-w-[200px] min-w-0 flex-1 truncate text-sm font-medium"
+            title={title}
+          >
             {title}
           </h3>
         </div>
 
         <div className="flex items-center gap-1">
           {onNewConversation && (
-            <Button title="新建对话" variant="ghost" size="icon-sm" onClick={onNewConversation}>
+            <Button
+              title="新建对话"
+              variant="ghost"
+              size="icon-sm"
+              onClick={onNewConversation}
+            >
               <IconMessage2Plus className="size-4" />
             </Button>
           )}
