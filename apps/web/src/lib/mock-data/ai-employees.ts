@@ -13,7 +13,7 @@ export interface AIEmployee {
 
 export type ContactType = "curator" | "employee" | "group"
 
-/** 主理人：独立身份，不属于员工列表 */
+/** 总管助手：独立身份，不属于员工列表 */
 export interface CuratorProfile {
   id: string
   name: string
@@ -37,7 +37,7 @@ export interface Contact {
 /** 常驻默认会话入口，通讯录置顶，独立于群聊与其它联系人 */
 export const PRIMARY_CURATOR: CuratorProfile = {
   id: "curator-primary",
-  name: "主理人",
+  name: "总管助手",
   role: "数字员工统筹",
   status: "online",
   avatar: createDiceBearAvatar("Curator"),
@@ -136,7 +136,7 @@ export const getEmployeeById = (id: string): AIEmployee | undefined => {
   return AI_EMPLOYEES.find((emp) => emp.id === id)
 }
 
-/** 消息发送方等场景：员工或主理人 */
+/** 消息发送方等场景：员工或总管助手 */
 export function getPeerProfileById(
   id: string
 ): AIEmployee | CuratorProfile | undefined {
