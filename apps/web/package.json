@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:app": "vite --mode electron",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "build:app": "vite build --mode electron && electron-builder",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
