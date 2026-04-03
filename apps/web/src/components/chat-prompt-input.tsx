@@ -134,7 +134,7 @@ export function ChatPromptInput({
   onSubmit,
   status,
   disabled,
-  placeholder = "请输入任务，然后交给 Aios Agent",
+  placeholder = "请输入任务，然后交给 Agent",
   size = "default",
   className,
   slashCommands,
@@ -168,9 +168,8 @@ export function ChatPromptInput({
             value={value}
             placeholder={placeholder}
             commands={slashCommands}
-            className={`resize-none placeholder:text-muted-foreground/60 ${
-              isCompact ? "min-h-[60px] text-base" : "min-h-28 text-lg"
-            }`}
+            className={`resize-none placeholder:text-muted-foreground/60 ${isCompact ? "min-h-[60px] text-base" : "min-h-28 text-lg"
+              }`}
           />
         </PromptInputBody>
         <PromptInputFooter>
@@ -182,16 +181,16 @@ export function ChatPromptInput({
               </PromptInputActionMenuContent>
             </PromptInputActionMenu>
 
-            <PromptInputButton variant="ghost" size="icon-sm">
+            {/* <PromptInputButton variant="ghost" size="icon-sm">
               <IconMap className="h-4 w-4" />
-            </PromptInputButton>
+            </PromptInputButton> */}
 
-            <PromptInputButton variant="ghost" size="icon-sm">
+            {/* <PromptInputButton variant="ghost" size="icon-sm">
               <IconSettings className="h-4 w-4" />
-            </PromptInputButton>
+            </PromptInputButton> */}
           </PromptInputTools>
           <PromptInputTools>
-            <ModelSelector
+            {/* <ModelSelector
               onOpenChange={setModelSelectorOpen}
               open={modelSelectorOpen}
             >
@@ -218,7 +217,7 @@ export function ChatPromptInput({
                   </ModelSelectorGroup>
                 </ModelSelectorList>
               </ModelSelectorContent>
-            </ModelSelector>
+            </ModelSelector> */}
             <PromptInputSubmit
               disabled={disabled}
               status={status}

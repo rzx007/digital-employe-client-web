@@ -211,7 +211,7 @@ export function ContactItem({
           className={cn(
             "relative cursor-pointer transition-transform hover:scale-105",
             isSelected &&
-              "rounded-md ring-1 ring-ring ring-offset-1 ring-offset-primary",
+              "rounded-md ring-1 ring-primary ring-offset-1 ring-offset-primary",
             className
           )}
           {...props}
@@ -230,8 +230,8 @@ export function ContactItem({
     <>
       <div
         className={cn(
-          "group relative flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
-          isSelected && "bg-accent text-accent-foreground",
+          "group relative flex cursor-pointer items-center gap-2 rounded-md p-2 text-xs transition-colors hover:bg-primary/10 hover:text-foreground",
+          isSelected && "bg-primary/15 text-primary",
           className
         )}
         {...props}

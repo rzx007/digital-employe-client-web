@@ -1,11 +1,10 @@
-import { useEffect, type ComponentProps } from "react"
+import { type ComponentProps } from "react"
 import { IconCirclePlus, IconPinFilled } from "@tabler/icons-react"
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@workspace/ui/components/button"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { cn } from "@workspace/ui/lib/utils"
 import { useConversationsQuery } from "@/hooks/use-chat-queries"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { CURATOR_PINNED_CONVERSATION_ID } from "@/lib/constants"
 import { useChatStore } from "@/stores/chat-store"
 import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
@@ -41,91 +40,31 @@ function CuratorPinnedItem({
 
 export function ConversationList({
   className,
+  hideNewButton,
+  onSelectConversation,
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & {
+  hideNewButton?: boolean
+  onSelectConversation?: () => void
+}) {
   const {
     selectedContactId,
     selectedConversationId,
-    isDraftConversation,
     setDraftConversation,
     setSelectedConversationId,
   } = useChatStore(
     useShallow((state) => ({
       selectedContactId: state.selectedContactId,
       selectedConversationId: state.selectedConversationId,
-      isDraftConversation: state.isDraftConversation,
       setDraftConversation: state.setDraftConversation,
       setSelectedConversationId: state.setSelectedConversationId,
     }))
   )
   const selectedContact = useChatStore((s) => s.getSelectedContact())
-  const isMobile = useIsMobile()
   const isCurator = selectedContact?.type === "curator"
 
-  const {
-    data: conversations = [],
-    isSuccess: conversationsQuerySuccess,
-    isPending: conversationsPending,
-  } = useConversationsQuery(selectedContactId, selectedContact)
-
-  useEffect(() => {
-    if (!selectedContactId) return
-
-    if (isCurator) {
-      if (isDraftConversation) {
-        return
-      }
-      if (selectedConversationId !== CURATOR_PINNED_CONVERSATION_ID) {
-        if (conversations.length === 0) {
-          setSelectedConversationId(CURATOR_PINNED_CONVERSATION_ID)
-          setDraftConversation(false)
-          return
-        }
-        const hasSelected = conversations.some(
-          (conversation) => conversation.id === selectedConversationId
-        )
-        if (!hasSelected) {
-          setSelectedConversationId(CURATOR_PINNED_CONVERSATION_ID)
-          setDraftConversation(false)
-        }
-      }
-      return
-    }
-
-    if (!conversationsQuerySuccess) return
-
-    if (conversations.length === 0) {
-      if (selectedConversationId != null) {
-        setSelectedConversationId(null)
-        return
-      }
-
-      if (!isDraftConversation) {
-        setDraftConversation(true)
-      }
-      return
-    }
-
-    if (isDraftConversation) {
-      return
-    }
-
-    const hasSelected = conversations.some(
-      (conversation) => conversation.id === selectedConversationId
-    )
-    if (!hasSelected) {
-      setSelectedConversationId(conversations[0].id)
-    }
-  }, [
-    conversations,
-    conversationsQuerySuccess,
-    isCurator,
-    isDraftConversation,
-    selectedContactId,
-    selectedConversationId,
-    setDraftConversation,
-    setSelectedConversationId,
-  ])
+  const { data: conversations = [], isPending: conversationsPending } =
+    useConversationsQuery(selectedContactId, selectedContact)
 
   const isPinnedSelected =
     isCurator && selectedConversationId === CURATOR_PINNED_CONVERSATION_ID
@@ -133,8 +72,7 @@ export function ConversationList({
   return (
     <div
       className={cn(
-        "flex flex-col border-r bg-muted/50 transition-all duration-300",
-        isMobile ? "h-full w-full" : "w-[275px] lg:w-[295px]",
+        "flex h-full w-full flex-col border-r bg-muted/50 transition-all duration-300",
         className
       )}
       {...props}
@@ -184,17 +122,20 @@ export function ConversationList({
         )}
       </div>
 
-      <Button
-        className="m-2"
-        variant="outline"
-        onClick={() => {
-          setDraftConversation(true)
-          setSelectedConversationId(null)
-        }}
-      >
-        <IconCirclePlus className="size-4" />
-        新建会话
-      </Button>
+      {!hideNewButton && (
+        <Button
+          className="m-2"
+          variant="outline"
+          onClick={() => {
+            setDraftConversation(true)
+            setSelectedConversationId(null)
+            onSelectConversation?.()
+          }}
+        >
+          <IconCirclePlus className="size-4" />
+          新建会话
+        </Button>
+      )}
 
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-2">
@@ -204,6 +145,7 @@ export function ConversationList({
               onClick={() => {
                 setDraftConversation(false)
                 setSelectedConversationId(CURATOR_PINNED_CONVERSATION_ID)
+                onSelectConversation?.()
               }}
             />
           )}
@@ -221,6 +163,7 @@ export function ConversationList({
               onClick={() => {
                 setDraftConversation(false)
                 setSelectedConversationId(conversation.id)
+                onSelectConversation?.()
               }}
             />
           ))}

@@ -21,12 +21,14 @@ export function DraftChatView({
   contact,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: ComponentProps<"div"> & {
   contact?: ChatViewContact
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const selectedContactId = useChatStore((s) => s.selectedContactId)
   const selectedConversationId = useChatStore((s) => s.selectedConversationId)
@@ -36,7 +38,9 @@ export function DraftChatView({
   )
   const selectedContact = useChatStore((s) => s.getSelectedContact())
   const [inputValue, setInputValue] = useState("")
-  const [command, setCommand] = useState<{ id: string; title: string } | null>(null)
+  const [command, setCommand] = useState<{ id: string; title: string } | null>(
+    null
+  )
   const createdConversationIdRef = useRef<string | number | null>(null)
   const createConversationMutation = useCreateConversationMutation()
 
@@ -106,7 +110,7 @@ export function DraftChatView({
         }
 
         setInputValue("")
-        
+
         await sendMessage(
           {
             text: messageText,
@@ -115,7 +119,7 @@ export function DraftChatView({
             body: {
               attachments: message.files,
               conversationId,
-              skill: command?.title ?? ''
+              skill: command?.title ?? "",
             },
           }
         )
@@ -150,6 +154,7 @@ export function DraftChatView({
       onSend={handleSendMessage}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
+      onNewConversation={onNewConversation}
       className={className}
       {...props}
     />

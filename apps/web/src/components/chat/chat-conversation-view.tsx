@@ -15,6 +15,7 @@ export function ConversationChatView({
   conversationId,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -23,9 +24,13 @@ export function ConversationChatView({
   conversationId: string | number
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const [inputValue, setInputValue] = React.useState("")
-  const [command, setCommand] = React.useState<{ id: string; title: string } | null>(null)
+  const [command, setCommand] = React.useState<{
+    id: string
+    title: string
+  } | null>(null)
   const previousSessionIdRef = React.useRef<string | null>(null)
 
   const { data: storedMessages = [] } = useMessagesQuery(conversationId)
@@ -44,7 +49,7 @@ export function ConversationChatView({
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
       })
-    }
+    },
   })
 
   React.useEffect(() => {
@@ -117,7 +122,7 @@ export function ConversationChatView({
             body: {
               attachments: message.files,
               conversationId,
-              skill: command?.title ?? ''
+              skill: command?.title ?? "",
             },
           }
         )
@@ -155,6 +160,7 @@ export function ConversationChatView({
       onSend={handleSendMessage}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
+      onNewConversation={onNewConversation}
       className={className}
       {...props}
     />

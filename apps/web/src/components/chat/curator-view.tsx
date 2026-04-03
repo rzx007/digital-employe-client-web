@@ -2,7 +2,9 @@ import * as React from "react"
 import {
   IconChevronDown,
   IconChevronRight,
+  IconCirclePlus,
   IconExternalLink,
+  IconHistory,
   IconMaximize,
   IconMinimize,
 } from "@tabler/icons-react"
@@ -303,10 +305,14 @@ function ExecutionCard({ execution }: { execution: TaskExecution }) {
 
 export function CuratorView({
   contact,
+  onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
   contact?: ChatViewContact
+  onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const { data: executions = [], isPending } = useAllTaskExecutions()
   const contacts = useChatStore((s) => s.contacts)
@@ -346,7 +352,7 @@ export function CuratorView({
       className={cn("flex flex-1 flex-col bg-background", className)}
       {...props}
     >
-      <div className="flex items-center border-b px-6 py-3">
+      <div className="flex items-center justify-between border-b px-6 py-3">
         {contact?.type === "curator" && (
           <div className="flex items-center gap-3">
             <EmployeeContactAvatar
@@ -363,6 +369,22 @@ export function CuratorView({
             </div>
           </div>
         )}
+        <div className="flex items-center gap-1">
+          {onNewConversation && (
+            <Button variant="ghost" size="icon-sm" onClick={onNewConversation}>
+              <IconCirclePlus className="size-4" />
+            </Button>
+          )}
+          {onOpenConversations && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onOpenConversations}
+            >
+              <IconHistory className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">

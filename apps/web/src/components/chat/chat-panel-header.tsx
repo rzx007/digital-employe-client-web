@@ -5,8 +5,9 @@ import { useShallow } from "zustand/react/shallow"
 import {
   IconCalendar,
   IconArchive,
+  IconMessage2Plus,
   IconDots,
-  IconMessages,
+  IconHistory,
   IconPencil,
   IconTrash,
   IconUsers,
@@ -34,7 +35,9 @@ import { useDeleteConversationMutation } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useChatStore } from "@/stores/chat-store"
 import { useMonitorStore } from "@/stores/monitor-store"
+import { Separator } from "@workspace/ui/components/separator"
 import type { ChatViewContact } from "./chat-view-shared"
+import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 
 interface ChatPanelHeaderProps {
   title: string
@@ -42,6 +45,7 @@ interface ChatPanelHeaderProps {
   contact?: ChatViewContact
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }
 
 export function ChatPanelHeader({
@@ -50,6 +54,7 @@ export function ChatPanelHeader({
   contact,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
 }: ChatPanelHeaderProps) {
   const isMobile = useIsMobile()
   const [menuOpen, setMenuOpen] = React.useState(false)
@@ -104,37 +109,70 @@ export function ChatPanelHeader({
                   <IconUsers className="size-4" />
                 </Button>
               )}
-              {onOpenConversations && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={onOpenConversations}
-                >
-                  <IconMessages className="size-4" />
-                </Button>
+            </>
+          )}
+          {contact && (
+            <>
+              {contact.type === "group" ? (
+                <GroupMembersAvatar
+                  participants={contact.group?.participants}
+                  className="h-8 w-8"
+                />
+              ) : contact.type === "curator" ? (
+                <EmployeeContactAvatar
+                  name={contact.curator?.name}
+                  avatar={contact.curator?.avatar}
+                  status={contact.curator?.status}
+                  showStatus
+                />
+              ) : (
+                <EmployeeContactAvatar
+                  name={contact.employee?.name}
+                  avatar={contact.employee?.avatar}
+                  status={contact.employee?.status}
+                  showStatus
+                />
               )}
+              <Separator orientation="vertical" className="h-5 self-center" />
             </>
           )}
           <h3 className="min-w-0 flex-1 truncate text-sm font-medium">
             {title}
           </h3>
         </div>
-        {conversationId && (
-          <div className="flex items-center gap-1">
-            {contact?.type === "employee" && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() =>
-                  openMonitor(
-                    contact.employee?.id ?? "",
-                    contact.employee?.name ?? ""
-                  )
-                }
-              >
-                <IconCalendar className="size-4" />
-              </Button>
-            )}
+
+        <div className="flex items-center gap-1">
+          {onNewConversation && (
+            <Button title="新建对话" variant="ghost" size="icon-sm" onClick={onNewConversation}>
+              <IconMessage2Plus className="size-4" />
+            </Button>
+          )}
+          {onOpenConversations && (
+            <Button
+              title="历史话列表"
+              variant="ghost"
+              size="icon-sm"
+              onClick={onOpenConversations}
+            >
+              <IconHistory className="size-4" />
+            </Button>
+          )}
+          {contact?.type === "employee" && (
+            <Button
+              title="监控"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() =>
+                openMonitor(
+                  contact.employee?.id ?? "",
+                  contact.employee?.name ?? ""
+                )
+              }
+            >
+              <IconCalendar className="size-4" />
+            </Button>
+          )}
+          {conversationId && (
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-sm">
@@ -160,8 +198,8 @@ export function ChatPanelHeader({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>

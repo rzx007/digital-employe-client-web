@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useShallow } from "zustand/react/shallow"
 
 import { Sheet, SheetContent } from "@workspace/ui/components/sheet"
 import { cn } from "@workspace/ui/lib/utils"
@@ -7,6 +8,7 @@ import { MonitorPanel } from "@/components/schedule-monitor"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useArtifactStore } from "@/stores/artifact-store"
 import { useMonitorStore } from "@/stores/monitor-store"
+import { useChatStore } from "@/stores/chat-store"
 import { ContactsSidebar } from "./contacts-sidebar"
 import { ConversationList } from "./conversation-list"
 import { ChatView } from "./chat-view"
@@ -18,6 +20,17 @@ export function ChatLayout({
   const [showContacts, setShowContacts] = React.useState(false)
   const [showConversations, setShowConversations] = React.useState(false)
   const isMobile = useIsMobile()
+  const { setDraftConversation, setSelectedConversationId } = useChatStore(
+    useShallow((state) => ({
+      setDraftConversation: state.setDraftConversation,
+      setSelectedConversationId: state.setSelectedConversationId,
+    }))
+  )
+
+  const handleNewConversation = () => {
+    setDraftConversation(true)
+    setSelectedConversationId(null)
+  }
   const {
     activeArtifactId,
     artifacts,
@@ -54,12 +67,12 @@ export function ChatLayout({
   return (
     <div className={cn("relative flex h-full", className)} {...props}>
       <ContactsSidebar className="hidden md:flex" />
-      <ConversationList className="hidden md:flex" />
 
       <div className="flex min-w-0 flex-1">
         <ChatView
           onOpenContacts={() => setShowContacts(true)}
           onOpenConversations={() => setShowConversations(true)}
+          onNewConversation={handleNewConversation}
           className="min-w-0 flex-1"
         />
 
@@ -76,7 +89,7 @@ export function ChatLayout({
           </div>
         )}
         {isMonitorOpen && !isMonitorFullscreen && !isMobile && (
-          <div className="hidden w-[380px] border-l bg-muted/20 p-2 sm:block 2xl:w-[520px] lg:p-3 transition-all duration-100">
+          <div className="hidden w-[380px] border-l bg-muted/20 p-2 transition-all duration-100 sm:block lg:p-3 2xl:w-[520px]">
             <MonitorPanel
               isOpen={isMonitorOpen}
               isFullscreen={false}
@@ -95,8 +108,11 @@ export function ChatLayout({
       </Sheet>
 
       <Sheet open={showConversations} onOpenChange={setShowConversations}>
-        <SheetContent side="left" className="w-64 p-0 md:hidden">
-          <ConversationList className="h-full w-full border-r-0" />
+        <SheetContent side="right" className="w-[300px] p-0">
+          <ConversationList
+            className="h-full w-full border-r-0"
+            onSelectConversation={() => setShowConversations(false)}
+          />
         </SheetContent>
       </Sheet>
 

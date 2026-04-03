@@ -85,6 +85,7 @@ export function ChatPanel({
   onSend,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -102,6 +103,7 @@ export function ChatPanel({
   onSend: (message: PromptInputMessage) => Promise<void>
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const isMobile = useIsMobile()
   const { addArtifact, openArtifact, setFullscreen } = useArtifactStore()
@@ -163,25 +165,20 @@ export function ChatPanel({
     >
       {contact && (
         <>
-          {!isDraftMode && (
-            <ChatPanelHeader
-              title={title}
-              conversationId={conversationId}
-              contact={contact}
-              onOpenContacts={onOpenContacts}
-              onOpenConversations={onOpenConversations}
-            />
-          )}
+          <ChatPanelHeader
+            title={title}
+            conversationId={conversationId}
+            contact={contact}
+            onOpenContacts={onOpenContacts}
+            onOpenConversations={onOpenConversations}
+            onNewConversation={onNewConversation}
+          />
           <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
               {isDraftMode ? (
                 <ConversationEmptyState className="py-16">
                   <div className="flex flex-col items-center gap-6">
-                    <img
-                      src={logo}
-                      alt="Logo"
-                      className="size-12 opacity-80"
-                    />
+                    <img src={logo} alt="Logo" className="size-12 opacity-80" />
                     <div className="space-y-3 text-center">
                       <h2 className="text-md font-semibold tracking-tight">
                         数字员工智能助手
@@ -368,7 +365,7 @@ export function ChatPanel({
             <ConversationScrollButton />
           </Conversation>
 
-          <div className="border-t p-4">
+          <div className="border-none p-4">
             <ChatPromptInput
               value={inputValue}
               onChange={onInputChange}
@@ -376,7 +373,7 @@ export function ChatPanel({
               status={status}
               disabled={isSubmitDisabled}
               size="compact"
-              className="w-full overflow-hidden"
+              className="w-full overflow-hidden shadow-xl"
               slashCommands={slashCommands}
             />
             {error && (
