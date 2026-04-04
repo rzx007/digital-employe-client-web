@@ -17,6 +17,7 @@ export function ConversationChatView({
   initialMessages,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -26,6 +27,7 @@ export function ConversationChatView({
   initialMessages: UIMessage[]
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const [inputValue, setInputValue] = React.useState("")
   const [command, setCommand] = React.useState<{
@@ -168,6 +170,7 @@ export function ConversationChatView({
         onStopStream={stop}
         onOpenContacts={onOpenContacts}
         onOpenConversations={onOpenConversations}
+        onNewConversation={onNewConversation}
         className={className}
         {...props}
       />

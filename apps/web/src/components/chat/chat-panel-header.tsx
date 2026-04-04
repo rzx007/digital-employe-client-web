@@ -3,11 +3,11 @@ import { toast } from "sonner"
 import { useShallow } from "zustand/react/shallow"
 
 import {
-  IconActivity,
   IconCalendar,
+  IconCirclePlus,
   IconArchive,
   IconDots,
-  IconMessages,
+  IconHistory,
   IconPencil,
   IconTrash,
   IconUsers,
@@ -30,11 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
+import { Separator } from "@workspace/ui/components/separator"
 
 import { useDeleteConversationMutation } from "@/hooks/use-chat-queries"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useChatStore } from "@/stores/chat-store"
 import { useMonitorStore } from "@/stores/monitor-store"
+import { EmployeeContactAvatar, GroupMembersAvatar } from "./contact-avatars"
 import type { ChatViewContact } from "./chat-view-shared"
 
 interface ChatPanelHeaderProps {
@@ -43,6 +45,7 @@ interface ChatPanelHeaderProps {
   contact?: ChatViewContact
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }
 
 export function ChatPanelHeader({
@@ -51,6 +54,7 @@ export function ChatPanelHeader({
   contact,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
 }: ChatPanelHeaderProps) {
   const isMobile = useIsMobile()
   const [menuOpen, setMenuOpen] = React.useState(false)
@@ -105,59 +109,93 @@ export function ChatPanelHeader({
                   <IconUsers className="size-4" />
                 </Button>
               )}
-              {onOpenConversations && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={onOpenConversations}
-                >
-                  <IconMessages className="size-4" />
-                </Button>
+            </>
+          )}
+          {contact && (
+            <>
+              {contact.type === "group" ? (
+                <GroupMembersAvatar
+                  participants={contact.group?.participants}
+                  className="h-7 w-7"
+                />
+              ) : contact.type === "curator" ? (
+                <EmployeeContactAvatar
+                  name={contact.curator?.name}
+                  avatar={contact.curator?.avatar}
+                  status={contact.curator?.status}
+                  avatarClassName="h-7 w-7"
+                  fallbackClassName="text-[10px]"
+                />
+              ) : (
+                <EmployeeContactAvatar
+                  name={contact.employee?.name}
+                  avatar={contact.employee?.avatar}
+                  status={contact.employee?.status}
+                  avatarClassName="h-7 w-7"
+                  fallbackClassName="text-[10px]"
+                />
               )}
+              <Separator orientation="vertical" className="h-5" />
             </>
           )}
           <h3 className="min-w-0 flex-1 truncate text-sm font-medium">
             {title}
           </h3>
         </div>
-        {conversationId && (
-          <div className="flex items-center gap-1">
-            {contact?.type === "employee" && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => openMonitor(contact.employee?.id ?? "")}
-              >
-                <IconCalendar className="size-4" />
-              </Button>
-            )}
-            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <IconDots className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem>
-                  <IconPencil className="text-muted-foreground" />
-                  <span>重命名</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <IconArchive className="text-muted-foreground" />
-                  <span>归档</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={handleDeleteClick}
+        <div className="flex items-center gap-1">
+          {onNewConversation && (
+            <Button variant="ghost" size="icon-sm" onClick={onNewConversation}>
+              <IconCirclePlus className="size-4" />
+            </Button>
+          )}
+          {onOpenConversations && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onOpenConversations}
+            >
+              <IconHistory className="size-4" />
+            </Button>
+          )}
+          {conversationId && (
+            <>
+              {contact?.type === "employee" && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => openMonitor(contact.employee?.id ?? "")}
                 >
-                  <IconTrash />
-                  <span>删除</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+                  <IconCalendar className="size-4" />
+                </Button>
+              )}
+              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm">
+                    <IconDots className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem>
+                    <IconPencil className="text-muted-foreground" />
+                    <span>重命名</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <IconArchive className="text-muted-foreground" />
+                    <span>归档</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={handleDeleteClick}
+                  >
+                    <IconTrash />
+                    <span>删除</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+        </div>
       </div>
 
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>

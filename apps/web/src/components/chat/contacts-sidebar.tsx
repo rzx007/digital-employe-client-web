@@ -46,6 +46,8 @@ export function ContactsSidebar({
     }
   )
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const isMobile = useIsMobile()
+  const effectiveCollapsed = isMobile ? false : isCollapsed
   const { setContacts, selectedContactId, setSelectedContactId } = useChatStore(
     useShallow((state) => ({
       setContacts: state.setContacts,
@@ -54,7 +56,6 @@ export function ContactsSidebar({
     }))
   )
   const { data: apiContacts } = useContactsQuery()
-  const isMobile = useIsMobile()
 
   const contacts = React.useMemo(
     () => [CURATOR_CONTACT, ...(apiContacts ?? [])],
@@ -141,7 +142,7 @@ export function ContactsSidebar({
       <div
         className={cn(
           "flex h-full flex-col border-r bg-muted/50 transition-all duration-300",
-          isCollapsed ? "w-14" : isMobile ? "w-full" : "xl:w-64 w-52",
+          effectiveCollapsed ? "w-14" : isMobile ? "w-full" : "w-52 xl:w-64",
           className
         )}
         {...props}
@@ -149,16 +150,16 @@ export function ContactsSidebar({
         <div
           className={cn(
             "flex shrink-0 items-center border-b p-4 wrap-break-word",
-            isCollapsed ? "flex-col space-y-4" : "justify-between"
+            effectiveCollapsed ? "flex-col space-y-4" : "justify-between"
           )}
         >
-          {!isCollapsed && (
+          {!effectiveCollapsed && (
             <span className="text-lg font-semibold">员工列表</span>
           )}
           <div
             className={cn(
               "flex items-center",
-              isCollapsed ? "w-full flex-col space-y-4" : ""
+              effectiveCollapsed ? "w-full flex-col space-y-4" : ""
             )}
           >
             <Button
@@ -182,15 +183,15 @@ export function ContactsSidebar({
         </div>
 
         <ScrollArea
-          className={cn("flex-1 overflow-y-auto", isCollapsed && "py-2")}
+          className={cn("flex-1 overflow-y-auto", effectiveCollapsed && "py-2")}
         >
-          {isCollapsed ? (
+          {effectiveCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-2 py-0.5">
               {curatorContacts.map((contact) => (
                 <ContactItem
                   key={contact.curator?.id}
                   contact={contact}
-                  isCollapsed={isCollapsed}
+                  isCollapsed={effectiveCollapsed}
                 />
               ))}
 
@@ -200,7 +201,7 @@ export function ContactsSidebar({
                 <ContactItem
                   key={contact.group?.id}
                   contact={contact}
-                  isCollapsed={isCollapsed}
+                  isCollapsed={effectiveCollapsed}
                 />
               ))}
 
@@ -210,7 +211,7 @@ export function ContactsSidebar({
                 <ContactItem
                   key={contact.employee?.id}
                   contact={contact}
-                  isCollapsed={isCollapsed}
+                  isCollapsed={effectiveCollapsed}
                 />
               ))}
             </div>
@@ -224,7 +225,7 @@ export function ContactsSidebar({
                   <ContactItem
                     key={contact.curator?.id}
                     contact={contact}
-                    isCollapsed={isCollapsed}
+                    isCollapsed={effectiveCollapsed}
                   />
                 ))}
               </div>
@@ -238,7 +239,7 @@ export function ContactsSidebar({
                     <ContactItem
                       key={contact.group?.id}
                       contact={contact}
-                      isCollapsed={isCollapsed}
+                      isCollapsed={effectiveCollapsed}
                     />
                   ))}
                 </div>
@@ -253,7 +254,7 @@ export function ContactsSidebar({
                     <ContactItem
                       key={contact.employee?.id}
                       contact={contact}
-                      isCollapsed={isCollapsed}
+                      isCollapsed={effectiveCollapsed}
                     />
                   ))}
                 </div>
@@ -272,7 +273,7 @@ export function ContactsSidebar({
         <div
           className={cn(
             "flex border-t p-2",
-            isCollapsed
+            effectiveCollapsed
               ? "flex-col items-center gap-2"
               : "items-center justify-between"
           )}
@@ -289,10 +290,10 @@ export function ContactsSidebar({
             variant="ghost"
             size="icon-sm"
             className="h-8 w-8"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            title={isCollapsed ? "展开" : "折叠"}
+            onClick={() => setIsCollapsed(!effectiveCollapsed)}
+            title={effectiveCollapsed ? "展开" : "折叠"}
           >
-            {isCollapsed ? (
+            {effectiveCollapsed ? (
               <IconChevronRight className="size-4" />
             ) : (
               <IconChevronLeft className="size-4" />

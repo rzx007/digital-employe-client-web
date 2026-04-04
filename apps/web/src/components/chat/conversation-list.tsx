@@ -1,4 +1,4 @@
-import { useEffect, type ComponentProps } from "react"
+import { type ComponentProps } from "react"
 import { IconCirclePlus } from "@tabler/icons-react"
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@workspace/ui/components/button"
@@ -12,74 +12,35 @@ import { ConversationItem } from "./conversation-item"
 
 export function ConversationList({
   className,
+  hideNewButton,
+  onSelectConversation,
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & {
+  hideNewButton?: boolean
+  onSelectConversation?: () => void
+}) {
   const {
     selectedContactId,
     selectedConversationId,
-    isDraftConversation,
     setDraftConversation,
     setSelectedConversationId,
   } = useChatStore(
     useShallow((state) => ({
       selectedContactId: state.selectedContactId,
       selectedConversationId: state.selectedConversationId,
-      isDraftConversation: state.isDraftConversation,
       setDraftConversation: state.setDraftConversation,
       setSelectedConversationId: state.setSelectedConversationId,
     }))
   )
   const selectedContact = useChatStore((s) => s.getSelectedContact())
   const isMobile = useIsMobile()
-  const {
-    data: conversations = [],
-    isSuccess: conversationsQuerySuccess,
-    isPending: conversationsPending,
-  } = useConversationsQuery(selectedContactId, selectedContact)
-
-  useEffect(() => {
-    if (!selectedContactId) return
-
-    if (!conversationsQuerySuccess) return
-
-    if (conversations.length === 0) {
-      if (selectedConversationId != null) {
-        setSelectedConversationId(null)
-        return
-      }
-
-      if (!isDraftConversation) {
-        setDraftConversation(true)
-      }
-      return
-    }
-
-    if (isDraftConversation) {
-      return
-    }
-
-    const hasSelected = conversations.some(
-      (conversation) =>
-        String(conversation.id) === String(selectedConversationId)
-    )
-    if (!hasSelected) {
-      setSelectedConversationId(conversations[0].id)
-    }
-  }, [
-    conversations,
-    conversationsQuerySuccess,
-    isDraftConversation,
-    selectedContactId,
-    selectedConversationId,
-    setDraftConversation,
-    setSelectedConversationId,
-  ])
+  const { data: conversations = [], isPending: conversationsPending } =
+    useConversationsQuery(selectedContactId, selectedContact)
 
   return (
     <div
       className={cn(
-        "flex flex-col border-r bg-muted/50 transition-all duration-300",
-        isMobile ? "h-full w-full" : "w-[245px] xl:w-[295px]",
+        "flex flex-col border-r bg-muted/50 transition-all duration-300 h-full w-full",
         className
       )}
       {...props}
@@ -129,17 +90,20 @@ export function ConversationList({
         )}
       </div>
 
-      <Button
-        className="m-2"
-        variant="outline"
-        onClick={() => {
-          setDraftConversation(true)
-          setSelectedConversationId(null)
-        }}
-      >
-        <IconCirclePlus className="size-4" />
-        新建会话
-      </Button>
+      {!hideNewButton && (
+        <Button
+          className="m-2"
+          variant="outline"
+          onClick={() => {
+            setDraftConversation(true)
+            setSelectedConversationId(null)
+            onSelectConversation?.()
+          }}
+        >
+          <IconCirclePlus className="size-4" />
+          新建会话
+        </Button>
+      )}
 
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-2">
@@ -158,6 +122,7 @@ export function ConversationList({
               onClick={() => {
                 setDraftConversation(false)
                 setSelectedConversationId(conversation.id)
+                onSelectConversation?.()
               }}
             />
           ))}

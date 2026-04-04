@@ -79,6 +79,7 @@ export function ChatPanel({
   onStopStream,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -96,6 +97,7 @@ export function ChatPanel({
   onStopStream?: () => void
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const isMobile = useIsMobile()
   const { addArtifact, openArtifact, setFullscreen } = useArtifactStore()
@@ -161,15 +163,14 @@ export function ChatPanel({
     >
       {contact && (
         <>
-          {!isDraftMode && (
-            <ChatPanelHeader
-              title={title}
-              conversationId={conversationId}
-              contact={contact}
-              onOpenContacts={onOpenContacts}
-              onOpenConversations={onOpenConversations}
-            />
-          )}
+          <ChatPanelHeader
+            title={title}
+            conversationId={conversationId}
+            contact={contact}
+            onOpenContacts={onOpenContacts}
+            onOpenConversations={onOpenConversations}
+            onNewConversation={onNewConversation}
+          />
           <Conversation className="min-h-0 flex-1 overflow-y-auto pt-4">
             <ConversationContent>
               {isDraftMode ? (

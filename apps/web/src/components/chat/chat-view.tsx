@@ -2,6 +2,7 @@ import * as React from "react"
 
 import { cn } from "@workspace/ui/lib/utils"
 
+import { useConversationAutoSelect } from "@/hooks/use-conversation-auto-select"
 import {
   useConversationsQuery,
   useMessagesQuery,
@@ -15,16 +16,21 @@ import { DraftChatView } from "./chat-draft-view"
 export function ChatView({
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const selectedContactId = useChatStore((s) => s.selectedContactId)
   const isDraftConversation = useChatStore((s) => s.isDraftConversation)
   const selectedConversationId = useChatStore((s) => s.selectedConversationId)
   const contact = useChatStore((s) => s.getSelectedContact())
+
+  useConversationAutoSelect(selectedContactId, contact)
+
   const { data: conversations = [] } = useConversationsQuery(
     selectedContactId,
     contact
@@ -48,6 +54,7 @@ export function ChatView({
       contact={contact}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
+      onNewConversation={onNewConversation}
       className={cn(className)}
       {...props}
     />
@@ -62,6 +69,7 @@ export function ChatView({
       initialMessages={initialMessages}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
+      onNewConversation={onNewConversation}
       className={cn(className)}
       {...props}
     />

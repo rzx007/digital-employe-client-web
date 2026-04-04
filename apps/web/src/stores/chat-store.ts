@@ -29,13 +29,15 @@ export const useChatStore = create<ChatStore>()(
       isDraftConversation: false,
       draftSessionKey: 0,
       setContacts: (contacts) => set({ contacts }),
-      setSelectedContactId: (id) =>
+      setSelectedContactId: (id) => {
+        if (get().selectedContactId === id) return
         set({
           selectedContactId: id,
           selectedConversationId: null,
           isDraftConversation: false,
           draftSessionKey: 0,
-        }),
+        })
+      },
       setSelectedConversationId: (id) =>
         set({
           selectedConversationId: id != null ? String(id) : null,

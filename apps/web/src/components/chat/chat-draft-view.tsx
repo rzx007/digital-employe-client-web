@@ -23,12 +23,14 @@ export function DraftChatView({
   contact,
   onOpenContacts,
   onOpenConversations,
+  onNewConversation,
   className,
   ...props
 }: ComponentProps<"div"> & {
   contact?: ChatViewContact
   onOpenContacts?: () => void
   onOpenConversations?: () => void
+  onNewConversation?: () => void
 }) {
   const selectedContactId = useChatStore((s) => s.selectedContactId)
   const selectedConversationId = useChatStore((s) => s.selectedConversationId)
@@ -186,6 +188,7 @@ export function DraftChatView({
       onStopStream={stop}
       onOpenContacts={onOpenContacts}
       onOpenConversations={onOpenConversations}
+      onNewConversation={onNewConversation}
       className={className}
       {...props}
     />
