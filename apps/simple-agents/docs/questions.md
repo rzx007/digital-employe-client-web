@@ -1,7 +1,3 @@
-现在全貌清楚了。以下是完整的集成方案：
-
----
-
 ## Questions 工具 + 工具确认 集成方案
 
 ### 核心原理
@@ -82,6 +78,7 @@ const questionTool = tool(
 配置 `interruptOn: { question: true, write_file: true, edit_file: true, execute: true }`
 
 当 agent 调用 `question` 时：
+
 1. Interrupt 拦截 → 暂停
 2. 前端显示 `tool-input-available` 状态
 3. 用户回答 → `addToolOutput({ tool: 'question', output: "React" })`
@@ -103,6 +100,7 @@ function isResumeRequest(messages: UIMessage[]): boolean {
 #### 5. Request Body 兼容
 
 后端同时支持两种格式：
+
 - **旧格式** `{ message: "text" }` → 简单聊天，无中断
 - **新格式** `{ messages: UIMessage[] }` → 支持完整工具调用/结果链，支持 resume
 
@@ -124,7 +122,6 @@ function isResumeRequest(messages: UIMessage[]): boolean {
 **Phase 3（UI 完善）**：确认/提问 UI 组件、工具执行状态展示
 
 ---
-
 
 ## 流式返回的是 `UIMessageChunk` 类型
 
@@ -154,8 +151,6 @@ tool-approval-request → { type: "tool-approval-request", approvalId, toolCallI
 4. **前端 useChat 配置** — `sendAutomaticallyWhen` + 审批/提问 UI
 
 数据流已经是 AI SDK 标准协议，不需要自定义事件类型。
-
-
 
 ----------------
 
@@ -212,9 +207,11 @@ tool-approval-request → { type: "tool-approval-request", approvalId, toolCallI
 **2. `src/agent.ts`** — 添加 checkpointer + interruptOn + question 工具
 
 改动点：
+
 - 从 `@langchain/langgraph` 导入 `MemorySaver`
 - 创建共享 `checkpointer` 实例（所有 agent 共享，通过 thread_id 隔离）
 - `createDeepAgent` 新增参数：
+
   ```ts
   checkpointer,
   interruptOn: {
@@ -225,7 +222,9 @@ tool-approval-request → { type: "tool-approval-request", approvalId, toolCallI
   },
   tools: [questionTool],
   ```
+
 - 新增 `questionTool` 定义：
+
   ```ts
   tool(
     ({ question, answer }: { question: string; answer: string }) => answer,
@@ -239,20 +238,24 @@ tool-approval-request → { type: "tool-approval-request", approvalId, toolCallI
     }
   )
   ```
+
 - **缓存策略不变**：checkpointer 按 thread_id（sessionId）隔离，同一 agent 实例可服务多会话
 
 **3. `src/services/agent-service.ts`** — 支持 resume + 接收完整 UIMessage[]
 
 改动点：
+
 - 从 `@ai-sdk/langchain` 导入 `toBaseMessages`
 - 从 `@langchain/langgraph` 导入 `Command`
 - `chatStreamResponse` 签名变更：
+
   ```ts
   // 之前
   chatStreamResponse(sessionId, userMessage: string, employeeId?)
   // 之后
   chatStreamResponse(sessionId, messages: UIMessage[], employeeId?)
   ```
+
 - 新增 `detectResume(messages)` 函数：
   - 检查最后一条 assistant 消息是否有 `state === "approval-requested"` 或 `state === "approval-responded"` 的 tool part
   - 如果有 → 这是 resume 场景
@@ -262,20 +265,25 @@ tool-approval-request → { type: "tool-approval-request", approvalId, toolCallI
   - 对 approve 工具：`{ type: "approve" }`
   - 对 reject 工具：`{ type: "reject" }`
 - resume 流程：
+
   ```ts
   const command = new Command({ resume: { decisions } })
   const eventStream = agent.streamEvents(command, config)
   ```
+
 - fresh 流程（兼容旧逻辑）：
+
   ```ts
   const langchainMessages = await toBaseMessages(messages)
   const eventStream = agent.streamEvents({ messages: langchainMessages }, config)
   ```
+
 - `onFinish` 保持不变（persistAssistantMessage）
 
 **4. `src/routes/chat.ts`** — 兼容两种请求格式
 
 `POST /chat/stream` 请求体兼容：
+
 ```ts
 // 旧格式（纯文本）
 { message: "你好" }
@@ -285,6 +293,7 @@ tool-approval-request → { type: "tool-approval-request", approvalId, toolCallI
 ```
 
 后端处理逻辑：
+
 ```ts
 let uiMessages: UIMessage[]
 if (body.messages && Array.isArray(body.messages)) {
@@ -300,6 +309,7 @@ if (body.messages && Array.isArray(body.messages)) {
 **5. `src/services/interrupt-service.ts`** — **新建**，interrupt/resume 逻辑提取
 
 职责：
+
 - `detectResume(messages: UIMessage[]): boolean`
 - `buildResumeDecisions(messages: UIMessage[]): Decision[]`
 - `extractApprovalResponses(messages: UIMessage[]): ApprovalResponse[]`
@@ -312,10 +322,13 @@ if (body.messages && Array.isArray(body.messages)) {
 **1. `src/lib/chat/langchain-chat-transport.ts`** — 发送完整 messages
 
 改动点：
+
 - `sendMessages` 改为发送完整 `messages` 数组：
+
   ```ts
   body: JSON.stringify({ messages }),
   ```
+
 - 不再只提取最新一条消息的文本
 
 **2. `src/lib/chat/use-chat-config.ts`** — **新建**，useChat 统一配置
@@ -351,6 +364,7 @@ export function useSimpleAgentsChat(options: {
 | `dynamic-tool` | `output-available` | 工具执行结果 |
 
 用户交互处理：
+
 ```tsx
 // Question 工具
 <button onClick={() => addToolOutput({

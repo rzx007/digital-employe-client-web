@@ -40,9 +40,11 @@ export function ChatView({
     (conversation) => String(conversation.id) === String(selectedConversationId)
   )
 
-  const { data: messagesData, isLoading: isMessagesLoading } = useMessagesQuery(
-    isDraftConversation ? null : selectedConversationId
-  )
+  const {
+    data: messagesData,
+    isLoading: isMessagesLoading,
+    isFetching,
+  } = useMessagesQuery(isDraftConversation ? null : selectedConversationId)
 
   const initialMessages = React.useMemo(
     () => mapStoredMessagesToUIMessages(messagesData ?? []),
@@ -58,7 +60,7 @@ export function ChatView({
       className={cn(className)}
       {...props}
     />
-  ) : isMessagesLoading ? (
+  ) : isMessagesLoading || isFetching ? (
     <ChatLoadingSkeleton className={cn(className)} />
   ) : (
     <ConversationChatView

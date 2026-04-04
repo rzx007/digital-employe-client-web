@@ -155,7 +155,7 @@ app.post("/:id/chat/stream", async (c) => {
   if (!session) return c.json({ error: "Session not found" }, 404)
 
   const employeeId = session.employeeId || undefined
-  const result = startSdkStream(id, body.messages, employeeId, body.skill)
+  const result = await startSdkStream(id, body.messages, employeeId, body.skill)
 
   if (!result.ok) {
     return c.json(

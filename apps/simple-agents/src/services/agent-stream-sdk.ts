@@ -282,7 +282,7 @@ async function runInBackground(
 
     const graphStream = await agent.stream(
       { messages: langchainMessages },
-      { ...config, streamMode: ["messages", "values"] }
+      { ...config, streamMode: ["messages"] }
     )
 
     const uiStream = toUIMessageStream(graphStream)
@@ -459,12 +459,12 @@ export type StartSdkStreamResult =
  * @param skill 技能名称（可选）
  * @returns 任务启动结果
  */
-export function startSdkStream(
+export async function startSdkStream(
   sessionId: string,
   messages: UIMessage[],
   employeeId?: string,
   skill?: string
-): StartSdkStreamResult {
+): Promise<StartSdkStreamResult> {
   // 防并发：检查会话是否已有活跃任务
   const existingStreamId = sessionIndex.get(sessionId)
   if (existingStreamId) {
@@ -488,7 +488,7 @@ export function startSdkStream(
     }
   }
 
-  // 保存用户消息到数据库（fire-and-forget，不阻塞 agent 启动）
+  // 保存用户消息到数据库（await 确保断线重连时 DB 中有完整消息）
   const lastMessage = messages[messages.length - 1]
   if (lastMessage?.role === "user") {
     const userText = lastMessage.parts
@@ -496,11 +496,13 @@ export function startSdkStream(
       .map((p) => p.text)
       .join("\n")
       .trim()
-    createMessage(sessionId, "user", userText || "", {
-      parts: lastMessage.parts,
-    }).catch((err) =>
+    try {
+      await createMessage(sessionId, "user", userText || "", {
+        parts: lastMessage.parts,
+      })
+    } catch (err) {
       console.error(`[sdk-stream:${streamId}] save user message failed:`, err)
-    )
+    }
   }
 
   // 后台启动 agent（延迟 50ms，让 SSE 端点先返回响应）
