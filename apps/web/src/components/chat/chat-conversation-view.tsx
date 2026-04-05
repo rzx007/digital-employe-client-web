@@ -1,6 +1,9 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai"
 import type { UIMessage } from "ai"
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
@@ -62,11 +65,20 @@ export function ConversationChatView({
 
   const addArtifact = useArtifactStore((s) => s.addArtifact)
 
-  const { messages, sendMessage, status, error, stop } = useChat({
+  const {
+    messages,
+    sendMessage,
+    status,
+    error,
+    stop,
+    addToolOutput,
+    addToolApprovalResponse,
+  } = useChat({
     id: conversationId,
     messages: initialMessages,
     transport,
     resume: true,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -171,6 +183,8 @@ export function ConversationChatView({
         onOpenContacts={onOpenContacts}
         onOpenConversations={onOpenConversations}
         onNewConversation={onNewConversation}
+        addToolOutput={addToolOutput}
+        addToolApprovalResponse={addToolApprovalResponse}
         className={className}
         {...props}
       />

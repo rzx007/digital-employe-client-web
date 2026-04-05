@@ -46,6 +46,7 @@ import { detectNewArtifacts } from "./agent-service"
 import { getEmployee } from "./employee-service"
 import { applySkillHint } from "./agent-service"
 import { toBaseMessages, toUIMessageStream } from "@ai-sdk/langchain"
+import { Command } from "@langchain/langgraph"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { nanoid } from "nanoid"
@@ -188,6 +189,158 @@ function broadcast(task: SdkStreamTask, event: UIMessageChunk): void {
   }
 }
 
+// ============ Resume 检测与决策构建 ============
+
+/**
+ * 提取 tool part 中的 toolCallId
+ */
+function getToolCallId(part: UIMessage["parts"][number]): string | null {
+  if ("toolCallId" in part && typeof part.toolCallId === "string") {
+    return part.toolCallId
+  }
+  return null
+}
+
+/**
+ * 获取 tool part 的 state
+ */
+function getToolState(part: UIMessage["parts"][number]): string | undefined {
+  if ("state" in part && typeof part.state === "string") {
+    return part.state
+  }
+  return undefined
+}
+
+/**
+ * 获取 tool part 的 toolName
+ */
+function getToolName(part: UIMessage["parts"][number]): string | undefined {
+  if ("toolName" in part && typeof part.toolName === "string") {
+    return part.toolName
+  }
+  return undefined
+}
+
+/**
+ * 获取 tool part 的 input
+ */
+function getToolInput(part: UIMessage["parts"][number]): unknown {
+  if ("input" in part) {
+    return (part as any).input
+  }
+  return null
+}
+
+/**
+ * 获取 tool part 的 output
+ */
+function getToolOutput(part: UIMessage["parts"][number]): unknown {
+  if ("output" in part) {
+    return (part as any).output
+  }
+  return null
+}
+
+/**
+ * 检测是否为 resume 场景
+ *
+ * 原理：检查所有 assistant 消息中是否有 tool part 的 state 为
+ * "output-available" 或 "input-available"（说明前端已经提供了工具结果）
+ *
+ * @param messages 完整的 UIMessage 数组
+ * @returns true 表示这是 resume 请求
+ */
+function detectResume(messages: UIMessage[]): boolean {
+  for (const msg of messages) {
+    if (msg.role !== "assistant") continue
+    if (!msg.parts) continue
+    for (const part of msg.parts) {
+      const state = getToolState(part)
+      if (state === "output-available" || state === "input-available") {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * 从 messages 中构建 LangGraph resume decisions
+ *
+ * 决策映射规则：
+ * - question 工具 + 有 output → { type: "edit", args: { question, answer: output } }
+ * - 其他工具 + 有 output → { type: "approve" }（工具已执行完成）
+ * - 有 approval response → 根据 approved 决定 approve/reject
+ *
+ * @param messages 完整的 UIMessage 数组
+ * @returns { toolCallId: decision } 映射
+ */
+function buildResumeDecisions(
+  messages: UIMessage[]
+): Record<string, { type: string; args?: Record<string, unknown> }> {
+  const decisions: Record<
+    string,
+    { type: string; args?: Record<string, unknown> }
+  > = {}
+
+  for (const msg of messages) {
+    if (msg.role !== "assistant") continue
+    if (!msg.parts) continue
+
+    for (const part of msg.parts) {
+      const toolCallId = getToolCallId(part)
+      if (!toolCallId) continue
+
+      const state = getToolState(part)
+      const toolName = getToolName(part)
+      const input = getToolInput(part)
+      const output = getToolOutput(part)
+
+      // 有 output → 工具已执行完成
+      if (state === "output-available") {
+        if (toolName === "question" && input && typeof input === "object") {
+          // question 工具：用 edit decision 填入 answer
+          const question = (input as any).question || ""
+          const answer =
+            output != null
+              ? typeof output === "string"
+                ? output
+                : JSON.stringify(output)
+              : ""
+          decisions[toolCallId] = {
+            type: "edit",
+            args: { question, answer },
+          }
+        } else {
+          // 其他工具：直接批准（output 已由工具执行产生）
+          decisions[toolCallId] = { type: "approve" }
+        }
+      }
+
+      // input-available 但无 output → 用户提供了编辑后的参数
+      if (state === "input-available" && output != null) {
+        if (toolName === "question" && input && typeof input === "object") {
+          const question = (input as any).question || ""
+          const answer =
+            typeof output === "string" ? output : JSON.stringify(output)
+          decisions[toolCallId] = {
+            type: "edit",
+            args: { question, answer },
+          }
+        } else {
+          // 其他工具：用户编辑了参数后批准
+          decisions[toolCallId] = {
+            type: "edit",
+            args: output as Record<string, unknown>,
+          }
+        }
+      }
+    }
+  }
+
+  return decisions
+}
+
 // ============ 任务管理 ============
 
 /**
@@ -266,9 +419,9 @@ async function runInBackground(
     const agent = await resolveAgent(employeeId)
 
     const config = { configurable: { thread_id: sessionId } }
-    const langchainMessages = await toBaseMessages(messages)
 
     // 指定技能时，将技能提示注入到最后一条用户消息
+    let langchainMessages = await toBaseMessages(messages)
     if (skill) {
       const lastMsg = langchainMessages[langchainMessages.length - 1]
       if (lastMsg && lastMsg._getType() === "human") {
@@ -280,12 +433,39 @@ async function runInBackground(
       }
     }
 
-    const graphStream = await agent.stream(
-      { messages: langchainMessages },
-      { ...config, streamMode: ["messages"] }
-    )
+    // 检测是否为 resume 场景（前端已提供工具结果）
+    const isResume = detectResume(messages)
 
-    const uiStream = toUIMessageStream(graphStream)
+    let eventsStream: any
+    if (isResume) {
+      // Resume 流程：从 checkpointer 恢复状态
+      const decisions = buildResumeDecisions(messages)
+      const decisionEntries = Object.entries(decisions).map(
+        ([toolCallId, decision]) => ({
+          toolCallId,
+          ...decision,
+        })
+      )
+
+      console.log(
+        `[sdk-stream:${task.id}] resume with ${decisionEntries.length} decisions:`,
+        JSON.stringify(decisionEntries, null, 2)
+      )
+
+      const command = new Command({ resume: { decisions: decisionEntries } })
+      eventsStream = agent.streamEvents(command, {
+        ...config,
+        version: "v2",
+      })
+    } else {
+      // Fresh 流程：正常启动对话
+      eventsStream = agent.streamEvents(
+        { messages: langchainMessages },
+        { ...config, version: "v2" }
+      )
+    }
+
+    const uiStream = toUIMessageStream(eventsStream)
     const sessionDir = getSessionDir(sessionId)
 
     // 记录待匹配的文件工具调用（tool-input → tool-output 配对）

@@ -21,8 +21,16 @@ import {
   ToolInput,
   ToolOutput,
 } from "@workspace/ui/components/ai-elements/tool"
+import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
 import { cn } from "@workspace/ui/lib/utils"
-import { IconSparkles, IconSquareRoundedX } from "@tabler/icons-react"
+import {
+  IconSparkles,
+  IconSquareRoundedX,
+  IconCheck,
+  IconX,
+  IconSend,
+} from "@tabler/icons-react"
 import logo from "@/assets/logo.svg"
 import {
   getLatestArtifactFromUIMessage,
@@ -66,6 +74,48 @@ function renderToolOutput(output: unknown) {
   return <MessageResponse>{content}</MessageResponse>
 }
 
+/**
+ * Question 工具输入组件 — 显示问题 + 输入框 + 提交按钮
+ */
+function QuestionInputPart({
+  toolCallId,
+  onSubmit,
+}: {
+  toolCallId: string
+  onSubmit: (output: { toolCallId: string; output: string }) => void
+}) {
+  const [answer, setAnswer] = React.useState("")
+
+  const handleSubmit = () => {
+    if (!answer.trim()) return
+    onSubmit({ toolCallId, output: answer.trim() })
+    setAnswer("")
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit()
+    }
+  }
+
+  return (
+    <div className="flex gap-2">
+      <Input
+        value={answer}
+        onChange={(e) => setAnswer(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="输入你的回答..."
+        className="flex-1"
+      />
+      <Button size="sm" onClick={handleSubmit} disabled={!answer.trim()}>
+        <IconSend className="mr-1 h-3 w-3" />
+        提交
+      </Button>
+    </div>
+  )
+}
+
 export function ChatPanel({
   contact,
   title,
@@ -82,6 +132,8 @@ export function ChatPanel({
   onOpenContacts,
   onOpenConversations,
   onNewConversation,
+  addToolOutput,
+  addToolApprovalResponse,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -100,6 +152,14 @@ export function ChatPanel({
   onOpenContacts?: () => void
   onOpenConversations?: () => void
   onNewConversation?: () => void
+  addToolOutput?: (output: {
+    toolCallId: string
+    output: string
+  }) => void
+  addToolApprovalResponse?: (response: {
+    id: string
+    approved: boolean
+  }) => void
 }) {
   const isMobile = useIsMobile()
   const { addArtifact, openArtifact, setFullscreen } = useArtifactStore()
@@ -313,6 +373,94 @@ export function ChatPanel({
                                       }
                                     : { type: part.type, state: part.state }
 
+                                const isApprovalRequested =
+                                  part.state === "approval-requested"
+                                const toolName =
+                                  "toolName" in part
+                                    ? (part.toolName as string)
+                                    : ""
+
+                                // Question 工具交互 UI
+                                if (
+                                  isApprovalRequested &&
+                                  toolName === "question" &&
+                                  addToolOutput
+                                ) {
+                                  return (
+                                    <Tool
+                                      key={block.key}
+                                      className="max-w-2xl"
+                                      defaultOpen
+                                    >
+                                      <ToolHeader {...headerProps} />
+                                      <ToolContent>
+                                        <div className="space-y-3 p-2">
+                                          <p className="text-sm">
+                                            {(part as any).input?.question ||
+                                              "请回答以下问题："}
+                                          </p>
+                                          <QuestionInputPart
+                                            toolCallId={part.toolCallId}
+                                            onSubmit={addToolOutput}
+                                          />
+                                        </div>
+                                      </ToolContent>
+                                    </Tool>
+                                  )
+                                }
+
+                                // 审批工具交互 UI
+                                if (
+                                  isApprovalRequested &&
+                                  addToolApprovalResponse
+                                ) {
+                                  return (
+                                    <Tool
+                                      key={block.key}
+                                      className="max-w-2xl"
+                                      defaultOpen
+                                    >
+                                      <ToolHeader {...headerProps} />
+                                      <ToolContent>
+                                        <ToolInput input={part.input} />
+                                        <div className="flex gap-2 p-2">
+                                          <Button
+                                            size="sm"
+                                            variant="default"
+                                            onClick={() =>
+                                              addToolApprovalResponse({
+                                                id:
+                                                  (part as any).approval?.id ||
+                                                  part.toolCallId,
+                                                approved: true,
+                                              })
+                                            }
+                                          >
+                                            <IconCheck className="mr-1 h-3 w-3" />
+                                            批准
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                              addToolApprovalResponse({
+                                                id:
+                                                  (part as any).approval?.id ||
+                                                  part.toolCallId,
+                                                approved: false,
+                                              })
+                                            }
+                                          >
+                                            <IconX className="mr-1 h-3 w-3" />
+                                            拒绝
+                                          </Button>
+                                        </div>
+                                      </ToolContent>
+                                    </Tool>
+                                  )
+                                }
+
+                                // 默认被动展示
                                 return (
                                   <Tool
                                     key={block.key}

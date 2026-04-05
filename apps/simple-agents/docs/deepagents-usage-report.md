@@ -383,6 +383,42 @@ systemPrompt: `读取 /memories/instructions.txt 了解用户偏好。
 
 ## 9. Human-in-the-Loop（人机协作）
 
+### 9.0 大白话解释：Checkpointer 和 Interrupt 是什么
+
+**Interrupt（中断）——就像游戏的"暂停菜单"**
+
+想象你在玩一个游戏，角色正准备释放一个强力技能，系统突然弹出："确定要释放此技能吗？[确认] [取消] [修改]"。这就是 interrupt——Agent 准备执行某个工具（比如删除文件、发邮件），但先停下来，把决定权交给你。
+
+在代码中，你通过 `interruptOn` 配置哪些工具需要暂停：
+- `delete_file: true` → 删除文件前先问人
+- `read_file: false` → 读文件直接执行，别烦我
+- `send_email: { allowedDecisions: ["approve", "reject"] }` → 发邮件前问人，但只能批准或拒绝，不能改内容
+
+**Checkpointer（检查点）——就像游戏的"存档系统"**
+
+游戏暂停后，你的角色状态、血量、装备都得保存下来，不然下次继续玩时怎么知道从哪开始？checkpointer 就是这个"存档"。
+
+没有 checkpointer 会怎样？Agent 暂停后，所有状态（消息历史、工具调用进度、上下文）全部丢失，你就算想"继续"也无从继续——因为 Agent 已经"失忆"了。
+
+有 checkpointer 后：
+1. Agent 暂停时，当前状态自动"存档"到内存/数据库
+2. 你做出决策（批准/拒绝/编辑）后，通过 `Command({ resume: { decisions } })` 告诉 Agent
+3. Agent 从存档中"读档"，拿到你的决策，继续执行
+
+**两者关系：缺一不可**
+
+```
+interruptOn → 决定"什么时候暂停"
+checkpointer → 保证"暂停后能继续"
+```
+
+没有 interruptOn，Agent 一路狂奔不停车。
+没有 checkpointer，Agent 停车后失忆，再也开不动了。
+
+**一个完整的生活比喻：**
+
+> 你让秘书（Agent）帮你处理文件。秘书发现一份需要签字的合同（触发 interrupt），于是把合同放到你桌上暂停处理（checkpointer 保存了当前工作状态）。你签完字后（提供 decision），秘书从暂停的地方继续处理（resume）。如果没有 checkpointer，秘书放完合同就忘了之前在做啥，你得从头交代一遍。
+
 ### 9.1 基本配置
 
 ```typescript
@@ -426,6 +462,61 @@ if (result.__interrupt__) {
 
 - 子代理可以有自己的 `interruptOn` 配置，覆盖主代理设置
 - 子代理工具可以直接调用 `interrupt()` 函数请求审批
+
+### 9.5 Checkpointer 类型对比
+
+| Checkpointer | 存储位置 | 持久性 | 适用场景 |
+|---|---|---|---|
+| `MemorySaver` | 进程内存 | 重启丢失 | 开发调试、短期会话 |
+| `@langchain/langgraph-checkpoint-sqlite` | SQLite 文件 | 持久化 | 生产环境、服务重启恢复 |
+| `@langchain/langgraph-checkpoint-postgres` | PostgreSQL | 持久化 | 分布式部署、多实例共享 |
+
+**当前项目状态**：未配置任何 checkpointer。`agent.ts` 中 `createDeepAgent` 没有传入 `checkpointer` 参数，因此 interruptOn 即使配置了也无法工作。
+
+### 9.6 与 `@ai-sdk/langchain` 的集成
+
+当通过 `@ai-sdk/langchain` 的 `toUIMessageStream()` 消费 LangGraph 流时，interrupt 事件会被自动转换为 AI SDK 标准 chunk：
+
+```
+LangGraph __interrupt__ 事件
+  → toUIMessageStream() 自动转换
+    → tool-input-start      (工具调用开始)
+    → tool-input-available  (工具参数已就绪)
+    → tool-approval-request (等待用户审批)
+    → finish                (流正常结束)
+```
+
+前端 `useChat` 收到这些 chunk 后，tool part 的 `state` 会变为 `"approval-requested"`，此时渲染审批 UI，用户通过 `addToolApprovalResponse()` 或 `addToolOutput()` 回传决策。
+
+**关键点**：`toUIMessageStream()` 已经内置了 interrupt 事件的处理逻辑，不需要自行解析 `__interrupt__` 字段。但 resume 时仍需在后端手动构建 `Command({ resume: { decisions } })` 并调用 `agent.streamEvents(command, config)`。
+
+### 9.7 实际数据流（Web 场景）
+
+```
+[前端] 用户发消息 → POST /chat/stream (UIMessage[])
+  ↓
+[后端] agent.stream() → toUIMessageStream() 迭代 chunk
+  ↓
+[Agent] 调用 write_file → interruptOn 拦截 → interrupt()
+  ↓
+[LangGraph] 图暂停，状态通过 checkpointer 保存
+  ↓
+[toUIMessageStream] 输出 tool-input-available + tool-approval-request + finish
+  ↓
+[SSE] 流结束，前端收到完整 chunk 序列
+  ↓
+[前端] 渲染审批 UI（part.state === "approval-requested"）
+  ↓
+[用户] 点击"批准" → addToolApprovalResponse({ id, approved: true })
+  ↓
+[前端] sendAutomaticallyWhen 检测所有工具已响应 → 自动 POST /chat/stream
+  ↓
+[后端] 检测到 messages 中包含工具结果 → 构建 decisions
+  ↓
+[后端] Command({ resume: { decisions } }) → agent.streamEvents(command, config)
+  ↓
+[Agent] 从 checkpointer 读档 → 执行 write_file → 继续后续流程
+```
 
 ---
 
@@ -592,20 +683,24 @@ deepagents --model anthropic:claude-opus-4-5  # 指定模型
 
 ### 15.1 已有项目 simple-agents 分析
 
-当前项目使用了 DeepAgents 的以下能力：
+当前项目**生产代码**使用了 DeepAgents 的以下能力：
 
-| 能力              | 使用状态  | 说明                             |
-| ----------------- | --------- | -------------------------------- |
-| 自定义模型        | ✅ 已使用 | GLM-4.7 通过 ChatOpenAI 兼容接口 |
-| FilesystemBackend | ✅ 已使用 | 虚拟模式，限制了工作目录         |
-| 自定义系统提示词  | ✅ 已使用 | 中文文件管理助手                 |
-| 子代理            | ❌ 未使用 | 仅在系统提示词中提及 task 工具   |
-| Skills            | ❌ 未使用 | —                                |
-| Memory            | ❌ 未使用 | —                                |
-| Human-in-the-Loop | ❌ 未使用 | —                                |
-| 结构化输出        | ❌ 未使用 | —                                |
-| Checkpointer      | ❌ 未使用 | thread_id 传入但无实际持久化     |
-| Streaming         | ✅ 已使用 | 两个流式端点 + 非流式端点        |
+| 能力              | 生产代码 | 示例代码 | 说明                             |
+| ----------------- | -------- | -------- | -------------------------------- |
+| 自定义模型        | ✅ 已使用 | ✅ 已使用 | GLM-4.7 通过 ChatOpenAI 兼容接口 |
+| FilesystemBackend | ✅ 已使用 | ✅ 已使用 | 虚拟模式，限制了工作目录         |
+| 自定义系统提示词  | ✅ 已使用 | ✅ 已使用 | 中文文件管理助手                 |
+| Streaming         | ✅ 已使用 | ✅ 已使用 | 两个流式端点 + 非流式端点        |
+| Skills            | ✅ 已使用 | ❌ 未演示 | 运行时通过 backend 读取技能文件  |
+| 子代理            | ❌ 未使用 | ✅ 已使用 | `04-subagents.ts` 有完整示例     |
+| Memory            | ❌ 未使用 | ✅ 已使用 | `06-memory-skills.ts` 有完整示例 |
+| Human-in-the-Loop | ❌ 未使用 | ✅ 已使用 | `07-human-in-the-loop.ts` 有完整示例 |
+| 结构化输出        | ❌ 未使用 | ✅ 已使用 | `08-structured-output.ts` 有完整示例 |
+| Checkpointer      | ❌ 未使用 | ✅ 已使用 | 示例使用 `MemorySaver`，生产未配置 |
+| Middleware        | ❌ 未使用 | ❌ 未演示 | 默认中间件已生效，无自定义中间件 |
+| Sandboxes         | ❌ 未使用 | ❌ 未演示 | 无沙箱后端配置                   |
+
+> **注意**：示例代码 (`examples/`) 已覆盖 checkpointer、interrupt、子代理、记忆、技能、结构化输出等全部核心能力，但**生产代码 (`src/`) 尚未集成这些功能**。
 
 ### 15.2 可扩展方向
 
