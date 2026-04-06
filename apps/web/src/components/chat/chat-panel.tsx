@@ -134,6 +134,7 @@ export function ChatPanel({
   onNewConversation,
   addToolOutput,
   addToolApprovalResponse,
+  onSendMessage,
   className,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -160,6 +161,7 @@ export function ChatPanel({
     id: string
     approved: boolean
   }) => void
+  onSendMessage?: () => void
 }) {
   const isMobile = useIsMobile()
   const { addArtifact, openArtifact, setFullscreen } = useArtifactStore()
@@ -301,210 +303,228 @@ export function ChatPanel({
                   </div>
                 </ConversationEmptyState>
               ) : (
-                displayMessages.map((message) => {
-                  const artifact = getLatestArtifactFromUIMessage(message)
-                  const renderBlocks = getRenderBlocksFromUIMessage(message)
-
-                  const handleOpenArtifact = () => {
-                    if (!artifact) {
-                      return
+                (() => {
+                  // 将连续相同 role 的消息合并为一组
+                  const groupedMessages: UIMessage[][] = []
+                  for (const message of displayMessages) {
+                    const last = groupedMessages[groupedMessages.length - 1]
+                    if (last && last[0].role === message.role) {
+                      last.push(message)
+                    } else {
+                      groupedMessages.push([message])
                     }
-
-                    addArtifact(artifact)
-                    setFullscreen(isMobile)
-                    openArtifact(artifact.id)
                   }
 
-                  return (
-                    <Message key={message.id} from={message.role}>
-                      {message.role === "assistant" && (
-                        <div className="mb-2 flex items-center gap-2">
-                          {contact.type === "group" ? (
-                            <GroupMembersAvatar
-                              participants={contact.group?.participants}
-                              className="size-6"
-                              itemClassName="h-3 w-3"
-                              fallbackClassName="text-[8px]"
-                              placeholderClassName="h-3 w-3"
-                            />
-                          ) : contact.type === "curator" ? (
-                            <EmployeeContactAvatar
-                              name={contact.curator?.name}
-                              avatar={contact.curator?.avatar}
-                              status={contact.curator?.status}
-                              avatarClassName="size-6"
-                              fallbackClassName="text-[10px]"
-                            />
-                          ) : (
-                            <EmployeeContactAvatar
-                              name={contact.employee?.name}
-                              avatar={contact.employee?.avatar}
-                              status={contact.employee?.status}
-                              avatarClassName="size-6"
-                              fallbackClassName="text-[10px]"
-                            />
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {contactDisplayName}
-                          </span>
-                        </div>
-                      )}
-                      <MessageContent>
-                        <div className="space-y-3">
-                          {renderBlocks.length > 0 ? (
-                            renderBlocks.map((block) => {
-                              if (block.kind === "text") {
-                                return (
-                                  <MessageResponse key={block.key}>
-                                    {block.text}
-                                  </MessageResponse>
-                                )
-                              }
+                  return groupedMessages.map((group, gi) => {
+                    const firstMessage = group[0]
+                    const allRenderBlocks = group.flatMap((msg) =>
+                      getRenderBlocksFromUIMessage(msg)
+                    )
+                    const allArtifacts = group
+                      .map((msg) => getLatestArtifactFromUIMessage(msg))
+                      .filter(Boolean)
 
-                              if (block.kind === "tool") {
-                                const part = block.part as ToolUIPart
-                                const headerProps =
-                                  part.type === "dynamic-tool" &&
-                                  "toolName" in part
-                                    ? {
-                                        type: part.type,
-                                        state: part.state,
-                                        toolName: part.toolName as string,
-                                      }
-                                    : { type: part.type, state: part.state }
+                    const handleOpenArtifact = () => {
+                      const artifact = allArtifacts[0]
+                      if (!artifact) return
+                      addArtifact(artifact)
+                      setFullscreen(isMobile)
+                      openArtifact(artifact.id)
+                    }
 
-                                const isApprovalRequested =
-                                  part.state === "approval-requested"
-                                const toolName =
-                                  "toolName" in part
-                                    ? (part.toolName as string)
-                                    : ""
-
-                                // Question 工具交互 UI
-                                if (
-                                  isApprovalRequested &&
-                                  toolName === "question" &&
-                                  addToolOutput
-                                ) {
+                    return (
+                      <Message key={gi} from={firstMessage.role}>
+                        {firstMessage.role === "assistant" && (
+                          <div className="mb-2 flex items-center gap-2">
+                            {contact.type === "group" ? (
+                              <GroupMembersAvatar
+                                participants={contact.group?.participants}
+                                className="size-6"
+                                itemClassName="h-3 w-3"
+                                fallbackClassName="text-[8px]"
+                                placeholderClassName="h-3 w-3"
+                              />
+                            ) : contact.type === "curator" ? (
+                              <EmployeeContactAvatar
+                                name={contact.curator?.name}
+                                avatar={contact.curator?.avatar}
+                                status={contact.curator?.status}
+                                avatarClassName="size-6"
+                                fallbackClassName="text-[10px]"
+                              />
+                            ) : (
+                              <EmployeeContactAvatar
+                                name={contact.employee?.name}
+                                avatar={contact.employee?.avatar}
+                                status={contact.employee?.status}
+                                avatarClassName="size-6"
+                                fallbackClassName="text-[10px]"
+                              />
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {contactDisplayName}
+                            </span>
+                          </div>
+                        )}
+                        <MessageContent>
+                          <div className="space-y-3">
+                            {allRenderBlocks.length > 0 ? (
+                              allRenderBlocks.map((block) => {
+                                if (block.kind === "text") {
                                   return (
-                                    <Tool
-                                      key={block.key}
-                                      className="max-w-2xl"
-                                      defaultOpen
-                                    >
-                                      <ToolHeader {...headerProps} />
-                                      <ToolContent>
-                                        <div className="space-y-3 p-2">
-                                          <p className="text-sm">
-                                            {(part as any).input?.question ||
-                                              "请回答以下问题："}
-                                          </p>
-                                          <QuestionInputPart
-                                            toolCallId={part.toolCallId}
-                                            onSubmit={addToolOutput}
-                                          />
-                                        </div>
-                                      </ToolContent>
-                                    </Tool>
+                                    <MessageResponse key={block.key}>
+                                      {block.text}
+                                    </MessageResponse>
                                   )
                                 }
 
-                                // 审批工具交互 UI
-                                if (
-                                  isApprovalRequested &&
-                                  addToolApprovalResponse
-                                ) {
+                                if (block.kind === "tool") {
+                                  const part = block.part as ToolUIPart
+                                  const headerProps =
+                                    part.type === "dynamic-tool" &&
+                                    "toolName" in part
+                                      ? {
+                                          type: part.type,
+                                          state: part.state,
+                                          toolName: part.toolName as string,
+                                        }
+                                      : { type: part.type, state: part.state }
+
+                                  const isApprovalRequested =
+                                    part.state === "approval-requested"
+                                  const toolName =
+                                    "toolName" in part
+                                      ? (part.toolName as string)
+                                      : ""
+
+                                  // Question 工具交互 UI
+                                  if (
+                                    isApprovalRequested &&
+                                    toolName === "question" &&
+                                    addToolOutput
+                                  ) {
+                                    return (
+                                      <Tool
+                                        key={block.key}
+                                        className="max-w-2xl"
+                                        defaultOpen
+                                      >
+                                        <ToolHeader {...headerProps} />
+                                        <ToolContent>
+                                          <div className="space-y-3 p-2">
+                                            <p className="text-sm">
+                                              {(part as any).input?.question ||
+                                                "请回答以下问题："}
+                                            </p>
+                                            <QuestionInputPart
+                                              toolCallId={part.toolCallId}
+                                              onSubmit={addToolOutput}
+                                            />
+                                          </div>
+                                        </ToolContent>
+                                      </Tool>
+                                    )
+                                  }
+
+                                  // 审批工具交互 UI
+                                  if (
+                                    isApprovalRequested &&
+                                    addToolApprovalResponse
+                                  ) {
+                                    return (
+                                      <Tool
+                                        key={block.key}
+                                        className="max-w-2xl"
+                                        defaultOpen
+                                      >
+                                        <ToolHeader {...headerProps} />
+                                        <ToolContent>
+                                          <ToolInput input={part.input} />
+                                          <div className="flex gap-2 p-2">
+                                            <Button
+                                              size="sm"
+                                              variant="default"
+                                              onClick={() => {
+                                                addToolApprovalResponse({
+                                                  id:
+                                                    (part as any).approval?.id ||
+                                                    part.toolCallId,
+                                                  approved: true,
+                                                })
+                                                onSendMessage?.()
+                                              }}
+                                            >
+                                              <IconCheck className="mr-1 h-3 w-3" />
+                                              批准
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                addToolApprovalResponse({
+                                                  id:
+                                                    (part as any).approval?.id ||
+                                                    part.toolCallId,
+                                                  approved: false,
+                                                })
+                                                onSendMessage?.()
+                                              }}
+                                            >
+                                              <IconX className="mr-1 h-3 w-3" />
+                                              拒绝
+                                            </Button>
+                                          </div>
+                                        </ToolContent>
+                                      </Tool>
+                                    )
+                                  }
+
+                                  // 默认被动展示
                                   return (
                                     <Tool
                                       key={block.key}
                                       className="max-w-2xl"
-                                      defaultOpen
+                                      defaultOpen={false}
                                     >
                                       <ToolHeader {...headerProps} />
                                       <ToolContent>
                                         <ToolInput input={part.input} />
-                                        <div className="flex gap-2 p-2">
-                                          <Button
-                                            size="sm"
-                                            variant="default"
-                                            onClick={() =>
-                                              addToolApprovalResponse({
-                                                id:
-                                                  (part as any).approval?.id ||
-                                                  part.toolCallId,
-                                                approved: true,
-                                              })
-                                            }
-                                          >
-                                            <IconCheck className="mr-1 h-3 w-3" />
-                                            批准
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              addToolApprovalResponse({
-                                                id:
-                                                  (part as any).approval?.id ||
-                                                  part.toolCallId,
-                                                approved: false,
-                                              })
-                                            }
-                                          >
-                                            <IconX className="mr-1 h-3 w-3" />
-                                            拒绝
-                                          </Button>
-                                        </div>
+                                        <ToolOutput
+                                          errorText={part.errorText}
+                                          output={renderToolOutput(part.output)}
+                                        />
                                       </ToolContent>
                                     </Tool>
                                   )
                                 }
 
-                                // 默认被动展示
                                 return (
-                                  <Tool
+                                  <ArtifactPreview
                                     key={block.key}
-                                    className="max-w-2xl"
-                                    defaultOpen={false}
-                                  >
-                                    <ToolHeader {...headerProps} />
-                                    <ToolContent>
-                                      <ToolInput input={part.input} />
-                                      <ToolOutput
-                                        errorText={part.errorText}
-                                        output={renderToolOutput(part.output)}
-                                      />
-                                    </ToolContent>
-                                  </Tool>
+                                    artifact={block.artifact}
+                                    onClick={() => {
+                                      addArtifact(block.artifact)
+                                      setFullscreen(isMobile)
+                                      openArtifact(block.artifact.id)
+                                    }}
+                                  />
                                 )
-                              }
-
-                              return (
-                                <ArtifactPreview
-                                  key={block.key}
-                                  artifact={block.artifact}
-                                  onClick={() => {
-                                    addArtifact(block.artifact)
-                                    setFullscreen(isMobile)
-                                    openArtifact(block.artifact.id)
-                                  }}
-                                />
-                              )
-                            })
-                          ) : renderBlocks.length === 0 ? null : (
-                            <MessageResponse />
-                          )}
-                        </div>
-                      </MessageContent>
-                      {artifact && renderBlocks.length === 0 && (
-                        <ArtifactPreview
-                          artifact={artifact}
-                          onClick={handleOpenArtifact}
-                        />
-                      )}
-                    </Message>
-                  )
-                })
+                              })
+                            ) : allRenderBlocks.length === 0 ? null : (
+                              <MessageResponse />
+                            )}
+                          </div>
+                        </MessageContent>
+                        {allArtifacts.length > 0 && allRenderBlocks.length === 0 && (
+                          <ArtifactPreview
+                            artifact={allArtifacts[0]}
+                            onClick={handleOpenArtifact}
+                          />
+                        )}
+                      </Message>
+                    )
+                  })
+                })()
               )}
 
               {showStreamingIndicator && (

@@ -1,18 +1,17 @@
 /**
- * Agent Stream (Raw) Service - 原始流式事件服务
+ * Agent Stream (Raw) Service - 基于 LangGraph stream() 的流式事件服务
  *
  * 核心职责：
- * 1. 封装 DeepAgent 的 streamEvents() 调用
+ * 1. 封装 DeepAgent 的 stream() 调用 (streamMode: ["messages", "updates"])
  * 2. 管理流式对话的生命周期（启动/取消/恢复）
- * 3. 手动迭代 LangChain streamEvents 并广播自定义 StreamEvent
+ * 3. 将 stream() 输出广播为简化的 StreamEvent
  * 4. 实现三级降级的流恢复机制（内存 → 数据库 → 消息表）
  *
  * 架构要点：
  * - agent 调用与 SSE 连接完全解耦
  * - 后台任务独立运行，客户端可随时断开/重连
  * - 通过 stream-registry 管理事件订阅和广播
- * - 对比 agent-service.ts 的 AI SDK 标准流：这里保留了完整的
- *   LangChain 事件粒度（on_chat_model_stream, on_tool_start 等）
+ * - 使用 LangGraph stream() 替代 streamEvents()，减少冗余事件
  */
 
 import type { StreamEvent } from "../types"
@@ -45,16 +44,8 @@ import {
   detectNewArtifacts,
   applySkillHint,
 } from "./agent-service"
+import { Command } from "@langchain/langgraph"
 
-/**
- * 将内部 Message 转换为 LangChain 消息格式
- *
- * @deprecated Use toLangchainMessages from agent-service.ts instead
- */
-
-/**
- * 根据 employeeId 获取对应的 Agent 实例
- */
 async function resolveAgent(employeeId?: string) {
   const cacheKey = employeeId || "__default__"
   let systemPrompt: string | undefined
@@ -67,9 +58,6 @@ async function resolveAgent(employeeId?: string) {
   return getAgent(cacheKey, systemPrompt)
 }
 
-/**
- * 流式对话启动结果类型
- */
 export type StartStreamResult =
   | {
       ok: true
@@ -80,11 +68,6 @@ export type StartStreamResult =
 
 /**
  * 启动流式对话
- *
- * 核心设计：
- * - 同时只会有一个活跃的流式任务（通过 stream-registry 保证）
- * - agent 调用在后台运行（fire-and-forget），不阻塞 SSE 连接
- * - 客户端通过 subscribe() 订阅事件，通过返回的取消函数取消订阅
  */
 export function startStream(
   sessionId: string,
@@ -131,17 +114,55 @@ export function startStream(
 }
 
 /**
- * 在后台运行 Agent 的流式对话（手动 streamEvents 迭代）
+ * 启动流式对话（resume 模式 — 用于 interrupt 审批后恢复）
+ */
+export function startStreamWithResume(
+  sessionId: string,
+  resumeDecisions: Record<string, { type: string; args?: Record<string, unknown> }>,
+  employeeId?: string
+): StartStreamResult {
+  const activeTask = getActiveTaskForSession(sessionId)
+  if (activeTask) {
+    return {
+      ok: false,
+      error: "Session already has an active stream",
+      activeStreamId: activeTask.id,
+    }
+  }
+
+  const streamId = nanoid()
+  const abortController = new AbortController()
+
+  const task = createTask(streamId, sessionId, abortController)
+  if (!task) {
+    return {
+      ok: false,
+      error: "Failed to create stream task",
+    }
+  }
+
+  setTimeout(() => {
+    runAgentInBackgroundResume(sessionId, resumeDecisions, task, employeeId).catch(
+      (err) => {
+        console.error(`[stream:${streamId}] resume error:`, err)
+      }
+    )
+  }, 50)
+
+  return {
+    ok: true,
+    streamId,
+    subscribe: (fn: (event: StreamEvent) => void) => {
+      subscribe(streamId, fn)
+      return () => unsubscribe(streamId, fn)
+    },
+  }
+}
+
+/**
+ * 后台运行 Agent（fresh 场景）
  *
- * 这是 raw stream 的核心异步流程：
- * 1. 保存用户消息到数据库
- * 2. 创建 stream_tasks 记录（用于恢复）
- * 3. 广播 stream_start 事件
- * 4. 根据 employeeId 获取对应的 Agent 实例
- * 5. 获取对话历史并调用 agent.streamEvents()
- * 6. 逐个 token 地广播事件给所有订阅者
- * 7. 定期将进度刷入数据库（每10个token或每2秒）
- * 8. 完成后保存代理回复、同步文件产物、更新任务状态
+ * 使用 agent.stream() + streamMode=["messages", "updates"]
  */
 async function runAgentInBackground(
   sessionId: string,
@@ -167,7 +188,6 @@ async function runAgentInBackground(
     const history = await getSessionMessages(sessionId)
     const langchainMessages = toLangchainMessages(history)
 
-    // 指定技能时，将技能提示注入到最后一条用户消息
     if (skill) {
       const lastMsg = langchainMessages[langchainMessages.length - 1]
       if (lastMsg && lastMsg.role === "user") {
@@ -178,116 +198,29 @@ async function runAgentInBackground(
       }
     }
 
-    const config = { configurable: { thread_id: sessionId } }
-    const eventStream = agent.streamEvents(
+    const eventStream = await agent.stream(
       { messages: langchainMessages as any },
-      config
+      {
+        configurable: { thread_id: sessionId },
+        streamMode: ["messages", "updates"],
+        signal: task.abortController.signal,
+      } as any
     )
 
-    let fullContent = ""
-    let tokenCount = 0
-    const FLUSH_INTERVAL = 2000
-    let lastFlush = Date.now()
+    const result = await processStreamEvents(eventStream, task, sessionId)
 
-    async function flushToDb() {
-      await getDb()
-        .update(streamTasks)
-        .set({
-          content: fullContent,
-          status: "streaming",
-          updatedAt: sql`datetime('now')`,
-        })
-        .where(eq(streamTasks.id, task.id))
-      lastFlush = Date.now()
+    if (result.interrupted) {
+      broadcast(task, {
+        type: "interrupt",
+        interrupts: result.interrupts,
+      })
+      completeTask(task.id, null)
+      return
     }
 
-    for await (const event of eventStream) {
-      if (task.abortController.signal.aborted) break
-
-      if (event.event === "on_chat_model_stream" && event.data?.chunk) {
-        const chunk = event.data.chunk
-
-        if (typeof chunk.content === "string" && chunk.content) {
-          fullContent += chunk.content
-          tokenCount++
-
-          task.content = fullContent
-          broadcast(task, { type: "token", content: chunk.content })
-
-          if (
-            tokenCount % 10 === 0 ||
-            Date.now() - lastFlush > FLUSH_INTERVAL
-          ) {
-            await flushToDb()
-          }
-        }
-
-        if (
-          Array.isArray(chunk.tool_call_chunks) &&
-          chunk.tool_call_chunks.length > 0
-        ) {
-          for (const tc of chunk.tool_call_chunks) {
-            if (tc.name) {
-              broadcast(task, {
-                type: "tool_call_start",
-                name: tc.name,
-                index: tc.index,
-                id: tc.id,
-              })
-            }
-            if (tc.args) {
-              broadcast(task, {
-                type: "tool_call_delta",
-                args: tc.args,
-                index: tc.index,
-              })
-            }
-          }
-        }
-      }
-
-      if (event.event === "on_tool_start") {
-        broadcast(task, {
-          type: "tool_start",
-          name: event.name,
-          input: event.data?.input,
-        })
-      }
-
-      if (event.event === "on_tool_end") {
-        const output =
-          typeof event.data?.output === "string"
-            ? event.data.output
-            : event.data?.output
-        broadcast(task, { type: "tool_end", name: event.name, output })
-      }
-
-      if (
-        event.event === "on_chain_start" &&
-        Array.isArray(event.tags) &&
-        event.tags.includes("agent")
-      ) {
-        broadcast(task, {
-          type: "chain_start",
-          name: event.name,
-          input: event.data?.input,
-        })
-      }
-
-      if (
-        event.event === "on_chain_end" &&
-        Array.isArray(event.tags) &&
-        event.tags.includes("agent")
-      ) {
-        broadcast(task, {
-          type: "chain_end",
-          name: event.name,
-          output: event.data?.output,
-        })
-      }
-    }
-
-    if (task.abortController.signal.aborted) {
+    await finalizeStream(task, sessionId, result.fullContent)
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
       await getDb()
         .update(streamTasks)
         .set({ status: "cancelled", updatedAt: sql`datetime('now')` })
@@ -296,33 +229,6 @@ async function runAgentInBackground(
       return
     }
 
-    const savedMessage = await createMessage(
-      sessionId,
-      "assistant",
-      fullContent
-    )
-
-    await flushToDb()
-    await getDb()
-      .update(streamTasks)
-      .set({
-        status: "completed",
-        messageId: savedMessage.id,
-        updatedAt: sql`datetime('now')`,
-      })
-      .where(eq(streamTasks.id, task.id))
-
-    await detectNewArtifacts(sessionId)
-    await updateSession(sessionId, {})
-
-    broadcast(task, {
-      type: "done",
-      messageId: savedMessage.id,
-      streamId: task.id,
-    })
-
-    completeTask(task.id, savedMessage.id)
-  } catch (error: any) {
     const errMsg = error?.message || "Unknown error"
 
     await getDb()
@@ -339,8 +245,231 @@ async function runAgentInBackground(
 }
 
 /**
- * 流恢复结果类型
+ * 后台运行 Agent（resume 场景 — interrupt 审批后恢复）
  */
+async function runAgentInBackgroundResume(
+  sessionId: string,
+  resumeDecisions: Record<string, { type: string; args?: Record<string, unknown> }>,
+  task: ActiveTask,
+  employeeId?: string
+) {
+  try {
+    await getDb().insert(streamTasks).values({
+      id: task.id,
+      sessionId,
+      status: "streaming",
+      content: "",
+    })
+
+    broadcast(task, { type: "stream_start", streamId: task.id })
+
+    const agent = await resolveAgent(employeeId)
+
+    const decisions = Object.entries(resumeDecisions).map(
+      ([toolCallId, d]) => ({ toolCallId, ...d })
+    )
+    const command = new Command({ resume: { decisions } })
+
+    const eventStream = await agent.stream(command, {
+      configurable: { thread_id: sessionId },
+      streamMode: ["messages", "updates"],
+      signal: task.abortController.signal,
+    } as any)
+
+    const result = await processStreamEvents(eventStream, task, sessionId)
+
+    if (result.interrupted) {
+      broadcast(task, {
+        type: "interrupt",
+        interrupts: result.interrupts,
+      })
+      completeTask(task.id, null)
+      return
+    }
+
+    await finalizeStream(task, sessionId, result.fullContent)
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      await getDb()
+        .update(streamTasks)
+        .set({ status: "cancelled", updatedAt: sql`datetime('now')` })
+        .where(eq(streamTasks.id, task.id))
+      completeTask(task.id, null)
+      return
+    }
+
+    const errMsg = error?.message || "Unknown error"
+
+    await getDb()
+      .update(streamTasks)
+      .set({
+        status: "failed",
+        errorMessage: errMsg,
+        updatedAt: sql`datetime('now')`,
+      })
+      .where(eq(streamTasks.id, task.id))
+
+    failTask(task.id, errMsg)
+  }
+}
+
+interface StreamResult {
+  fullContent: string
+  interrupted: boolean
+  interrupts: any[]
+}
+
+/**
+ * 处理 stream() 输出事件
+ *
+ * stream(streamMode=["messages","updates"]) 输出格式为 [modeName, payload] 元组：
+ * - ["messages", [AIMessageChunk, metadata]]
+ * - ["updates", {nodeName: stateUpdate}]
+ * - ["updates", {"__interrupt__": [...]}]
+ */
+async function processStreamEvents(
+  eventStream: AsyncIterable<any>,
+  task: ActiveTask,
+  _sessionId: string
+): Promise<StreamResult> {
+  let fullContent = ""
+  let tokenCount = 0
+  const FLUSH_INTERVAL = 2000
+  let lastFlush = Date.now()
+
+  async function flushToDb() {
+    await getDb()
+      .update(streamTasks)
+      .set({
+        content: fullContent,
+        status: "streaming",
+        updatedAt: sql`datetime('now')`,
+      })
+      .where(eq(streamTasks.id, task.id))
+    lastFlush = Date.now()
+  }
+
+  for await (const event of eventStream) {
+    if (task.abortController.signal.aborted) break
+
+    // 元组格式: [mode, data]
+    const [mode, data] = event
+
+    if (mode === "messages") {
+      const [chunk, metadata] = data
+
+      // 文本 token
+      if (
+        typeof chunk?.content === "string" &&
+        chunk.content.length > 0
+      ) {
+        fullContent += chunk.content
+        tokenCount++
+        task.content = fullContent
+
+        broadcast(task, {
+          type: "messages",
+          chunk: {
+            content: chunk.content,
+            tool_call_chunks: chunk.tool_call_chunks || [],
+            tool_calls: chunk.tool_calls || [],
+            additional_kwargs: chunk.additional_kwargs || {},
+          },
+          metadata: metadata || {},
+        })
+
+        if (
+          tokenCount % 10 === 0 ||
+          Date.now() - lastFlush > FLUSH_INTERVAL
+        ) {
+          await flushToDb()
+        }
+      }
+
+      // 工具调用参数流式片段
+      if (Array.isArray(chunk?.tool_call_chunks) && chunk.tool_call_chunks.length > 0) {
+        broadcast(task, {
+          type: "messages",
+          chunk: {
+            content: "",
+            tool_call_chunks: chunk.tool_call_chunks,
+            tool_calls: chunk.tool_calls || [],
+            additional_kwargs: chunk.additional_kwargs || {},
+          },
+          metadata: metadata || {},
+        })
+      }
+
+      // 完整工具调用（某些模型一次输出完整 tool_calls）
+      if (
+        !chunk?.content &&
+        Array.isArray(chunk?.tool_calls) &&
+        chunk.tool_calls.length > 0
+      ) {
+        broadcast(task, {
+          type: "messages",
+          chunk: {
+            content: "",
+            tool_call_chunks: [],
+            tool_calls: chunk.tool_calls,
+            additional_kwargs: chunk.additional_kwargs || {},
+          },
+          metadata: metadata || {},
+        })
+      }
+    } else if (mode === "updates") {
+      // 检测 interrupt
+      if (data && typeof data === "object" && "__interrupt__" in data) {
+        return {
+          fullContent,
+          interrupted: true,
+          interrupts: data.__interrupt__,
+        }
+      }
+
+      broadcast(task, { type: "updates", data })
+    }
+  }
+
+  return {
+    fullContent,
+    interrupted: false,
+    interrupts: [],
+  }
+}
+
+/**
+ * 流结束后的收尾工作：保存消息、更新任务状态、同步产物
+ */
+async function finalizeStream(
+  task: ActiveTask,
+  sessionId: string,
+  fullContent: string
+) {
+  const savedMessage = await createMessage(sessionId, "assistant", fullContent)
+
+  await getDb()
+    .update(streamTasks)
+    .set({
+      content: fullContent,
+      status: "completed",
+      messageId: savedMessage.id,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(streamTasks.id, task.id))
+
+  await detectNewArtifacts(sessionId)
+  await updateSession(sessionId, {})
+
+  broadcast(task, {
+    type: "done",
+    messageId: savedMessage.id,
+    streamId: task.id,
+  })
+
+  completeTask(task.id, savedMessage.id)
+}
+
 export type ResumeResult =
   | {
       ok: true
@@ -349,9 +478,6 @@ export type ResumeResult =
     }
   | { ok: false; error: string }
 
-/**
- * 恢复/订阅指定的流
- */
 export function resumeStream(streamId: string): ResumeResult {
   const task = getTask(streamId)
   if (!task) {
@@ -368,16 +494,10 @@ export function resumeStream(streamId: string): ResumeResult {
   }
 }
 
-/**
- * 取消指定的流
- */
 export function cancelStream(streamId: string): boolean {
   return cancelTask(streamId)
 }
 
-/**
- * 流状态类型
- */
 export type StreamStatus = {
   active: boolean
   streamId?: string
@@ -387,9 +507,6 @@ export type StreamStatus = {
   lastMessageId?: number | null
 }
 
-/**
- * 获取会话的流状态
- */
 export function getStreamStatus(sessionId: string): StreamStatus {
   const task = getActiveTaskForSession(sessionId)
   if (task) {
@@ -398,9 +515,6 @@ export function getStreamStatus(sessionId: string): StreamStatus {
   return { active: false }
 }
 
-/**
- * 解析后的流类型
- */
 export type ResolvedStream =
   | {
       ok: true
@@ -413,9 +527,6 @@ export type ResolvedStream =
     }
   | { ok: false; error: string }
 
-/**
- * 解析会话的流状态（支持页面重载恢复）
- */
 export async function resolveStream(
   sessionId: string
 ): Promise<ResolvedStream> {
@@ -505,9 +616,6 @@ export async function resolveStream(
   return { ok: false, error: "Unknown stream status" }
 }
 
-/**
- * 获取会话的最新流任务记录
- */
 export async function getLatestStreamTask(sessionId: string) {
   const [row] = await getDb()
     .select()

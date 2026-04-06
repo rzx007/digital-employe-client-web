@@ -38,7 +38,7 @@ import { getDataDir } from "./db"
  * - 支持通过环境变量配置 API 密钥和基础 URL
  */
 const model = new ChatOpenAI({
-  model: "glm-4.7",
+  model: process.env.GLM_MODEL ?? "glm-4.7",
   openAIApiKey: process.env.OPENAI_API_KEY || process.env.GLM_API_KEY,
   configuration: {
     baseURL: process.env.GLM_BASE_URL,

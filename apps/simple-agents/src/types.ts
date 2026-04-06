@@ -202,30 +202,41 @@ export type StreamTask = {
 /**
  * 流事件类型
  *
- * 用于通过 SSE 向客户端推送事件
+ * 通过 SSE 向客户端推送 LangGraph stream() 事件
  *
  * 事件类型：
  * - stream_start: 流开始
- * - chain_start: Agent 推理轮次开始
- * - chain_end: Agent 推理轮次结束
- * - token: 模型逐 token 输出
- * - tool_call_start: 模型开始生成工具调用（含工具名）
- * - tool_call_delta: 工具调用参数的流式片段
- * - tool_start: 工具执行开始
- * - tool_end: 工具执行结束
+ * - messages: LangGraph messages 模式 → [AIMessageChunk, metadata] 元组
+ * - updates: LangGraph updates 模式 → {nodeName: stateUpdate}
+ * - interrupt: Agent 遇到 interruptOn 触发的人机协作暂停
  * - done: 流完成
  * - error: 流出错
  * - cancelled: 流取消
  */
 export type StreamEvent =
   | { type: "stream_start"; streamId: string }
-  | { type: "chain_start"; name: string; input?: unknown }
-  | { type: "chain_end"; name: string; output?: unknown }
-  | { type: "token"; content: string }
-  | { type: "tool_call_start"; name: string; index?: number; id?: string }
-  | { type: "tool_call_delta"; args: string; index?: number }
-  | { type: "tool_start"; name: string; input?: unknown }
-  | { type: "tool_end"; name: string; output?: unknown }
+  | {
+      type: "messages"
+      chunk: {
+        content?: string | any[]
+        tool_call_chunks?: Array<{
+          name?: string
+          args?: string
+          id?: string
+          index?: number
+        }>
+        tool_calls?: Array<{
+          name?: string
+          args?: string | Record<string, unknown>
+          id?: string
+          type?: string
+        }>
+        additional_kwargs?: Record<string, unknown>
+      }
+      metadata?: Record<string, any>
+    }
+  | { type: "updates"; data: Record<string, any> }
+  | { type: "interrupt"; interrupts: any[] }
   | { type: "done"; messageId: number; streamId: string }
   | { type: "error"; message: string; streamId: string }
   | { type: "cancelled"; streamId: string }

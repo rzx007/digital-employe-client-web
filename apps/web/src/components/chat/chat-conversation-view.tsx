@@ -1,12 +1,10 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
-import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from "ai"
 import type { UIMessage } from "ai"
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
+
+import { SimpleAgentsTransport } from "@/lib/chat/simple-agents-transport"
 
 import { ChatPanel } from "./chat-panel"
 import { type ChatViewContact } from "./chat-view-shared"
@@ -38,28 +36,8 @@ export function ConversationChatView({
     title: string
   } | null>(null)
 
-  const SIMPLE_AGENTS_BASE = import.meta.env.DEV
-    ? "/simple-agents/api/sessions"
-    : "http://localhost:3005/api/sessions"
   const transport = React.useMemo(
-    () =>
-      new DefaultChatTransport<any>({
-        prepareSendMessagesRequest({ messages, body }) {
-          const skill = body?.skill ?? ""
-          if (!conversationId) {
-            throw new Error("缺少会话 ID")
-          }
-          return {
-            body: { messages, skill },
-            api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
-          }
-        },
-        prepareReconnectToStreamRequest({ id }) {
-          return {
-            api: `${import.meta.env.DEV ? "/simple-agents" : "http://localhost:3005"}/api/sessions/${id}/chat/stream`,
-          }
-        },
-      }),
+    () => new SimpleAgentsTransport<any>(),
     [conversationId]
   )
 
@@ -78,7 +56,6 @@ export function ConversationChatView({
     messages: initialMessages,
     transport,
     resume: true,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -142,6 +119,7 @@ export function ConversationChatView({
 
       try {
         setInputValue("")
+        transport.setSkill(command?.title ?? "")
 
         await sendMessage(
           {
@@ -151,7 +129,6 @@ export function ConversationChatView({
             body: {
               attachments: message.files,
               conversationId,
-              skill: command?.title ?? "",
             },
           }
         )
@@ -167,6 +144,7 @@ export function ConversationChatView({
 
   return (
     <>
+      {/* {JSON.stringify(messages)} */}
       <ChatPanel
         contact={contact}
         title={title}
@@ -185,6 +163,7 @@ export function ConversationChatView({
         onNewConversation={onNewConversation}
         addToolOutput={addToolOutput}
         addToolApprovalResponse={addToolApprovalResponse}
+        onSendMessage={() => sendMessage({ text: "" })}
         className={className}
         {...props}
       />

@@ -14,11 +14,12 @@
  * 4. GET  /:id/chat/stream           - 断线重连：回放缓存 chunks + 接续实时流（204 = 已结束）
  * 5. POST /:id/chat/stream/stop     - 手动停止 agent（abort + 持久化已有内容）
  *
- * === Raw 流式对话（保留，前端未使用，供调试/外部集成） ===
- * 6. POST /:id/chat/raw-stream       - 原始 LangChain 事件流（自定义 StreamEvent）
- * 7. GET  /:id/stream/:streamId      - 恢复/订阅指定 raw 流
- * 8. POST /:id/stream/:streamId/cancel - 取消指定 raw 流
- * 9. GET  /:id/stream                - 查询 raw 流状态
+ * === Raw 流式对话（前端 SimpleAgentsTransport 使用） ===
+ * 6. POST /:id/chat/raw-stream       - 启动 raw 流（LangGraph stream() + SSE）
+ * 7. POST /:id/chat/raw-stream/resume - 恢复 raw 流（interrupt 审批后）
+ * 8. GET  /:id/stream/:streamId      - 恢复/订阅指定 raw 流
+ * 9. POST /:id/stream/:streamId/cancel - 取消指定 raw 流
+ * 10. GET /:id/stream                - 查询 raw 流状态
  *
  * 流式端点对比：
  *
@@ -52,6 +53,7 @@ import {
 } from "../services/agent-stream-sdk"
 import {
   startStream,
+  startStreamWithResume,
   resumeStream,
   cancelStream,
   getStreamStatus,
@@ -288,14 +290,16 @@ app.post("/:id/chat/stream/stop", async (c) => {
 /**
  * POST /:id/chat/raw-stream
  *
- * 原始 LangChain 事件流式对话（前端未使用，供调试/外部集成）
+ * 启动 raw 流式对话（前端 SimpleAgentsTransport 使用）
  *
- * 保留完整 LangChain 事件粒度（on_chat_model_stream, on_tool_start 等），
- * 使用自定义 StreamEvent 格式和 stream-registry 内存注册表。
+ * 使用 LangGraph stream(streamMode=["messages","updates"]) + SSE 推送
  */
 app.post("/:id/chat/raw-stream", async (c) => {
   const id = c.req.param("id")
-  const body = await c.req.json<SendMessageInput>()
+  const body = await c.req.json<{
+    message?: string
+    skill?: string
+  }>()
 
   if (!body.message || typeof body.message !== "string") {
     return c.json({ error: "message is required (string)" }, 400)
@@ -340,7 +344,79 @@ app.post("/:id/chat/raw-stream", async (c) => {
         if (
           event.type === "done" ||
           event.type === "error" ||
-          event.type === "cancelled"
+          event.type === "cancelled" ||
+          event.type === "interrupt"
+        ) {
+          unsub()
+          return
+        }
+      }
+      await stream.sleep(100)
+    }
+  })
+})
+
+/**
+ * POST /:id/chat/raw-stream/resume
+ *
+ * 恢复 raw 流（interrupt 审批后调用）
+ *
+ * 前端审批/回答后，发送 resumeDecisions 恢复 Agent 执行
+ */
+app.post("/:id/chat/raw-stream/resume", async (c) => {
+  const id = c.req.param("id")
+  const body = await c.req.json<{
+    resumeDecisions: Record<
+      string,
+      { type: string; args?: Record<string, unknown> }
+    >
+  }>()
+
+  if (!body.resumeDecisions || typeof body.resumeDecisions !== "object") {
+    return c.json({ error: "resumeDecisions is required (object)" }, 400)
+  }
+
+  const session = await getSession(id)
+  if (!session) return c.json({ error: "Session not found" }, 404)
+
+  const employeeId = session.employeeId || undefined
+
+  const result = startStreamWithResume(id, body.resumeDecisions, employeeId)
+
+  if (!result.ok) {
+    return c.json(
+      { error: result.error, activeStreamId: result.activeStreamId },
+      409
+    )
+  }
+
+  return streamSSE(c, async (stream) => {
+    const streamId = result.streamId
+    const queue: StreamEvent[] = []
+
+    await stream.writeSSE({
+      data: JSON.stringify({ type: "stream_start", streamId }),
+    })
+
+    const unsub = result.subscribe((event: StreamEvent) => {
+      queue.push(event)
+    })
+
+    let aborted = false
+    stream.onAbort(() => {
+      aborted = true
+      unsub()
+    })
+
+    while (!aborted) {
+      while (queue.length > 0) {
+        const event = queue.shift()!
+        await stream.writeSSE({ data: JSON.stringify(event) })
+        if (
+          event.type === "done" ||
+          event.type === "error" ||
+          event.type === "cancelled" ||
+          event.type === "interrupt"
         ) {
           unsub()
           return
@@ -425,7 +501,8 @@ app.get("/:id/stream/:streamId", async (c) => {
           if (
             event.type === "done" ||
             event.type === "error" ||
-            event.type === "cancelled"
+            event.type === "cancelled" ||
+            event.type === "interrupt"
           ) {
             unsub()
             return

@@ -7,10 +7,8 @@ import {
   type ComponentProps,
 } from "react"
 import { useChat } from "@ai-sdk/react"
-import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from "ai"
+
+import { SimpleAgentsTransport } from "@/lib/chat/simple-agents-transport"
 
 import type { PromptInputMessage } from "@workspace/ui/components/ai-elements/prompt-input"
 import type { PromptChangeEvent } from "@/components/lexical-editor/prompt-input-textarea"
@@ -58,28 +56,7 @@ export function DraftChatView({
     setInputValue("")
   }, [draftSessionKey, selectedContactId])
 
-  const SIMPLE_AGENTS_BASE = import.meta.env.DEV
-    ? "/simple-agents/api/sessions"
-    : "http://localhost:3005/api/sessions"
-
-  const draftTransport = useMemo(
-    () =>
-      new DefaultChatTransport<any>({
-        prepareSendMessagesRequest({ messages, body }) {
-          const conversationId =
-            body?.conversationId ?? createdConversationIdRef.current
-          const skill = body?.skill ?? ""
-          if (!conversationId) {
-            throw new Error("缺少会话 ID")
-          }
-          return {
-            body: { messages, skill },
-            api: `${SIMPLE_AGENTS_BASE}/${conversationId}/chat/stream`,
-          }
-        },
-      }),
-    []
-  )
+  const draftTransport = useMemo(() => new SimpleAgentsTransport<any>(), [])
 
   const addArtifact = useArtifactStore((s) => s.addArtifact)
 
@@ -96,7 +73,6 @@ export function DraftChatView({
       ? `draft:${selectedContactId}:${draftSessionKey}`
       : `draft:chat-view:${draftSessionKey}`,
     transport: draftTransport,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onError: (chatError) => {
       toast.error("发送失败", {
         description: chatError.message || "请稍后重试",
@@ -155,6 +131,7 @@ export function DraftChatView({
         }
 
         setInputValue("")
+        draftTransport.setSkill(command?.title ?? "")
 
         await sendMessage(
           {
@@ -164,7 +141,6 @@ export function DraftChatView({
             body: {
               attachments: message.files,
               conversationId,
-              skill: command?.title ?? "",
             },
           }
         )
@@ -187,25 +163,30 @@ export function DraftChatView({
   )
 
   return (
-    <ChatPanel
-      contact={contact}
-      title="新对话"
-      messages={messages}
-      inputValue={inputValue}
-      status={status}
-      error={error}
-      isDraftMode={messages.length === 0}
-      isSubmitDisabled={isSubmitDisabled}
-      onInputChange={handleTextChange}
-      onSend={handleSendMessage}
-      onStopStream={stop}
-      onOpenContacts={onOpenContacts}
-      onOpenConversations={onOpenConversations}
-      onNewConversation={onNewConversation}
-      addToolOutput={addToolOutput}
-      addToolApprovalResponse={addToolApprovalResponse}
-      className={className}
-      {...props}
-    />
+    <>
+      {JSON.stringify(messages)}
+
+      <ChatPanel
+        contact={contact}
+        title="新对话"
+        messages={messages}
+        inputValue={inputValue}
+        status={status}
+        error={error}
+        isDraftMode={messages.length === 0}
+        isSubmitDisabled={isSubmitDisabled}
+        onInputChange={handleTextChange}
+        onSend={handleSendMessage}
+        onStopStream={stop}
+        onOpenContacts={onOpenContacts}
+        onOpenConversations={onOpenConversations}
+        onNewConversation={onNewConversation}
+        addToolOutput={addToolOutput}
+        addToolApprovalResponse={addToolApprovalResponse}
+        onSendMessage={() => sendMessage({ text: "" })}
+        className={className}
+        {...props}
+      />
+    </>
   )
 }
