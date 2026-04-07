@@ -469,6 +469,7 @@ processStream(response.body)
 ### 9.1 当前方案已足够
 
 当前 `SimpleAgentsTransport` + `useChat` 方案：
+
 - 已经解决了所有已知问题（tool_call_chunks 解析、interrupt 匹配、resume 流程）
 - AI SDK 提供了消息管理、状态同步、错误处理等基础设施
 - 代码量与手动渲染相当，但维护成本更低
