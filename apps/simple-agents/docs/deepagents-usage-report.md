@@ -471,52 +471,78 @@ if (result.__interrupt__) {
 | `@langchain/langgraph-checkpoint-sqlite` | SQLite 文件 | 持久化 | 生产环境、服务重启恢复 |
 | `@langchain/langgraph-checkpoint-postgres` | PostgreSQL | 持久化 | 分布式部署、多实例共享 |
 
-**当前项目状态**：未配置任何 checkpointer。`agent.ts` 中 `createDeepAgent` 没有传入 `checkpointer` 参数，因此 interruptOn 即使配置了也无法工作。
+**当前项目状态**：已配置 `MemorySaver` checkpointer + `interruptOn`，人机协作已完整实现。详见下方 9.6-9.8 节。
 
-### 9.6 与 `@ai-sdk/langchain` 的集成
+### 9.6 与 `@ai-sdk/langchain` 的集成（已废弃）
 
-当通过 `@ai-sdk/langchain` 的 `toUIMessageStream()` 消费 LangGraph 流时，interrupt 事件会被自动转换为 AI SDK 标准 chunk：
+> **注意**：`toUIMessageStream()` 对 DeepAgents 的 interrupt/checkpoint 适配存在已知 bug（#12797），`tool-approval-request` 的 toolCallId 不匹配，且某些场景根本不输出 approval 事件。项目已放弃此方案，改用自定义 `SimpleAgentsTransport`。
 
-```
-LangGraph __interrupt__ 事件
-  → toUIMessageStream() 自动转换
-    → tool-input-start      (工具调用开始)
-    → tool-input-available  (工具参数已就绪)
-    → tool-approval-request (等待用户审批)
-    → finish                (流正常结束)
-```
-
-前端 `useChat` 收到这些 chunk 后，tool part 的 `state` 会变为 `"approval-requested"`，此时渲染审批 UI，用户通过 `addToolApprovalResponse()` 或 `addToolOutput()` 回传决策。
-
-**关键点**：`toUIMessageStream()` 已经内置了 interrupt 事件的处理逻辑，不需要自行解析 `__interrupt__` 字段。但 resume 时仍需在后端手动构建 `Command({ resume: { decisions } })` 并调用 `agent.streamEvents(command, config)`。
-
-### 9.7 实际数据流（Web 场景）
+### 9.7 实际数据流（Web 场景 — 当前方案）
 
 ```
-[前端] 用户发消息 → POST /chat/stream (UIMessage[])
+[前端] 用户发消息 → SimpleAgentsTransport.sendMessages()
   ↓
-[后端] agent.stream() → toUIMessageStream() 迭代 chunk
+[前端] POST /chat/raw-stream { message: "..." }
   ↓
-[Agent] 调用 write_file → interruptOn 拦截 → interrupt()
+[后端] startStream() → runAgentInBackground()
   ↓
-[LangGraph] 图暂停，状态通过 checkpointer 保存
+[后端] agent.stream({ streamMode: ["messages", "updates"] })
   ↓
-[toUIMessageStream] 输出 tool-input-available + tool-approval-request + finish
+[Agent] 调用 write_file → interruptOn 拦截 → 图暂停
   ↓
-[SSE] 流结束，前端收到完整 chunk 序列
+[后端] processStreamEvents() 检测到 __interrupt__ → broadcast("interrupt")
   ↓
-[前端] 渲染审批 UI（part.state === "approval-requested"）
+[后端] completeTask(task.id, null) 释放注册表 slot
+  ↓
+[SSE] 流结束，前端收到 interrupt 事件
+  ↓
+[前端] transport 解析 interrupt → 匹配 tracker → tool-approval-request
+  ↓
+[前端] useChat → part.state = "approval-requested" → 渲染审批 UI
   ↓
 [用户] 点击"批准" → addToolApprovalResponse({ id, approved: true })
   ↓
-[前端] sendAutomaticallyWhen 检测所有工具已响应 → 自动 POST /chat/stream
+[前端] onSendMessage() → sendMessage({ text: "" })
   ↓
-[后端] 检测到 messages 中包含工具结果 → 构建 decisions
+[前端] transport.extractResumeDecisions() → { toolCallId: { type: "approve" } }
   ↓
-[后端] Command({ resume: { decisions } }) → agent.streamEvents(command, config)
+[前端] POST /chat/raw-stream/resume { resumeDecisions: { ... } }
+  ↓
+[后端] startStreamWithResume() → runAgentInBackgroundResume()
+  ↓
+[后端] Command({ resume: { decisions } }) → agent.stream(command, config)
   ↓
 [Agent] 从 checkpointer 读档 → 执行 write_file → 继续后续流程
 ```
+
+### 9.8 SimpleAgentsTransport 架构
+
+```
+SimpleAgentsTransport (implements ChatTransport<UIMessage>)
+  │
+  ├── sendMessages()
+  │   ├── extractResumeDecisions(messages) → 检测 approval-responded
+  │   ├── POST /raw-stream (普通消息)
+  │   └── POST /raw-stream/resume (审批恢复)
+  │
+  └── processResponseStream()
+      └── processSSEEvent()
+          ├── "messages" → text-delta / tool-input-start / tool-input-delta / tool-input-available
+          ├── "updates" → tool-output-available (非 resume 流)
+          ├── "interrupt" → tool-approval-request (匹配已有 tracker)
+          ├── "done" → finish
+          └── "error" → error
+```
+
+**关键设计决策**：
+
+| 决策 | 原因 |
+|------|------|
+| 用 `stream()` 替代 `streamEvents()` | 事件更少、结构更清晰、interrupt 检测更直接 |
+| 用 `tc.id` 作为 tracker key | `index` 始终为 0（LangChain 官方 issue #8394） |
+| Resume 流跳过 `tool-output-available` | AI SDK 在新消息中找不到旧消息的 tool part |
+| 手动触发 `sendMessage()` 而非 `sendAutomaticallyWhen` | 更可控，避免 AI SDK 内部状态不一致 |
+| 渲染时合并连续 assistant message | Resume 后创建新消息，视觉上需要连续 |
 
 ---
 
@@ -687,20 +713,20 @@ deepagents --model anthropic:claude-opus-4-5  # 指定模型
 
 | 能力              | 生产代码 | 示例代码 | 说明                             |
 | ----------------- | -------- | -------- | -------------------------------- |
-| 自定义模型        | ✅ 已使用 | ✅ 已使用 | GLM-4.7 通过 ChatOpenAI 兼容接口 |
+| 自定义模型        | ✅ 已使用 | ✅ 已使用 | GLM-4.7 / DeepSeek 通过 OpenAI 兼容接口 |
 | FilesystemBackend | ✅ 已使用 | ✅ 已使用 | 虚拟模式，限制了工作目录         |
 | 自定义系统提示词  | ✅ 已使用 | ✅ 已使用 | 中文文件管理助手                 |
-| Streaming         | ✅ 已使用 | ✅ 已使用 | 两个流式端点 + 非流式端点        |
-| Skills            | ✅ 已使用 | ❌ 未演示 | 运行时通过 backend 读取技能文件  |
+| Streaming         | ✅ 已使用 | ✅ 已使用 | stream(streamMode) + SSE 推送    |
+| Skills            | ✅ 已使用 | ✅ 已使用 | 运行时通过 backend 读取技能文件  |
+| Checkpointer      | ✅ 已使用 | ✅ 已使用 | `MemorySaver`，支持 interrupt + resume |
+| Human-in-the-Loop | ✅ 已使用 | ✅ 已使用 | `interruptOn` + `SimpleAgentsTransport` 完整实现 |
 | 子代理            | ❌ 未使用 | ✅ 已使用 | `04-subagents.ts` 有完整示例     |
 | Memory            | ❌ 未使用 | ✅ 已使用 | `06-memory-skills.ts` 有完整示例 |
-| Human-in-the-Loop | ❌ 未使用 | ✅ 已使用 | `07-human-in-the-loop.ts` 有完整示例 |
 | 结构化输出        | ❌ 未使用 | ✅ 已使用 | `08-structured-output.ts` 有完整示例 |
-| Checkpointer      | ❌ 未使用 | ✅ 已使用 | 示例使用 `MemorySaver`，生产未配置 |
 | Middleware        | ❌ 未使用 | ❌ 未演示 | 默认中间件已生效，无自定义中间件 |
 | Sandboxes         | ❌ 未使用 | ❌ 未演示 | 无沙箱后端配置                   |
 
-> **注意**：示例代码 (`examples/`) 已覆盖 checkpointer、interrupt、子代理、记忆、技能、结构化输出等全部核心能力，但**生产代码 (`src/`) 尚未集成这些功能**。
+> **注意**：Human-in-the-Loop 已完整集成到生产代码中，使用自定义 `SimpleAgentsTransport` 替代了 `@ai-sdk/langchain` 的 `toUIMessageStream()`（因其存在已知 bug #12797）。详见 [transport-review.md](./transport-review.md)。
 
 ### 15.2 可扩展方向
 
