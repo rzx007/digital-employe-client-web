@@ -87,7 +87,7 @@ export default {
 
 最简单的 Electrobun 应用，打开一个窗口并加载网页：
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { BrowserWindow } from "electrobun/bun"
@@ -186,7 +186,7 @@ export default {
 
 ### 3.2 Browser 侧 TypeScript
 
-**`src/main-ui/index.ts`**
+`**src/main-ui/index.ts**`
 
 ```typescript
 import { Electroview } from "electrobun/view"
@@ -212,7 +212,7 @@ window.goForward = () => {
 
 ### 3.3 HTML 模板
 
-**`src/main-ui/index.html`**
+`**src/main-ui/index.html**`
 
 ```html
 <!DOCTYPE html>
@@ -247,7 +247,7 @@ window.goForward = () => {
 </html>
 ```
 
-**`src/main-ui/index.css`**
+`**src/main-ui/index.css**`
 
 ```css
 * {
@@ -320,7 +320,7 @@ body {
 
 ### 3.4 设置应用菜单（启用快捷键）
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { BrowserWindow, ApplicationMenu } from "electrobun/bun"
@@ -363,7 +363,7 @@ const win = new BrowserWindow({
 
 ### 4.1 定义共享类型
 
-**`src/shared/types.ts`**
+`**src/shared/types.ts**`
 
 ```typescript
 import { type RPCSchema } from "electrobun/bun"
@@ -414,7 +414,7 @@ export type AppRPCType = {
 
 ### 4.2 Bun 主进程处理
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { BrowserWindow, BrowserView, Utils } from "electrobun/bun"
@@ -481,7 +481,7 @@ const win = new BrowserWindow({
 
 ### 4.3 Browser 侧调用
 
-**`src/main-ui/index.ts`**
+`**src/main-ui/index.ts**`
 
 ```typescript
 import { Electroview } from "electrobun/view"
@@ -539,7 +539,7 @@ electroview.rpc.send.logToBun({ level: "info", msg: "UI loaded" })
 
 ## 五、系统托盘应用
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { Tray, Utils } from "electrobun/bun"
@@ -616,7 +616,7 @@ tray.on("tray-clicked", (e) => {
 
 ## 六、窗口管理进阶
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { BrowserWindow, Screen } from "electrobun/bun"
@@ -670,7 +670,7 @@ console.log("Current zoom:", win.getPageZoom())
 
 ## 七、事件系统实践
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import Electrobun from "electrobun/bun"
@@ -732,7 +732,7 @@ win.webview.on("will-navigate", (e) => {
 
 ## 八、文件对话框与工具 API
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { Utils, BrowserWindow, GlobalShortcut } from "electrobun/bun"
@@ -800,7 +800,7 @@ GlobalShortcut.register("CommandOrControl+Shift+H", () => {
 
 ### 9.1 Bun 主进程
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { BrowserWindow } from "electrobun/bun"
@@ -816,7 +816,7 @@ const win = new BrowserWindow({
 
 ### 9.2 HTML/CSS
 
-**`src/main-ui/index.html`**
+`**src/main-ui/index.html**`
 
 ```html
 <!DOCTYPE html>
@@ -934,7 +934,7 @@ const win = new BrowserWindow({
 
 使用 `<electrobun-webview>` 标签在单个页面中嵌入多个隔离的 webview（OOPIF 模式）：
 
-**`src/main-ui/index.html`**
+`**src/main-ui/index.html**`
 
 ```html
 <!DOCTYPE html>
@@ -1020,7 +1020,7 @@ const win = new BrowserWindow({
 </html>
 ```
 
-**`src/main-ui/index.ts`**
+`**src/main-ui/index.ts**`
 
 ```typescript
 import { Electroview } from "electrobun/view"
@@ -1041,7 +1041,7 @@ window.switchTab = (index: number) => {
 
 ## 十一、应用更新机制
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { BrowserWindow, Tray, Utils } from "electrobun/bun"
@@ -1139,7 +1139,7 @@ export default {
 
 ## 十二、Session 与 Cookie 管理
 
-**`src/bun/index.ts`**
+`**src/bun/index.ts**`
 
 ```typescript
 import { Session, BrowserWindow } from "electrobun/bun"
@@ -1473,5 +1473,5 @@ bun install electrobun          # 安装 Electrobun 依赖
 
 ---
 
-_文档生成日期：2026-03-28_
-_参考文档：https://blackboard.sh/electrobun/docs/_
+*文档生成日期：2026-03-28*
+*参考文档：[https://blackboard.sh/electrobun/docs/](https://blackboard.sh/electrobun/docs/)*

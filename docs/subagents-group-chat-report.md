@@ -164,12 +164,14 @@ task({
 
 ### 2.6 子代理继承规则
 
-| 属性          | 自定义子代理        | general-purpose 子代理 |
-| ------------- | ------------------- | ---------------------- |
-| 父 Agent 工具 | 继承（可覆盖）      | 继承                   |
-| 父 Agent 技能 | **不继承**          | 继承                   |
-| 父 Agent 模型 | 继承（可覆盖）      | 继承                   |
-| 中间件        | 基础中间件 + 自定义 | 基础中间件 + 父 skills |
+
+| 属性         | 自定义子代理      | general-purpose 子代理 |
+| ---------- | ----------- | ------------------- |
+| 父 Agent 工具 | 继承（可覆盖）     | 继承                  |
+| 父 Agent 技能 | **不继承**     | 继承                  |
+| 父 Agent 模型 | 继承（可覆盖）     | 继承                  |
+| 中间件        | 基础中间件 + 自定义 | 基础中间件 + 父 skills    |
+
 
 **基础中间件包含：** `todoListMiddleware` + `FilesystemMiddleware` + `SummarizationMiddleware` + `PatchToolCallsMiddleware`
 
@@ -318,15 +320,17 @@ sessions (
 
 ### 4.2 群聊 API 层
 
-| 端点                     | 状态       | 说明                       |
-| ------------------------ | ---------- | -------------------------- |
+
+| 端点                       | 状态      | 说明                  |
+| ------------------------ | ------- | ------------------- |
 | `POST /api/groups`       | 已实现     | 创建群聊（存 employeeIds） |
-| `GET /api/groups`        | 已实现     | 列出群聊                   |
-| `GET /api/groups/:id`    | 已实现     | 获取群聊详情               |
-| `PATCH /api/groups/:id`  | 已实现     | 更新群聊                   |
-| `DELETE /api/groups/:id` | 已实现     | 删除群聊                   |
-| 群聊消息发送             | **未实现** | 无群聊 session 和消息机制  |
-| 群聊 Agent 调度          | **未实现** | 无多 Agent 协调逻辑        |
+| `GET /api/groups`        | 已实现     | 列出群聊                |
+| `GET /api/groups/:id`    | 已实现     | 获取群聊详情              |
+| `PATCH /api/groups/:id`  | 已实现     | 更新群聊                |
+| `DELETE /api/groups/:id` | 已实现     | 删除群聊                |
+| 群聊消息发送                   | **未实现** | 无群聊 session 和消息机制   |
+| 群聊 Agent 调度              | **未实现** | 无多 Agent 协调逻辑       |
+
 
 ### 4.3 前端群聊现状
 
@@ -368,15 +372,17 @@ POST /chat/conversations
 
 ## 5. 核心差距分析
 
-| 维度       | 当前状态                     | 目标状态                      | 差距                        |
-| ---------- | ---------------------------- | ----------------------------- | --------------------------- |
-| 数据模型   | sessions 只关联单个 employee | sessions 可关联 group         | 需要增加 group_id 字段      |
-| Agent 创建 | 每个员工独立 Agent 实例      | 群聊场景需要编排多 Agent      | 需要群聊级别的 Agent 编排器 |
-| 消息路由   | 单 Agent 处理所有消息        | 消息需要路由到群内多个 Agent  | 需要消息分发机制            |
-| 流式输出   | 单 Agent 单流                | 多 Agent 可能需要多流合并     | 需要流合并/顺序展示         |
-| 上下文共享 | 无                           | 群内 Agent 需要共享对话上下文 | 需要上下文传递机制          |
-| 前端 UI    | 群聊无特殊展示               | 区分不同 Agent 的回复         | 需要 Agent 标识和头像展示   |
-| 会话历史   | 单 Agent 消息列表            | 多 Agent 混合消息列表         | 需要消息关联 Agent 身份     |
+
+| 维度       | 当前状态                    | 目标状态               | 差距                |
+| -------- | ----------------------- | ------------------ | ----------------- |
+| 数据模型     | sessions 只关联单个 employee | sessions 可关联 group | 需要增加 group_id 字段  |
+| Agent 创建 | 每个员工独立 Agent 实例         | 群聊场景需要编排多 Agent    | 需要群聊级别的 Agent 编排器 |
+| 消息路由     | 单 Agent 处理所有消息          | 消息需要路由到群内多个 Agent  | 需要消息分发机制          |
+| 流式输出     | 单 Agent 单流              | 多 Agent 可能需要多流合并   | 需要流合并/顺序展示        |
+| 上下文共享    | 无                       | 群内 Agent 需要共享对话上下文 | 需要上下文传递机制         |
+| 前端 UI    | 群聊无特殊展示                 | 区分不同 Agent 的回复     | 需要 Agent 标识和头像展示  |
+| 会话历史     | 单 Agent 消息列表            | 多 Agent 混合消息列表     | 需要消息关联 Agent 身份   |
+
 
 ---
 
@@ -422,16 +428,18 @@ POST /chat/conversations
 
 ### 6.2 方案选型矩阵
 
-| 维度               | 方案 A: Orchestrator-Delegate | 方案 B: Round-Robin   | 方案 C: Supervisor    |
-| ------------------ | ----------------------------- | --------------------- | --------------------- |
-| 编排方式           | 主 Agent 智能委派             | 顺序让每个 Agent 响应 | 主 Agent + 评审 Agent |
-| 上下文共享         | 通过 task 工具自动传递        | 每轮手动拼接          | 两轮：先执行后评审    |
-| 灵活性             | 高（AI 自主决策）             | 低（固定轮转）        | 中等                  |
-| 复杂度             | 中等                          | 低                    | 高                    |
-| Token 消耗         | 中等（主 Agent + 子 Agent）   | 高（每个 Agent 都跑） | 高（主 + 子 + 评审）  |
-| 适用场景           | 复杂协作、任务分发            | 简单信息收集、投票    | 质量敏感、需二次验证  |
-| 与 DeepAgents 适配 | **原生支持**                  | 需要自定义实现        | 需要自定义实现        |
-| 推荐指数           | ★★★★★                         | ★★★☆☆                 | ★★★★☆                 |
+
+| 维度              | 方案 A: Orchestrator-Delegate | 方案 B: Round-Robin | 方案 C: Supervisor   |
+| --------------- | --------------------------- | ----------------- | ------------------ |
+| 编排方式            | 主 Agent 智能委派                | 顺序让每个 Agent 响应    | 主 Agent + 评审 Agent |
+| 上下文共享           | 通过 task 工具自动传递              | 每轮手动拼接            | 两轮：先执行后评审          |
+| 灵活性             | 高（AI 自主决策）                  | 低（固定轮转）           | 中等                 |
+| 复杂度             | 中等                          | 低                 | 高                  |
+| Token 消耗        | 中等（主 Agent + 子 Agent）       | 高（每个 Agent 都跑）    | 高（主 + 子 + 评审）      |
+| 适用场景            | 复杂协作、任务分发                   | 简单信息收集、投票         | 质量敏感、需二次验证         |
+| 与 DeepAgents 适配 | **原生支持**                    | 需要自定义实现           | 需要自定义实现            |
+| 推荐指数            | ★★★★★                       | ★★★☆☆             | ★★★★☆              |
+
 
 ---
 
@@ -1191,28 +1199,34 @@ stream.on("tool_end", (event) => {
 
 ### 14.1 性能风险
 
-| 风险                  | 影响                              | 对策                                         |
-| --------------------- | --------------------------------- | -------------------------------------------- |
-| 群聊 Agent 创建开销大 | 首次响应延迟高                    | 预热缓存：群聊创建时提前构建 Agent           |
-| 多 Agent 串行执行     | 总耗时 = Orchestrator + Σ子 Agent | 支持并行 task 调用（DeepAgents 已支持）      |
-| Token 消耗倍增        | API 成本上升                      | 限制子代理最大轮次；精简 orchestrator prompt |
-| 大群聊（>10人）       | 子代理过多，选择困难              | 限制群聊最大人数；优化 description 排序      |
+
+| 风险             | 影响                            | 对策                               |
+| -------------- | ----------------------------- | -------------------------------- |
+| 群聊 Agent 创建开销大 | 首次响应延迟高                       | 预热缓存：群聊创建时提前构建 Agent             |
+| 多 Agent 串行执行   | 总耗时 = Orchestrator + Σ子 Agent | 支持并行 task 调用（DeepAgents 已支持）     |
+| Token 消耗倍增     | API 成本上升                      | 限制子代理最大轮次；精简 orchestrator prompt |
+| 大群聊（>10人）      | 子代理过多，选择困难                    | 限制群聊最大人数；优化 description 排序       |
+
 
 ### 14.2 质量风险
 
-| 风险                          | 影响       | 对策                                                 |
-| ----------------------------- | ---------- | ---------------------------------------------------- |
-| Orchestrator 选择错误的子代理 | 回复质量差 | 优化 employee description；添加 negative examples    |
-| 子代理回复与上下文脱节        | 信息不连贯 | 在 task description 中包含完整上下文摘要             |
-| 子代理幻觉编造信息            | 输出不可信 | 子代理继承员工能力约束；关键场景使用 Supervisor 模式 |
+
+| 风险                    | 影响    | 对策                                           |
+| --------------------- | ----- | -------------------------------------------- |
+| Orchestrator 选择错误的子代理 | 回复质量差 | 优化 employee description；添加 negative examples |
+| 子代理回复与上下文脱节           | 信息不连贯 | 在 task description 中包含完整上下文摘要                |
+| 子代理幻觉编造信息             | 输出不可信 | 子代理继承员工能力约束；关键场景使用 Supervisor 模式             |
+
 
 ### 14.3 技术风险
 
-| 风险                      | 影响                 | 对策                                         |
-| ------------------------- | -------------------- | -------------------------------------------- |
-| 群成员变更后缓存失效      | 使用旧 Agent 配置    | 群成员变更时调用 invalidateGroupAgentCache() |
-| session metadata 解析失败 | 群聊路由到单人 Agent | 添加 fallback 逻辑和类型校验                 |
-| 流式事件中子代理事件丢失  | 前端展示不完整       | 充分测试 streamEvents 透传行为               |
+
+| 风险                    | 影响            | 对策                                   |
+| --------------------- | ------------- | ------------------------------------ |
+| 群成员变更后缓存失效            | 使用旧 Agent 配置  | 群成员变更时调用 invalidateGroupAgentCache() |
+| session metadata 解析失败 | 群聊路由到单人 Agent | 添加 fallback 逻辑和类型校验                  |
+| 流式事件中子代理事件丢失          | 前端展示不完整       | 充分测试 streamEvents 透传行为               |
+
 
 ### 14.4 缓存策略建议
 
@@ -1233,22 +1247,24 @@ groupAgentCache (Map<"group:{groupId}", DeepAgent>)
 
 ## 附录 A：关键文件索引
 
-| 文件                                                  | 说明                 |
-| ----------------------------------------------------- | -------------------- |
+
+| 文件                                                    | 说明            |
+| ----------------------------------------------------- | ------------- |
 | `apps/simple-agents/src/agent.ts`                     | Agent 工厂，缓存管理 |
-| `apps/simple-agents/src/services/agent-service.ts`    | 单人聊天服务         |
-| `apps/simple-agents/src/services/group-service.ts`    | 群聊 CRUD 服务       |
-| `apps/simple-agents/src/services/agent-stream-raw.ts` | 原始流式服务         |
+| `apps/simple-agents/src/services/agent-service.ts`    | 单人聊天服务        |
+| `apps/simple-agents/src/services/group-service.ts`    | 群聊 CRUD 服务    |
+| `apps/simple-agents/src/services/agent-stream-raw.ts` | 原始流式服务        |
 | `apps/simple-agents/src/services/stream-registry.ts`  | 流式任务管理器       |
-| `apps/simple-agents/src/db/schema.ts`                 | 数据库 Schema        |
-| `apps/simple-agents/src/routes/chat.ts`               | 聊天路由             |
-| `apps/simple-agents/src/routes/groups.ts`             | 群聊路由             |
+| `apps/simple-agents/src/db/schema.ts`                 | 数据库 Schema    |
+| `apps/simple-agents/src/routes/chat.ts`               | 聊天路由          |
+| `apps/simple-agents/src/routes/groups.ts`             | 群聊路由          |
 | `apps/simple-agents/examples/04-subagents.ts`         | 子代理使用示例       |
-| `apps/web/src/api/chat.ts`                            | 前端聊天 API 层      |
-| `apps/web/src/api/group.ts`                           | 前端群聊 API         |
-| `apps/web/src/api/types.ts`                           | 类型定义             |
-| `apps/web/src/components/chat/contacts-sidebar.tsx`   | 通讯录侧边栏         |
-| `apps/web/src/components/chat/chat-draft-view.tsx`    | 新对话视图           |
+| `apps/web/src/api/chat.ts`                            | 前端聊天 API 层    |
+| `apps/web/src/api/group.ts`                           | 前端群聊 API      |
+| `apps/web/src/api/types.ts`                           | 类型定义          |
+| `apps/web/src/components/chat/contacts-sidebar.tsx`   | 通讯录侧边栏        |
+| `apps/web/src/components/chat/chat-draft-view.tsx`    | 新对话视图         |
+
 
 ## 附录 B：外部管理 API 群聊接口（已定义未实现）
 
@@ -1288,3 +1304,4 @@ interface CompiledSubAgent<TRunnable extends ReactAgent<any> | Runnable> {
 // createDeepAgent 中 subagents 参数类型
 subagents?: (SubAgent | CompiledSubAgent)[]
 ```
+
