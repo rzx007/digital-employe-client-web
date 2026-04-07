@@ -32,5 +32,5 @@
       ]
     }
   },
-  "include": ["src", "src/**/*.d.ts"]
+  "include": ["src", "src/**/*.d.ts", "electron/electron.d.ts"]
 }

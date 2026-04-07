@@ -1,10 +1,16 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron"
+import { app, BrowserWindow, shell, ipcMain, Menu } from "electron"
 import { startAgentServer, stopAgentServer } from "./agent-server"
 import { createRequire } from "node:module"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 import os from "node:os"
+import { registerIpcHandlers, isForceQuit, setForceQuit } from "./ipc-handlers"
 import { update } from "./update"
+import {
+  createSplashWindow,
+  closeSplashWindow,
+} from "./splash"
+import { createTray, destroyTray } from "./tray"
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -46,57 +52,124 @@ const indexHtml = path.join(RENDERER_DIST, "index.html")
 
 async function createWindow() {
   win = new BrowserWindow({
-    title: "Main window",
-    icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
+    title: "数字员工",
+    icon: path.join(process.env.VITE_PUBLIC, "logo.svg"),
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      // nodeIntegration: true,
-
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      // contextIsolation: false,
     },
+    minWidth: 1024,
+    minHeight: 768,
   })
 
+  // 加载页面：开发环境加载 Vite dev server，生产环境加载本地文件
   if (VITE_DEV_SERVER_URL) {
-    // #298
     win.loadURL(VITE_DEV_SERVER_URL)
-    // Open devTool if the app is not packaged
-    // win.webContents.openDevTools()
   } else {
     win.loadFile(indexHtml)
   }
   win.webContents.openDevTools()
-  // Test actively push message to the Electron-Renderer
+
+  // 点击关闭按钮(X) → 隐藏窗口到托盘，不退出应用
+  // forceQuit 为 true 时（从托盘菜单退出），允许窗口真正关闭
+  win.on("close", (e) => {
+    if (!isForceQuit()) {
+      e.preventDefault()
+      win?.hide()
+    }
+  })
+
+  // 页面加载完成后通知渲染进程
   win.webContents.on("did-finish-load", () => {
     win?.webContents.send("main-process-message", new Date().toLocaleString())
   })
 
-  // Make all links open with the browser, not with the application
+  // https 链接在系统浏览器中打开
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https:")) shell.openExternal(url)
     return { action: "deny" }
   })
 
+  // 注册 IPC 通信
+  registerIpcHandlers(win)
+
+  // 创建系统托盘（窗口关闭后仍可从托盘操作）
+  createTray(win)
+
   // Auto update
   update(win)
 }
 
+
+// ========== 应用生命周期 ==========
+
+/**
+ * 退出前清理
+ *
+ * 首次触发时：标记 forceQuit，停止后端，延迟退出
+ * 后续触发时（forceQuit=true）：直接退出，不再阻止
+ */
+app.on("before-quit", (e) => {
+  if (isForceQuit()) return
+  e.preventDefault()
+
+  setForceQuit(true)
+  destroyTray()
+  stopAgentServer()
+
+  // 兜底超时：即使后端未退出，也要确保应用能退出
+  setTimeout(() => {
+    app.exit(0)
+  }, 3000).unref()
+})
+
+/**
+ * 应用就绪
+ *
+ * 启动顺序：
+ * 1. 启动 node 后端
+ * 2. 创建主窗口
+ * 3. 如果后端启动失败，仍然创建窗口，通过 IPC 通知渲染进程
+ */
 app.whenReady().then(async () => {
-  await startAgentServer()
-  createWindow()
+  // 移除默认菜单栏（File Edit View 等）
+  Menu.setApplicationMenu(null)
+
+  createSplashWindow({
+    devServerUrl: VITE_DEV_SERVER_URL,
+    indexHtml,
+  })
+  try {
+    await startAgentServer()
+    console.log("[App] backend server ready, creating window...")
+    closeSplashWindow()
+    await createWindow()
+  } catch (err) {
+    console.error("[App] backend failed:", err)
+    setTimeout(() => {
+      closeSplashWindow()
+      createWindow()
+    }, 1500)
+
+    setTimeout(() => {
+      win?.webContents.send(
+        "backend-error",
+        err instanceof Error ? err.message : String(err)
+      )
+    }, 2500)
+  }
 })
 
 app.on("window-all-closed", () => {
   win = null
-  if (process.platform !== "darwin") app.quit()
+  // 不退出应用，保持 tray 存活
+  // 真正退出走 tray 菜单「退出」或 forceQuit
 })
 
 app.on("second-instance", () => {
   if (win) {
-    // Focus on the main window if the user tried to open another
     if (win.isMinimized()) win.restore()
+    // 窗口隐藏到托盘时也要能唤出
+    win.show()
     win.focus()
   }
 })
@@ -108,10 +181,6 @@ app.on("activate", () => {
   } else {
     createWindow()
   }
-})
-
-app.on("before-quit", async () => {
-  await stopAgentServer()
 })
 
 // New window example arg: new windows url
