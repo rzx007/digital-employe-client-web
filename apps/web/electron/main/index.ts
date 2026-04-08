@@ -63,6 +63,7 @@ const indexHtml = path.join(RENDERER_DIST, "index.html")
 async function createWindow() {
   win = new BrowserWindow({
     title: "数字员工",
+    frame: false,
     icon: path.join(process.env.VITE_PUBLIC, "logo.svg"),
     webPreferences: {
       preload,
@@ -148,7 +149,7 @@ app.whenReady().then(async () => {
   // 预注册 IPC 通信（登录窗口和主窗口共用）
   // 主窗口引用在 createWindow() 中通过 setMainWindow() 更新
   registerIpcHandlers(async () => {
-    // await createWindow()
+    await createWindow()
   })
 
 
