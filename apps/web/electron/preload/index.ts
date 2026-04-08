@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 })
 
 contextBridge.exposeInMainWorld("electronApi", {
+  isElectron: true,
   quitApp: () => ipcRenderer.invoke("quit-app"),
   minimizeWindow: () => ipcRenderer.invoke("minimize-window"),
   closeWindow: () => ipcRenderer.invoke("close-window"),
