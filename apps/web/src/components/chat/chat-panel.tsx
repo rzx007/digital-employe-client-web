@@ -561,7 +561,7 @@ export function ChatPanel({
               status={status}
               disabled={isSubmitDisabled}
               size="compact"
-              className="w-full overflow-hidden"
+              className="w-full overflow-hidden rounded-md"
               slashCommands={slashCommands}
               mentionCandidates={mentionCandidates}
             />
