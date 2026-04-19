@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
-import { getRootDir } from "../db"
+import { getRootDir } from "../config"
 
 const app = new Hono()
 

@@ -17,7 +17,8 @@
  */
 
 import type { Artifact } from "../types"
-import { getDb, getDataDir } from "../db"
+import { getDb } from "../db"
+import { getDataDir } from "../config"
 import { artifacts } from "../db/schema"
 import { eq } from "drizzle-orm"
 import { nanoid } from "nanoid"

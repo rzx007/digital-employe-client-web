@@ -1,8 +1,9 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron"
 import { flashTray, stopFlashTray } from "./tray"
+import { VITE_DEV_SERVER_URL, indexHtml } from "./index"
 import { sendNotification } from "./notification"
-import { closeLoginWindow } from "./login"
-
+import { closeLoginWindow, createLoginWindow  } from "./login"
+import { saveAuth, clearAuth, getStoredAuth, hasToken } from "./stores/auth"
 /**
  * IPC 通信处理器
  *
@@ -134,6 +135,55 @@ export function registerIpcHandlers(onLoginSuccess: () => void): void {
     _onLoginSuccess?.()
   })
 }
+
+ // ========== 认证管理 ==========
+
+  /** 保存认证信息（登录成功后调用） */
+  ipcMain.handle(
+    "save-auth",
+    (
+      _event,
+      data: {
+        token: string
+        user: Record<string, unknown>
+        rememberMe: boolean
+      }
+    ) => {
+      saveAuth(data.token, data.user, data.rememberMe)
+    }
+  )
+
+  /** 清除认证信息（退出登录时调用） */
+  ipcMain.handle("clear-auth", () => {
+    clearAuth()
+
+    // Electron 环境下：关闭所有窗口，打开登录窗口
+    // 关闭设置窗口
+    // closeSettingsWindow()
+    // 关闭招聘窗口
+    // closeRecruitmentWindow()
+    // 关闭主窗口
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.close()
+      mainWin = null
+    }
+
+    createLoginWindow({
+      devServerUrl: VITE_DEV_SERVER_URL,
+      indexHtml,
+    })
+  })
+
+  /** 获取已存储的认证状态 */
+  ipcMain.handle("get-auth-status", () => {
+    return getStoredAuth()
+  })
+
+  /** 检查是否有持久化的 token（启动时判断是否跳过登录） */
+  ipcMain.handle("has-saved-auth", () => {
+    return hasToken()
+  })
+
 
 /**
  * 退出应用

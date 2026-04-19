@@ -12,6 +12,7 @@ import {
 } from "./splash"
 import { createTray, destroyTray } from "./tray"
 import { createLoginWindow, closeLoginWindow } from "./login"
+import { hasToken, initAuthStore } from "./stores/auth"
 
 
 
@@ -45,30 +46,44 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, "public")
   : RENDERER_DIST
 
-// Disable GPU Acceleration for Windows 7
+//  语言设置
+app.commandLine.appendSwitch("lang", "zh-CN")
+
+// ========== 平台兼容性 ==========
+
+// Windows 7 禁用 GPU 加速
 if (os.release().startsWith("6.1")) app.disableHardwareAcceleration()
 
-// Set application name for Windows 10+ notifications
+// Windows 10+ 设置应用用户模型 ID（用于系统通知）
 if (process.platform === "win32") app.setAppUserModelId(app.getName())
 
+
+// ========== 单实例锁 ==========
 if (!app.requestSingleInstanceLock()) {
   app.quit()
   process.exit(0)
 }
 
+// ========== 窗口管理 ==========
 let win: BrowserWindow | null = null
 const preload = path.join(__dirname, "../preload/index.mjs")
-const indexHtml = path.join(RENDERER_DIST, "index.html")
+export const indexHtml = path.join(RENDERER_DIST, "index.html")
 
+
+/**
+ * 创建主窗口
+ */
 async function createWindow() {
   win = new BrowserWindow({
     title: "数字员工",
     frame: false,
     skipTaskbar: true,
-    icon: path.join(process.env.VITE_PUBLIC, "logo.svg"),
+    icon: path.join(process.env.APP_ROOT, "build/icon.ico"),
     webPreferences: {
       preload,
     },
+    width: 1024,
+    height: 768,
     minWidth: 1024,
     minHeight: 768,
   })
@@ -107,7 +122,7 @@ async function createWindow() {
   // 创建系统托盘（窗口关闭后仍可从托盘操作）
   createTray(win)
 
-  // Auto update
+  // 自动更新
   update(win)
 }
 
@@ -138,19 +153,24 @@ app.on("before-quit", (e) => {
  * 应用就绪
  *
  * 启动顺序：
- * 1. 启动 Python 后端（等待就绪或超时）
- * 2. 关闭 splash，打开登录窗口
- * 3. 登录成功后关闭登录窗口，创建主窗口
- * 4. 如果后端启动失败，仍然创建登录窗口
+ * 1. 初始化认证存储
+ * 2. 注册 IPC 通信
+ * 3. 启动agent 后端（等待就绪或超时）
+ * 4. 关闭 splash
+ * 5. 检查是否有持久化 token → 有则直接进主窗口，否则进登录窗口
  */
+
 app.whenReady().then(async () => {
-  // 移除默认菜单栏（File Edit View 等）
+  // 移除默认菜单栏（文件、编辑、视图等）
   Menu.setApplicationMenu(null)
+
+  initAuthStore()
 
   // 预注册 IPC 通信（登录窗口和主窗口共用）
   // 主窗口引用在 createWindow() 中通过 setMainWindow() 更新
+  // 登录成功回调：创建主窗口
   registerIpcHandlers(async () => {
-    // await createWindow()
+    await createWindow()
   })
 
 
@@ -160,9 +180,16 @@ app.whenReady().then(async () => {
   })
   try {
     await startAgentServer()
-    createLoginWindow({ devServerUrl: VITE_DEV_SERVER_URL, indexHtml })
     closeSplashWindow()
-    createLoginWindow({ devServerUrl: VITE_DEV_SERVER_URL, indexHtml })
+    // 检查是否有持久化的 token，有则跳过登录
+    if (hasToken()) {
+      console.log("[App] saved token found, skipping login...")
+      await createWindow()
+    } else {
+      console.log("[App] no saved token, opening login window...")
+      createLoginWindow({ devServerUrl: VITE_DEV_SERVER_URL, indexHtml })
+    }
+
   } catch (err) {
     console.error("[App] backend failed:", err)
     setTimeout(() => {
@@ -197,19 +224,3 @@ app.on("activate", () => {
   }
 })
 
-// New window example arg: new windows url
-ipcMain.handle("open-win", (_, arg) => {
-  const childWindow = new BrowserWindow({
-    webPreferences: {
-      preload,
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  })
-
-  if (VITE_DEV_SERVER_URL) {
-    childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)
-  } else {
-    childWindow.loadFile(indexHtml, { hash: arg })
-  }
-})

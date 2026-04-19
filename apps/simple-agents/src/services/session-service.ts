@@ -19,7 +19,8 @@
  */
 
 import type { CreateSessionInput, UpdateSessionInput, Session } from "../types"
-import { getDb, getDataDir } from "../db"
+import { getDb } from "../db"
+import { getDataDir } from "../config"
 import { sessions } from "../db/schema"
 import { eq, desc, sql, and } from "drizzle-orm"
 import { nanoid } from "nanoid"

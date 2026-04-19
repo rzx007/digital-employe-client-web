@@ -28,7 +28,7 @@ import { tool } from "@langchain/core/tools"
 import { z } from "zod"
 import path from "node:path"
 import fs from "node:fs"
-import { getDataDir } from "./db"
+import { getDataDir } from "./config"
 
 /**
  * AI 模型配置

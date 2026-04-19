@@ -28,22 +28,30 @@ export function createLoginWindow(options: {
   devServerUrl: string | undefined
   indexHtml: string
 }): void {
-  if (loginWin) return
+  if (loginWin) {
+    loginWin.focus()
+    return
+  }
 
   const preload = path.join(
-    path.dirname(__dirname),
-    "preload/index.mjs"
+    process.env.APP_ROOT!,
+    "dist-electron/preload/index.mjs"
   )
 
   loginWin = new BrowserWindow({
-    width: 350,
-    height: 520,
+    width: 290,
+    height: 410,
+    title: "数字员工",
+    icon: path.join(process.env.APP_ROOT!, "build/icon.ico"),
     frame: false,
     resizable: false,
+    useContentSize: true,
     center: true,
-    skipTaskbar: true,
+    autoHideMenuBar: true,
+    // skipTaskbar: true,
     webPreferences: {
       preload,
+      zoomFactor: 0.95,
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -53,6 +61,7 @@ export function createLoginWindow(options: {
   const loginUrl = options.devServerUrl
     ? `${options.devServerUrl}#/login`
     : `file://${options.indexHtml}#/login`
+  // loginWin.webContents.openDevTools()
 
   loginWin.loadURL(loginUrl)
 

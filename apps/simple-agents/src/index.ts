@@ -1,6 +1,7 @@
 import "dotenv/config"
 import { serve } from "@hono/node-server"
-import { setup, getDataDir, cronScheduler } from "./app"
+import { setup, cronScheduler } from "./app"
+import { getDataDir } from "./config"
 
 export const DEFAULT_PORT = 3005
 

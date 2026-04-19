@@ -35,7 +35,7 @@
 import path from "node:path"
 import fs from "node:fs"
 import os from "node:os"
-import { getDataDir } from "../db"
+import { getDataDir } from "../config"
 import extractZip from "extract-zip"
 
 /**

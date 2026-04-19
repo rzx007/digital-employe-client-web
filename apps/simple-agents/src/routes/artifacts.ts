@@ -14,7 +14,7 @@ import {
   getArtifact,
   deleteArtifact,
 } from "../services/artifact-service"
-import { getDataDir } from "../db"
+import { getDataDir } from "../config"
 import path from "node:path"
 import fs from "node:fs"
 

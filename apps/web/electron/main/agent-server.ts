@@ -60,7 +60,12 @@ export async function startAgentServer(): Promise<void> {
     fs.mkdirSync(dataDir, { recursive: true })
   }
 
-  const agentApp = setup(dataDir, MIGRATIONS_DIR, STATIC_DIR, ROOT_DIR)
+  const agentApp = setup({
+    dataDir,
+    migrationsDir: MIGRATIONS_DIR,
+    staticDir: STATIC_DIR,
+    rootDir: ROOT_DIR,
+  })
 
   console.log(`[AgentServer] Starting on port ${AGENT_PORT}`)
   console.log(`[AgentServer] Data directory: ${dataDir}`)

@@ -8,13 +8,8 @@ import chatRoutes from "./routes/chat"
 import artifactRoutes from "./routes/artifacts"
 import groupRoutes from "./routes/groups"
 import cronRoutes from "./routes/cron"
-import {
-  getDataDir,
-  getStaticDir,
-  initDb,
-  setStaticDir,
-  setRootDir,
-} from "./db"
+import { initDb } from "./db"
+import { configureDirs, getDataDir, getStaticDir, type SetupOptions } from "./config"
 import openApiDoc from "./doc/openapi.json"
 import { ensureSkillDirs } from "./services/skill-service"
 import mockManagementRoutes from "./routes/mock-management"
@@ -86,26 +81,12 @@ app.route("/management", mockManagementRoutes)
 
 let initialized = false
 
-export function setup(
-  dataDir?: string,
-  migrationsDir?: string,
-  staticDir?: string,
-  rootDir?: string
-) {
+export function setup(options?: SetupOptions) {
   if (initialized) return app
   initialized = true
 
-  if (rootDir) {
-    setRootDir(rootDir)
-  }
-  if (staticDir) {
-    setStaticDir(staticDir)
-  }
-  if (dataDir) {
-    process.env.DATA_DIR = dataDir
-  }
-
-  initDb(dataDir, migrationsDir)
+  configureDirs(options ?? {})
+  initDb()
   ensureSkillDirs()
 
   return app

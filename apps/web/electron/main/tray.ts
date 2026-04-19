@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron"
 import path from "node:path"
-import { setForceQuit, stopBackend } from "./ipc-handlers"
+import { setForceQuit } from "./ipc-handlers"
+import { stopAgentServer } from "./agent-server"
 
 /**
  * 系统托盘管理
@@ -216,11 +217,11 @@ export function stopFlashTray(): void {
  * 3. 停止后端进程
  * 4. 关闭窗口，触发 app.quit
  */
-function quitFromTray(win: BrowserWindow): void {
+async function quitFromTray(win: BrowserWindow): Promise<void> {
   setForceQuit(true)
   stopFlashTray()
   destroyTray()
-  stopBackend()
+  await stopAgentServer()
   win.close()
 
   // 兜底超时，确保应用能退出

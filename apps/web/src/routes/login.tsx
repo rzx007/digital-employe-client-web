@@ -1,10 +1,7 @@
 import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-} from "@workspace/ui/components/card"
+import { Card, CardContent } from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Checkbox } from "@workspace/ui/components/checkbox"
@@ -27,8 +24,60 @@ function LoginPage() {
     e.preventDefault()
     setLoading(true)
     // TODO: 对接登录 API
-    setTimeout(() => {
-      window?.electronApi?.loginSuccess()
+    setTimeout(async () => {
+      const res = {
+        code: 1,
+        result: [
+          {
+            id: 1,
+            name: "系统管理员",
+            username: "bbadmin",
+            menuid: "1",
+            orgType: null,
+            orgNo: null,
+            email: "ca@greg.co",
+            phoneNumber: "13720349091",
+            expirationTime: null,
+            status: "1",
+            loginTime: "2026-04-07 06:32:11",
+            changePwdTime: "2026-04-07 06:21:05",
+            inTime: null,
+            inIp: null,
+            consInfo: {},
+            dpts: [
+              {
+                id: 10,
+                name: "爱可生",
+                parentId: null,
+                description: null,
+                createTime: null,
+                updateTime: null,
+                status: "1",
+              },
+            ],
+          },
+        ],
+        noMenus: false,
+        token:
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0aWQiOjEsIm1lbnVpZCI6IjEiLCJ1c2VybmFtZSI6ImJiYWRtaW4iLCJvcmdObyI6bnVsbCwib3JnVHlwZSI6bnVsbCwiZHB0SWRzIjoiMTAiLCJsb2dpbklwIjoiMTAuMTcyLjI0Ni4xNDQiLCJjaGFuZ2VQd2RUaW1lIjoiMjAyNi0wNC0wNyAwNjoyMTowNSIsImV4cFRpbWUiOjE3OTYyODE1NDk1NTksImlhdCI6MTc3NTU0NTU0OSwiZXhwIjoxNzc2NDA5NTQ5fQ.ViBSPVwb7tRfFRWQ1uj-BtfY_t_EwNIgNWsooWvaVTQ",
+        msg: "",
+      }
+      const token = res.token
+      const user = res.result[0]
+
+      // 写入 localStorage（request.ts 的 getAuthToken() 从这里读取）
+      localStorage.setItem("token", token)
+
+      // 通过 IPC 持久化到 electron-store（仅 Electron 环境）
+      await window.electronApi?.saveAuth(
+        token,
+        user as unknown as Record<string, unknown>,
+        rememberMe
+      )
+
+      // 通知主进程：关闭登录窗口，打开主窗口
+      await window.electronApi?.loginSuccess()
+
       setLoading(false)
     }, 1500)
   }
@@ -45,13 +94,14 @@ function LoginPage() {
           <h1 className="font-heading text-lg font-semibold text-foreground">
             DigitalEmployee
           </h1>
-          <p className="text-xs text-muted-foreground">
-            数字员工智能助手
-          </p>
+          <p className="text-xs text-muted-foreground">数字员工智能助手</p>
         </div>
 
         {/* 登录表单卡片 */}
-        <Card className="w-full" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+        <Card
+          className="w-full"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
           <CardContent className="flex flex-col gap-4 pt-0">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {/* 账号 */}
@@ -86,7 +136,7 @@ function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
+                    className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
                     tabIndex={-1}
                     disabled={loading}
                   >
