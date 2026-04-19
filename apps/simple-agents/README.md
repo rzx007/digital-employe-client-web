@@ -44,6 +44,37 @@ data/
       output.csv
 ```
 
+### 目录结构
+
+`src/config.ts` 管理两个核心目录：
+
+| 目录 | 用途 | 独立模式 | Electron 模式 |
+|------|------|----------|---------------|
+| `dataDir` | 运行时可写数据 | `cwd()/data/` | `app.getPath("userData")/agent-data/` |
+| `resourcesDir` | 只读资源 | `cwd()/` | dev: `apps/simple-agents/`, prod: `process.resourcesPath/simple-agents/` |
+
+```
+dataDir/                          resourcesDir/
+  ├── simple-agents.db              ├── migrations/
+  ├── skills/                       └── static/
+  ├── employees/
+  └── workspace/
+      {sessionId}/
+        skills/          → junction → dataDir/skills/
+        employee-skills/ → junction → dataDir/employees/{eid}/skills/
+        (agent 生成的文件)
+```
+
+配置通过 `setup()` 传入：
+
+```typescript
+// 独立模式（无参数，使用默认值）
+setup()
+
+// Electron 模式（显式指定路径）
+setup({ dataDir, resourcesDir })
+```
+
 ### 数据层
 
 ```

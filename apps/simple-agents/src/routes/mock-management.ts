@@ -1,12 +1,12 @@
 import { Hono } from "hono"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
-import { getRootDir } from "../config"
+import { getResourcesDir, getStaticDir } from "../config"
 
 const app = new Hono()
 
-const getDataPath = () => join(getRootDir(), "src", "employees", "data.json")
-const getSkillsZipPath = () => join(getRootDir(), "static", "skills.zip")
+const getDataPath = () => join(getResourcesDir(), "src", "employees", "data.json")
+const getSkillsZipPath = () => join(getStaticDir(), "skills.zip")
 
 app.get("/employees/:userId", async (c) => {
   const userId = c.req.param("userId")

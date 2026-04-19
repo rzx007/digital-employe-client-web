@@ -14,10 +14,6 @@ const resourcesBaseDir = isDev
   ? path.join(__dirname, "../../../simple-agents")
   : path.join(process.resourcesPath, "simple-agents")
 
-const MIGRATIONS_DIR = path.join(resourcesBaseDir, "migrations")
-const STATIC_DIR = path.join(resourcesBaseDir, "static")
-const ROOT_DIR = resourcesBaseDir
-
 let server: ServerType | null = null
 
 function loadEnvFile(filePath: string): void {
@@ -62,15 +58,12 @@ export async function startAgentServer(): Promise<void> {
 
   const agentApp = setup({
     dataDir,
-    migrationsDir: MIGRATIONS_DIR,
-    staticDir: STATIC_DIR,
-    rootDir: ROOT_DIR,
+    resourcesDir: resourcesBaseDir,
   })
 
   console.log(`[AgentServer] Starting on port ${AGENT_PORT}`)
   console.log(`[AgentServer] Data directory: ${dataDir}`)
-  console.log(`[AgentServer] Migrations: ${MIGRATIONS_DIR}`)
-  console.log(`[AgentServer] Static: ${STATIC_DIR}`)
+  console.log(`[AgentServer] Resources: ${resourcesBaseDir}`)
 
   server = serve({ fetch: agentApp.fetch, port: AGENT_PORT })
 

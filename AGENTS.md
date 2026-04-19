@@ -4,7 +4,8 @@ This monorepo is a React 19 + TypeScript web dashboard built with Vite, Turbo, a
 
 ## Project Structure
 
-- `apps/web` - Main application with TanStack Router and React Query
+- `apps/web` - Main application with TanStack Router, React Query, and Electron desktop mode
+- `apps/simple-agents` - Hono-based AI agent server (embedded in Electron, or standalone)
 - `packages/ui` - Shared UI components built with Radix UI and Tailwind CSS
 
 ## Build & Development Commands
@@ -161,3 +162,34 @@ Path aliases are defined in each package's tsconfig.json:
 - `@/*` → `./src/*` (in apps/web)
 - `@workspace/ui/*` → `../../packages/ui/src/*` (in apps/web)
 - `@workspace/ui/*` → `./src/*` (in packages/ui)
+
+### simple-agents Directory Configuration
+
+`simple-agents` uses two directory concepts:
+
+| Directory | Purpose | Standalone default | Electron mode |
+|-----------|---------|-------------------|---------------|
+| `dataDir` | Runtime data (db, workspace, skills) | `cwd()/data/` | `app.getPath("userData")/agent-data/` |
+| `resourcesDir` | Read-only resources (migrations, static) | `cwd()/` | dev: `apps/simple-agents/`, prod: `process.resourcesPath/simple-agents/` |
+
+```
+dataDir/                          resourcesDir/
+  ├── simple-agents.db              ├── migrations/
+  ├── skills/                       └── static/
+  ├── employees/
+  └── workspace/
+```
+
+Configuration is managed in `src/config.ts` and initialized via `setup()`:
+
+```typescript
+// Standalone (no args needed):
+import { setup } from "./app"
+setup()
+
+// Electron (explicit paths):
+import { setup } from "simple-agents/app"
+setup({ dataDir, resourcesDir })
+```
+
+All other paths (`getStaticDir()`, `getMigrationsDir()`) are derived from `resourcesDir`.

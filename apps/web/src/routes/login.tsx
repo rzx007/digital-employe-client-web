@@ -6,8 +6,16 @@ import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Checkbox } from "@workspace/ui/components/checkbox"
 import { Separator } from "@workspace/ui/components/separator"
-import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react"
+import {
+  IconEye,
+  IconEyeOff,
+  IconLoader2,
+  IconSettings,
+  IconX,
+} from "@tabler/icons-react"
+
 import logoImage from "@/assets/logo.svg"
+import bgImage from "@/assets/Group.png"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -81,122 +89,132 @@ function LoginPage() {
       setLoading(false)
     }, 1500)
   }
-
+  const isElectron = !!window.electronApi
   return (
     <div
-      className="flex h-screen w-screen items-center justify-center bg-background"
-      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      className="relative h-screen w-screen overflow-hidden"
+      style={
+        {
+          background: `url(${bgImage}) no-repeat 100% 0%, linear-gradient(180deg, #eaf0fd 1%, rgba(236, 242, 255, 0.74) 27%, rgba(255, 255, 255, 0) 83%)`,
+          WebkitAppRegion: "drag",
+        } as React.CSSProperties
+      }
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-6 px-6">
-        {/* Logo + 标题 */}
-        <div className="flex flex-col items-center gap-2">
-          <img src={logoImage} alt="DigitalEmployee" className="h-12 w-12" />
-          <h1 className="font-heading text-lg font-semibold text-foreground">
-            DigitalEmployee
-          </h1>
-          <p className="text-xs text-muted-foreground">数字员工智能助手</p>
-        </div>
-
-        {/* 登录表单卡片 */}
-        <Card
-          className="w-full"
+      {/* 右上角按钮 */}
+      {isElectron && (
+        <div
+          className="absolute top-0 right-0 z-10 flex items-center"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <CardContent className="flex flex-col gap-4 pt-0">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {/* 账号 */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="username">账号</Label>
+          <button
+            type="button"
+            title="通信设置"
+            className="p-2 text-gray-700 hover:bg-gray-300"
+          >
+            <IconSettings className="size-5" />
+          </button>
+          <button
+            type="button"
+            title="关闭"
+            className="p-2 text-gray-700 hover:bg-destructive hover:text-white"
+            onClick={() => window.electronApi?.quitApp()}
+          >
+            <IconX className="size-5" />
+          </button>
+        </div>
+      )}
+      {/* 左上角 Logo + 名称 */}
+      <div className="flex items-center px-4 pt-4 select-none">
+        <img src={logoImage} alt="DigitalEmployee" className="h-7 w-7" />
+        <h1 className="ml-2 text-base font-semibold tracking-wider text-gray-800">
+          数字员工
+        </h1>
+      </div>
+
+      <div className="flex flex-col items-center justify-center px-6 pt-10">
+        <h3 className="mb-6 text-xl font-bold">欢迎回来</h3>
+
+        <div
+          className="w-full max-w-sm"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="username" className="text-sm font-bold">
+                账号
+              </Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="请输入你的用户名"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="password" className="text-sm font-bold">
+                密码
+              </Label>
+              <div className="relative">
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="请输入账号"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="请输入你的密码"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-8"
+                  autoComplete="current-password"
                   disabled={loading}
                 />
-              </div>
-
-              {/* 密码 */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="password">密码</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="请输入密码"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pr-8"
-                    autoComplete="current-password"
-                    disabled={loading}
-                  />
-                  {/* 密码显示/隐藏切换按钮 */}
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
-                    tabIndex={-1}
-                    disabled={loading}
-                  >
-                    {showPassword ? (
-                      <IconEyeOff className="size-3.5" />
-                    ) : (
-                      <IconEye className="size-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* 记住我 + 忘记密码 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Checkbox
-                    id="remember"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) =>
-                      setRememberMe(checked === true)
-                    }
-                    disabled={loading}
-                  />
-                  <Label htmlFor="remember" className="cursor-pointer">
-                    记住我
-                  </Label>
-                </div>
                 <button
                   type="button"
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
+                  tabIndex={-1}
+                  disabled={loading}
                 >
-                  忘记密码?
+                  {showPassword ? (
+                    <IconEyeOff className="size-3.5" />
+                  ) : (
+                    <IconEye className="size-3.5" />
+                  )}
                 </button>
               </div>
+            </div>
 
-              {/* 登录按钮 */}
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={loading}
-              >
-                {loading && <IconLoader2 className="animate-spin" />}
-                {loading ? "登录中..." : "登 录"}
-              </Button>
-            </form>
+            <div className="flex items-center gap-4 py-1">
+              <div className="flex items-center gap-1">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  disabled={loading}
+                />
+                <Label htmlFor="remember" className="cursor-pointer text-sm">
+                  记住密码
+                </Label>
+              </div>
+            </div>
 
-            <Separator />
-
-            {/* 注册入口 */}
             <Button
-              variant="outline"
+              type="submit"
               className="w-full"
               size="lg"
-              disabled={loading}
+              disabled={loading || !username || !password}
             >
-              注 册
+              {loading && <IconLoader2 className="mr-2 size-4 animate-spin" />}
+              {loading ? "登录中..." : "登录"}
             </Button>
-          </CardContent>
-        </Card>
+          </form>
+          <p className="mt-2 w-full text-center text-xs text-muted-foreground">
+            还没有账号?{" "}
+            <span className="cursor-pointer text-primary">联系管理员</span>
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -46,7 +46,7 @@ packages/
 | **5. 配置 electron-forge** | `forge.config.ts`：只有 `main` + `preload` 两个 `build target`，无 `renderer plugin`；`packagerConfig` 包含 `web/dist/` | `extraResource` 指向 `../web/dist/` |
 | **6. 编写 Vite configs** | `vite.base.config.ts`（参考 `electron-hono-main`）、`vite.main.config.ts`（`CJS` 输出，`external deps`）、`vite.preload.config.ts`（`CJS` + `inlineDynamicImports`） | 所有 `dependencies` `external`，`better-sqlite3` 原生模块不打包 |
 | **7. 修复 Renderer API 地址** | `agent-request.ts` 和 `chat-conversation-view.tsx`：根据 `window.electronApi?.getServerUrl()` 动态设置 `baseURL`，`fallback` 到 `/simple-agents`（`web` 模式走 `proxy`） | 这是当前生产环境 `API` 调用失败的根因 |
-| **8. 修复 DB 路径** | `db/index.ts`：`Electron` 环境用 `app.getPath('userData')` 作为 `dataDir`；`migrations` 用 `process.resourcesPath + '/migrations/'` | 替代 `findPackageRoot` |
+| **8. 修复 DB 路径** | `src/config.ts`：`Electron` 环境用 `app.getPath('userData')` 作为 `dataDir`；`resourcesDir` 指向包含 `migrations/` 和 `static/` 的目录 | `setup({ dataDir, resourcesDir })` |
 | **9. 构建流水线** | `turbo.json` 增加 `desktop` 构建 `task`，`dependsOn: ["^build"]` 确保 `web` 先构建；`desktop` 的 `package` 命令组合 `web build` + `forge make` | `pnpm-workspace.yaml` 加入 `apps/desktop` |
 | **10. 清理 web 包** | 移除 `web/electron/` 目录、移除 `vite-plugin-electron`、移除 `electron-builder` 依赖、移除 `mode=electron` 逻辑 | `web` 变为纯 `Web` 包 |
 
@@ -59,7 +59,7 @@ import { serve } from "@hono/node-server"
 import { setup } from "./server/app"
 
 // 启动 Hono
-const agentApp = setup(app.getPath("userData") + "/agent-data")
+const agentApp = setup({ dataDir: app.getPath("userData") + "/agent-data", resourcesDir })
 serve({ fetch: agentApp.fetch, port: 3005 })
 
 // 加载 renderer
